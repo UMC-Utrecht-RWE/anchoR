@@ -1,0 +1,6 @@
+^CHANGELOG\.md$
+^.github$
+^.lintr$
+^CITATION\.cff$
+^\.zenodo\.json$
+^codemeta\.json$
