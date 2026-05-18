@@ -35,6 +35,78 @@ normalize_selector_name <- function(x) {
   toupper(trimws(as.character(x)))
 }
 
+looks_like_glob <- function(x) {
+  grepl("[\\*\\?\\[]", x)
+}
+
+concepts_input_type <- function(concepts) {
+  if (is.data.frame(concepts)) {
+    return("table")
+  }
+
+  if (!is.character(concepts) || length(concepts) == 0L) {
+    stop(
+      paste(
+        "`concepts` must be a data frame, a DuckDB file path,",
+        "or parquet file location(s)."
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (
+    length(concepts) == 1L &&
+    identical(tolower(tools::file_ext(concepts)), "duckdb")
+  ) {
+    return("duckdb")
+  }
+
+  "parquet"
+}
+
+normalize_parquet_sources <- function(concepts) {
+  if (concepts_input_type(concepts) != "parquet") {
+    stop("`concepts` is not a parquet source.", call. = FALSE)
+  }
+
+  parquet_sources <- unlist(
+    lapply(
+      concepts,
+      function(path) {
+        if (dir.exists(path)) {
+          parquet_files <- list.files(
+            path,
+            pattern = "\\.parquet$",
+            full.names = TRUE,
+            recursive = TRUE
+          )
+
+          if (length(parquet_files) == 0L) {
+            stop(
+              sprintf("No parquet files found under `%s`.", path),
+              call. = FALSE
+            )
+          }
+
+          return(parquet_files)
+        }
+
+        if (file.exists(path) || looks_like_glob(path)) {
+          return(path)
+        }
+
+        stop(
+          sprintf("Concept parquet source does not exist: %s.", path),
+          call. = FALSE
+        )
+      }
+    ),
+    use.names = FALSE
+  )
+
+  as.character(parquet_sources)
+}
+
 rename_first_matching_column <- function(x, target, aliases) {
   if (target %in% names(x)) {
     return(invisible(x))
@@ -160,7 +232,9 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
 }
 
 concepts_to_data_table <- function(concepts) {
-  if (is.character(concepts) && length(concepts) == 1L) {
+  concepts_type <- concepts_input_type(concepts)
+
+  if (concepts_type == "duckdb") {
     if (!file.exists(concepts)) {
       stop(
         sprintf("Concept database path does not exist: %s.", concepts),
@@ -189,6 +263,21 @@ concepts_to_data_table <- function(concepts) {
           CAST(date AS DATE) AS date,
           value",
           "FROM concepts_db.concept_table"
+        )
+      )
+    )
+  } else if (concepts_type == "parquet") {
+    con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+    concepts_dt <- data.table::as.data.table(
+      DBI::dbGetQuery(
+        con,
+        paste(
+          "SELECT person_id, concept_id, CAST(date AS DATE) AS date, value",
+          "FROM read_parquet(",
+          parquet_paths_sql(con, concepts),
+          ", hive_partitioning = true, union_by_name = true)"
         )
       )
     )

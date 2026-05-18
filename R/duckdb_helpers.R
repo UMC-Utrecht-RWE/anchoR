@@ -1,50 +1,18 @@
-anchor_db_connect <- function(db_dir = NULL) {
-  use_memory <- TRUE
-  db_path <- ":memory:"
-
-  if (!is.null(db_dir)) {
-    if (!dir.exists(db_dir)) {
-      warning(
-        sprintf(
-          "Directory `%s` does not exist. Falling back to in-memory DuckDB.",
-          db_dir
-        ),
-        call. = FALSE
-      )
-    } else if (file.access(db_dir, 2L) != 0L) {
-      warning(
-        sprintf(
-          "Directory `%s` is not writable. Falling back to in-memory DuckDB.",
-          db_dir
-        ),
-        call. = FALSE
-      )
-    } else {
-      use_memory <- FALSE
-      db_path <- file.path(
-        db_dir,
-        sprintf("anchr_%s_%s.duckdb", Sys.getpid(), as.integer(Sys.time()))
-      )
-    }
-  }
-
-  list(
-    con = DBI::dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE),
-    db_path = db_path,
-    use_memory = use_memory
+parquet_paths_sql <- function(con, concepts) {
+  parquet_paths <- normalize_parquet_sources(concepts)
+  quoted_paths <- vapply(
+    parquet_paths,
+    function(path) as.character(DBI::dbQuoteString(con, path)),
+    character(1)
   )
-}
 
-anchor_db_disconnect <- function(connection) {
-  try(DBI::dbDisconnect(connection$con, shutdown = TRUE), silent = TRUE)
-
-  if (!connection$use_memory && file.exists(connection$db_path)) {
-    try(unlink(connection$db_path), silent = TRUE)
-  }
+  paste0("[", paste(quoted_paths, collapse = ", "), "]")
 }
 
 load_concepts_table <- function(con, concepts) {
-  if (is.character(concepts) && length(concepts) == 1L) {
+  concepts_type <- concepts_input_type(concepts)
+
+  if (concepts_type == "duckdb") {
     DBI::dbExecute(
       con,
       sprintf(
@@ -57,15 +25,35 @@ load_concepts_table <- function(con, concepts) {
       con,
       paste(
         "CREATE VIEW concepts AS",
-        "SELECT person_id, concept_id, CAST(date AS DATE) AS date, value",
+        "SELECT
+        person_id,
+        concept_id,
+        CAST(date AS DATE) AS date,
+        value",
         "FROM concepts_db.concept_table"
+      )
+    )
+  } else if (concepts_type == "parquet") {
+    DBI::dbExecute(con, "DROP VIEW IF EXISTS concepts;")
+    DBI::dbExecute(
+      con,
+      paste(
+        "CREATE VIEW concepts AS",
+        "SELECT
+        person_id,
+        concept_id,
+        CAST(date AS DATE) AS date,
+        value",
+        "FROM read_parquet(",
+        parquet_paths_sql(con, concepts),
+        ", hive_partitioning = true, union_by_name = true)"
       )
     )
   } else {
     DBI::dbWriteTable(
       con,
       name = "concepts",
-      value = concepts_to_data_table(concepts),
+      value = concepts,
       overwrite = TRUE
     )
   }

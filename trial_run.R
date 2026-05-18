@@ -6,24 +6,7 @@ metadata <- filter_supported_metadata(metadata)
 
 
 population <- picard::load("anchoR_input/D4_MSC.fst")
-con <- duckdb::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-
-view_name <- "concepts"
-DBI::dbExecute(
-  con,
-  glue::glue(
-    "CREATE OR REPLACE VIEW {view_name} AS
-      SELECT *
-      FROM read_parquet(
-        ['anchoR_input/D3_CONCEPTS_parquet/*/*.parquet'],
-        hive_partitioning = true,
-        union_by_name     = true
-      )"
-  )
-)
-
-DBI::dbListTables(con)
-concepts <- DBI::dbReadTable(con, view_name)
+concepts <- "anchoR_input/D3_CONCEPTS_parquet"
 anchor_col <- "T0"
 
 

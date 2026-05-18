@@ -5,7 +5,8 @@
 #' population.
 #'
 #' @param population A data frame containing at least `person_id`.
-#' @param concepts A concept table as a data frame or a DuckDB file path.
+#' @param concepts A concept table as a data frame, a DuckDB file path, or
+#'   parquet file location(s).
 #' @param concept_id One or more concept IDs used to derive the index date.
 #' @param selector Either `"EARLIEST"` or `"LATEST"`.
 #' @param window_start_col Optional population column containing the earliest

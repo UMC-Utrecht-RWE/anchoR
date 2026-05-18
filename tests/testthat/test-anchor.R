@@ -52,3 +52,16 @@ test_that("anchor honors a non-default anchor column", {
   expect_equal(range_2$value, "1")
   expect_equal(range_2$date, as.Date("2024-01-10"))
 })
+
+test_that("anchor accepts parquet concept sources", {
+  anchored <- anchor(
+    population = example_population(),
+    metadata = example_metadata(),
+    concepts = example_concepts_parquet(),
+    keep_all = FALSE
+  )
+
+  range_2 <- anchored[person_id == "2" & variable_id == "lab_range"]
+  expect_equal(range_2$value, "1")
+  expect_equal(range_2$date, as.Date("2024-01-10"))
+})

@@ -10,7 +10,6 @@ anchor(
   concepts,
   anchor_col = "T0",
   keep_all = FALSE,
-  db_dir = NULL,
   package = "anchoR"
 )
 }
@@ -19,15 +18,14 @@ anchor(
 
 \item{metadata}{A data frame describing the variables to anchor.}
 
-\item{concepts}{A concept table as a data frame or a DuckDB file path.}
+\item{concepts}{A concept table as a data frame, a DuckDB file path, or
+parquet file location(s).}
 
 \item{anchor_col}{Column representing T0}
 
 \item{keep_all}{If \code{TRUE}, keep the full population-by-metadata cross join
 and fill unmatched rows with missing values. If \code{FALSE}, return only rows
 with at least one matching concept record.}
-
-\item{db_dir}{Optional writable directory for a temporary DuckDB database.}
 
 \item{package}{Package name used to resolve selector SQL templates.}
 }

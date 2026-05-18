@@ -26,3 +26,16 @@ test_that("derive_t0 returns NA when no concept is found", {
 
   expect_true(all(is.na(derived$T0)))
 })
+
+test_that("derive_t0 accepts parquet concept sources", {
+  derived <- derive_t0(
+    population = example_population(),
+    concepts = example_concepts_parquet(),
+    concept_id = "T0_EVENT",
+    selector = "EARLIEST",
+    window_start_col = "candidate_start",
+    window_end_col = "candidate_end"
+  )
+
+  expect_equal(derived$T0, as.Date(c("2024-01-05", "2024-01-10")))
+})

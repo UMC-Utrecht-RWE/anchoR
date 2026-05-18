@@ -18,8 +18,9 @@ anchor column used for windowing.}
 
 \item{metadata}{A data frame in the standard study-variable format.}
 
-\item{concepts}{A concept table as a data frame or a DuckDB file path whose
-\code{concept_table} contains \code{person_id}, \code{concept_id}, and \code{date}.}
+\item{concepts}{A concept table as a data frame, a DuckDB file path whose
+\code{concept_table} contains \code{person_id}, \code{concept_id}, and \code{date}, or parquet
+file location(s).}
 
 \item{anchor_col}{Column to use when metadata does not specify
 the anchor column.}

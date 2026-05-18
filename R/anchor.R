@@ -4,12 +4,12 @@
 #'
 #' @param population A data frame containing the study population.
 #' @param metadata A data frame describing the variables to anchor.
-#' @param concepts A concept table as a data frame or a DuckDB file path.
+#' @param concepts A concept table as a data frame, a DuckDB file path, or
+#'   parquet file location(s).
 #' @param anchor_col Column representing T0
 #' @param keep_all If `TRUE`, keep the full population-by-metadata cross join
 #'   and fill unmatched rows with missing values. If `FALSE`, return only rows
 #'   with at least one matching concept record.
-#' @param db_dir Optional writable directory for a temporary DuckDB database.
 #' @param package Package name used to resolve selector SQL templates.
 #'
 #' @return A long `data.table` containing anchored values and event dates.
@@ -20,7 +20,6 @@ anchor <- function(
   concepts,
   anchor_col = "T0",
   keep_all = FALSE,
-  db_dir = NULL,
   package = "anchoR"
 ) {
   validated <- validate_anchor_inputs(
@@ -53,16 +52,16 @@ anchor <- function(
     )
   }
 
-  db <- anchor_db_connect(db_dir = db_dir)
-  on.exit(anchor_db_disconnect(db), add = TRUE)
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
-  load_concepts_table(db$con, concepts)
-  write_population_windows(db$con, valid_windows)
+  load_concepts_table(con, validated$concepts)
+  write_population_windows(con, valid_windows)
 
   result_list <- lapply(
     unique(valid_windows$selector),
     function(selector_name) {
-      run_selector_query(db$con, selector_name, package = package)
+      run_selector_query(con, selector_name, package = package)
     }
   )
 

@@ -49,3 +49,20 @@ example_concepts <- function() {
     value = c("TRUE", "1", "1", "TRUE", "FALSE", "3.2", "6.1", "TRUE")
   )
 }
+
+example_concepts_parquet <- function() {
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  parquet_path <- tempfile(fileext = ".parquet")
+  DBI::dbWriteTable(con, "concepts_source", example_concepts(), overwrite = TRUE)
+  DBI::dbExecute(
+    con,
+    sprintf(
+      "COPY concepts_source TO '%s' (FORMAT PARQUET)",
+      normalizePath(parquet_path, winslash = "/", mustWork = FALSE)
+    )
+  )
+
+  parquet_path
+}

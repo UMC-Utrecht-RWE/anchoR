@@ -51,6 +51,27 @@ metadata_supported_selectors <- function(metadata_dt, package = "anchoR") {
   invisible(metadata_dt)
 }
 
+normalize_concepts_input <- function(concepts) {
+  concepts_type <- concepts_input_type(concepts)
+
+  if (concepts_type == "table") {
+    return(concepts_to_data_table(concepts))
+  }
+
+  if (concepts_type == "duckdb" && !file.exists(concepts)) {
+    stop(
+      sprintf("Concept database path does not exist: %s.", concepts),
+      call. = FALSE
+    )
+  }
+
+  if (concepts_type == "parquet") {
+    normalize_parquet_sources(concepts)
+  }
+
+  concepts
+}
+
 #' Validate Anchoring Inputs
 #'
 #' Standardizes the study-variable metadata shape and checks the minimum
@@ -59,8 +80,9 @@ metadata_supported_selectors <- function(metadata_dt, package = "anchoR") {
 #' @param population A data frame containing at least `person_id` and the
 #'   anchor column used for windowing.
 #' @param metadata A data frame in the standard study-variable format.
-#' @param concepts A concept table as a data frame or a DuckDB file path whose
-#'   `concept_table` contains `person_id`, `concept_id`, and `date`.
+#' @param concepts A concept table as a data frame, a DuckDB file path whose
+#'   `concept_table` contains `person_id`, `concept_id`, and `date`, or parquet
+#'   file location(s).
 #' @param anchor_col Column to use when metadata does not specify
 #'   the anchor column.
 #' @param package Package name used to resolve available selector SQL
@@ -109,7 +131,7 @@ validate_anchor_inputs <- function(
 
   concepts_obj <- NULL
   if (!is.null(concepts)) {
-    concepts_obj <- concepts_to_data_table(concepts)
+    concepts_obj <- normalize_concepts_input(concepts)
   }
 
   invisible(

@@ -17,7 +17,8 @@ derive_t0(
 \arguments{
 \item{population}{A data frame containing at least \code{person_id}.}
 
-\item{concepts}{A concept table as a data frame or a DuckDB file path.}
+\item{concepts}{A concept table as a data frame, a DuckDB file path, or
+parquet file location(s).}
 
 \item{concept_id}{One or more concept IDs used to derive the index date.}
 
