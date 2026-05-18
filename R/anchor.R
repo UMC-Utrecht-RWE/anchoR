@@ -58,11 +58,10 @@ anchor <- function(
   load_concepts_table(con, validated$concepts)
   write_population_windows(con, valid_windows)
 
-  result_list <- lapply(
-    unique(valid_windows$selector),
-    function(selector_name) {
-      run_selector_query(con, selector_name, package = package)
-    }
+  result_list <- run_selector_queries(
+    con = con,
+    selectors = unique(valid_windows$selector),
+    package = package
   )
 
   result_dt <- data.table::rbindlist(

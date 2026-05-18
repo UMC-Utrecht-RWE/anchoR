@@ -101,7 +101,7 @@ filter_supported_metadata <- function(metadata, package = "anchoR") {
       )
     }
 
-    warning(paste(warning_parts, collapse = " "), call. = FALSE)
+    logger::log_warn(paste(warning_parts, collapse = " "))
   }
 
   metadata_dt[keep_rows][]
@@ -140,4 +140,45 @@ read_selector_sql <- function(selector, package = "anchoR") {
 
 run_selector_query <- function(con, selector, package = "anchoR") {
   DBI::dbGetQuery(con, read_selector_sql(selector, package = package))
+}
+
+run_selector_queries <- function(con, selectors, package = "anchoR") {
+  result_list <- vector("list", length(selectors))
+
+  for (i in seq_along(selectors)) {
+    selector_name <- selectors[[i]]
+    logger::log_info(
+      sprintf("Processing selector: %s", selector_name)
+    )
+
+    result_list[[i]] <- tryCatch(
+      {
+        withCallingHandlers(
+          run_selector_query(con, selector_name, package = package),
+          warning = function(w) {
+            logger::log_warn(
+              sprintf(
+                "Warning while processing selector %s: %s",
+                selector_name,
+                conditionMessage(w)
+              )
+            )
+            invokeRestart("muffleWarning")
+          }
+        )
+      },
+      error = function(e) {
+        logger::log_error(
+          sprintf(
+            "Error while processing selector %s: %s",
+            selector_name,
+            conditionMessage(e)
+          )
+        )
+        stop(e)
+      }
+    )
+  }
+
+  result_list
 }

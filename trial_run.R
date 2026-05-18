@@ -16,8 +16,7 @@ result <- anchor(
   metadata = metadata,
   concepts = concepts,
   anchor_col = anchor_col,
-  keep_all = FALSE,
-  package = "anchoR"
+  keep_all = FALSE
 )
 
 head(result)
