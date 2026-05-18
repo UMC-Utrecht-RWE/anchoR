@@ -1,16 +1,15 @@
 #' Validate Anchoring Inputs
 #'
-#' Standardizes metadata column names and checks that the population,
-#' metadata, and concepts objects have the minimum structure required by the
-#' package.
+#' Standardizes the study-variable metadata shape and checks the minimum
+#' structure required by the package.
 #'
 #' @param population A data frame containing at least `person_id` and the
-#'   anchor columns referenced by the metadata.
-#' @param metadata A data frame describing the variables to anchor.
+#'   anchor column used for windowing.
+#' @param metadata A data frame in the standard study-variable format.
 #' @param concepts A concept table as a data frame or a DuckDB file path whose
 #'   `concept_table` contains `person_id`, `concept_id`, and `date`.
 #' @param default_anchor_col Column to use when metadata does not specify
-#'   `anchor_start_col` or `anchor_end_col`.
+#'   the anchor column.
 #'
 #' @return Invisibly returns a list with normalized `population`, `metadata`,
 #'   and `concepts`.
@@ -30,6 +29,18 @@ validate_anchor_inputs <- function(
   assert_has_columns(
     population_dt,
     required = "person_id", arg = "population"
+  )
+
+  assert_has_columns(
+    metadata_dt,
+    required = c(
+      "variable_id",
+      "concept_id",
+      "selector",
+      "window_start_offset",
+      "window_end_offset"
+    ),
+    arg = "metadata"
   )
 
   anchor_cols <- unique(

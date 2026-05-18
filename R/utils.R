@@ -31,20 +31,6 @@ assert_has_columns <- function(x, required, arg) {
   invisible(x)
 }
 
-rename_first_existing <- function(x, candidates, target) {
-  if (target %in% names(x)) {
-    return(x)
-  }
-
-  found <- candidates[candidates %in% names(x)]
-
-  if (length(found) > 0L) {
-    data.table::setnames(x, found[[1L]], target)
-  }
-
-  x
-}
-
 normalize_selector_name <- function(x) {
   toupper(trimws(as.character(x)))
 }
@@ -52,36 +38,43 @@ normalize_selector_name <- function(x) {
 normalize_metadata <- function(metadata, default_anchor_col = "anchor_date") {
   metadata_dt <- as_data_table(metadata, "metadata")
 
-  metadata_dt <- rename_first_existing(
-    metadata_dt,
-    candidates = c("date_extraction_func", "anchoring_function"),
-    target = "selector"
-  )
-  metadata_dt <- rename_first_existing(
-    metadata_dt,
-    candidates = c("start_look_back", "window_start", "window_start_days"),
-    target = "window_start_offset"
-  )
-  metadata_dt <- rename_first_existing(
-    metadata_dt,
-    candidates = c("end_look_back", "window_end", "window_end_days"),
-    target = "window_end_offset"
-  )
-  metadata_dt <- rename_first_existing(
-    metadata_dt,
-    candidates = c("anchor_date_start", "window_start_anchor"),
-    target = "anchor_start_col"
-  )
-  metadata_dt <- rename_first_existing(
-    metadata_dt,
-    candidates = c("anchor_date_end", "window_end_anchor"),
-    target = "anchor_end_col"
-  )
-  metadata_dt <- rename_first_existing(
-    metadata_dt,
-    candidates = c("window_definition_fn", "window_function"),
-    target = "window_definition"
-  )
+  if (!"selector" %in% names(metadata_dt)) {
+    selector_source <- intersect(
+      c("date_extraction_func", "anchoring_function"),
+      names(metadata_dt)
+    )
+    if (length(selector_source) > 0L) {
+      data.table::setnames(metadata_dt, selector_source[[1L]], "selector")
+    }
+  }
+
+  if (!"window_start_offset" %in% names(metadata_dt)) {
+    window_start_source <- intersect(
+      c("start_look_back", "window_start", "window_start_days"),
+      names(metadata_dt)
+    )
+    if (length(window_start_source) > 0L) {
+      data.table::setnames(
+        metadata_dt,
+        window_start_source[[1L]],
+        "window_start_offset"
+      )
+    }
+  }
+
+  if (!"window_end_offset" %in% names(metadata_dt)) {
+    window_end_source <- intersect(
+      c("end_look_back", "window_end", "window_end_days"),
+      names(metadata_dt)
+    )
+    if (length(window_end_source) > 0L) {
+      data.table::setnames(
+        metadata_dt,
+        window_end_source[[1L]],
+        "window_end_offset"
+      )
+    }
+  }
 
   assert_has_columns(
     metadata_dt,
@@ -106,43 +99,11 @@ normalize_metadata <- function(metadata, default_anchor_col = "anchor_date") {
     window_end_offset := as.integer(window_end_offset)
   ]
 
-  if (!"anchor_start_col" %in% names(metadata_dt)) {
-    metadata_dt[, anchor_start_col := default_anchor_col]
-  }
-  if (!"anchor_end_col" %in% names(metadata_dt)) {
-    metadata_dt[, anchor_end_col := default_anchor_col]
-  }
-  if (!"window_definition" %in% names(metadata_dt)) {
-    metadata_dt[, window_definition := "RELATIVE"]
-  }
-  if (!"range_min" %in% names(metadata_dt)) {
-    metadata_dt[, range_min := NA_real_]
-  }
-  if (!"range_max" %in% names(metadata_dt)) {
-    metadata_dt[, range_max := NA_real_]
-  }
-
-  metadata_dt[
-    is.na(anchor_start_col) | trimws(anchor_start_col) == "",
-    anchor_start_col := default_anchor_col
-  ]
-  metadata_dt[
-    is.na(anchor_end_col) | trimws(anchor_end_col) == "",
-    anchor_end_col := default_anchor_col
-  ]
-  metadata_dt[
-    is.na(window_definition) | trimws(window_definition) == "",
-    window_definition := "RELATIVE"
-  ][
-    ,
-    window_definition := normalize_selector_name(window_definition)
-  ][
-    ,
-    range_min := as.numeric(range_min)
-  ][
-    ,
-    range_max := as.numeric(range_max)
-  ]
+  metadata_dt[, anchor_start_col := default_anchor_col]
+  metadata_dt[, anchor_end_col := default_anchor_col]
+  metadata_dt[, window_definition := "RELATIVE"]
+  metadata_dt[, range_min := NA_real_]
+  metadata_dt[, range_max := NA_real_]
 
   metadata_dt[]
 }

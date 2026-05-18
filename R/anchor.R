@@ -19,7 +19,7 @@ anchor <- function(
   population,
   metadata,
   concepts,
-  default_anchor_col = "anchor_date",
+  default_anchor_col = "T0",
   keep_all = FALSE,
   db_dir = NULL,
   package = "anchoR"
