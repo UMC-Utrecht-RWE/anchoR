@@ -2,6 +2,8 @@ compute_relative_windows <- function(window_dt) {
   window_dt[, window_start := as.Date(NA)]
   window_dt[, window_end := as.Date(NA)]
 
+  # We loop by anchor column name so one metadata table can mix different
+  # anchors, such as T0 and pregnancy dates, without falling back to row-wise R.
   for (col in unique(window_dt$anchor_start_col)) {
     window_dt[
       anchor_start_col == col,
@@ -16,6 +18,8 @@ compute_relative_windows <- function(window_dt) {
     ]
   }
 
+  # The helper returns the same table so `define_window()` can keep its flow
+  # linear and avoid carrying multiple temporary objects.
   window_dt[]
 }
 
@@ -65,15 +69,16 @@ define_window <- function(
     ,
     .anchor_join_key := NULL
   ]
-  # removes that temporary column
+  # Preserve the pre-processing order so later operations can reorder safely
+  # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]
 
   window_dt <- compute_relative_windows(window_dt)
   data.table::setorder(window_dt, .window_row_id)
   window_dt[, .window_row_id := NULL]
 
-  # We add a `window_valid` column to identify rows with valid windows, which
-  # are the only ones that should be kept for downstream processing.
+  # Mark invalid windows instead of dropping them here so callers can decide
+  # whether they want a sparse anchored result or a full design matrix.
   window_dt[
     ,
     window_valid := !is.na(window_start) &
@@ -81,6 +86,8 @@ define_window <- function(
       window_start <= window_end
   ]
 
+  # This synthetic key gives the SQL layer a stable identifier for each
+  # person-variable request, independent of the original population keys.
   window_dt[, anchor_row_id := .I]
   window_dt[]
 }

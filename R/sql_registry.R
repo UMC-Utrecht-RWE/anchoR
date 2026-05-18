@@ -1,4 +1,6 @@
 selector_sql_root <- function(package = "anchoR") {
+  # `system.file()` is the installed-package path; the fallback keeps the same
+  # code working under `devtools::load_all()` from the source tree.
   sql_root <- system.file("sql", package = package)
 
   if (!nzchar(sql_root)) {
@@ -16,6 +18,8 @@ selector_sql_root <- function(package = "anchoR") {
 }
 
 metadata_selector_column <- function(metadata_dt) {
+  # This keeps one compatibility bridge for legacy metadata names instead of
+  # forcing every selector-related helper to know both column conventions.
   if ("selector" %in% names(metadata_dt)) {
     return("selector")
   }
@@ -61,17 +65,25 @@ filter_supported_metadata <- function(metadata, package = "anchoR") {
   metadata_dt <- as_data_table(metadata, "metadata")
   selector_col <- metadata_selector_column(metadata_dt)
 
+  # This helper is intentionally permissive: it is meant for exploratory or
+  # mixed metadata files where dropping unsupported rows is more useful than
+  # failing the whole run immediately.
   raw_selectors <- as.character(metadata_dt[[selector_col]])
   normalized_selectors <- normalize_selector_name(raw_selectors)
   missing_selectors <- is.na(raw_selectors) | trimws(raw_selectors) == ""
   supported_selectors <- available_selectors(package = package)
 
-  keep_rows <- !missing_selectors & normalized_selectors %in% supported_selectors
+  keep_rows <- !missing_selectors &
+    normalized_selectors %in% supported_selectors
   dropped_rows <- !keep_rows
 
   if (any(dropped_rows)) {
     dropped_selector_values <- unique(
-      ifelse(missing_selectors[dropped_rows], "<missing>", normalized_selectors[dropped_rows])
+      ifelse(
+        missing_selectors[dropped_rows],
+        "<missing>",
+        normalized_selectors[dropped_rows]
+      )
     )
 
     warning_parts <- c(
@@ -116,6 +128,8 @@ filter_supported_metadata <- function(metadata, package = "anchoR") {
 #' @export
 selector_sql_path <- function(selector, package = "anchoR") {
   selector <- normalize_selector_name(selector[[1L]])
+  # Selector names and SQL filenames are kept in sync by convention so adding a
+  # new selector mostly means dropping one new template into `inst/sql`.
   sql_path <- file.path(
     selector_sql_root(package = package),
     paste0(tolower(selector), ".sql")
@@ -132,6 +146,8 @@ selector_sql_path <- function(selector, package = "anchoR") {
 }
 
 read_selector_sql <- function(selector, package = "anchoR") {
+  # Keeping SQL in separate template files makes the selector logic inspectable
+  # and editable without embedding large query strings inside R functions.
   paste(
     readLines(selector_sql_path(selector, package = package), warn = FALSE),
     collapse = "\n"
@@ -145,6 +161,8 @@ run_selector_query <- function(con, selector, package = "anchoR") {
 run_selector_queries <- function(con, selectors, package = "anchoR") {
   result_list <- vector("list", length(selectors))
 
+  # The loop is over selector types, not metadata rows, because each SQL
+  # template processes all matching person-variable windows in one batch.
   for (i in seq_along(selectors)) {
     selector_name <- selectors[[i]]
     logger::log_info(
@@ -153,6 +171,8 @@ run_selector_queries <- function(con, selectors, package = "anchoR") {
 
     result_list[[i]] <- tryCatch(
       {
+        # Warnings are logged and muffled so one noisy backend message does not
+        # interrupt a full selector batch that still produced usable results.
         withCallingHandlers(
           run_selector_query(con, selector_name, package = package),
           warning = function(w) {
@@ -168,6 +188,8 @@ run_selector_queries <- function(con, selectors, package = "anchoR") {
         )
       },
       error = function(e) {
+        # Errors are logged with selector context before being rethrown so the
+        # caller still gets a failing run and a useful breadcrumb trail.
         logger::log_error(
           sprintf(
             "Error while processing selector %s: %s",

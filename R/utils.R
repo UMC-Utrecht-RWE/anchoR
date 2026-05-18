@@ -11,6 +11,8 @@ as_data_table <- function(x, arg) {
     stop(sprintf("`%s` must be a data frame.", arg), call. = FALSE)
   }
 
+  # Most package code mutates tables by reference, so always copy here to avoid
+  # surprising callers by changing the object they passed in.
   data.table::as.data.table(data.table::copy(x))
 }
 
@@ -44,6 +46,8 @@ concepts_input_type <- function(concepts) {
     return("table")
   }
 
+  # Classifying the source once keeps the rest of the pipeline from repeating
+  # path heuristics in every place concepts are loaded.
   if (!is.character(concepts) || length(concepts) == 0L) {
     stop(
       paste(
@@ -69,6 +73,8 @@ normalize_parquet_sources <- function(concepts) {
     stop("`concepts` is not a parquet source.", call. = FALSE)
   }
 
+  # Expand directories early so the SQL layer always receives an explicit list
+  # of parquet sources, regardless of how the caller grouped the files.
   parquet_sources <- unlist(
     lapply(
       concepts,
@@ -108,6 +114,8 @@ normalize_parquet_sources <- function(concepts) {
 }
 
 rename_first_matching_column <- function(x, target, aliases) {
+  # Metadata arrives with study-specific names, so rename once instead of
+  # making every downstream function know all historical aliases.
   if (target %in% names(x)) {
     return(invisible(x))
   }
@@ -122,6 +130,8 @@ rename_first_matching_column <- function(x, target, aliases) {
 }
 
 add_column_if_missing <- function(x, name, value) {
+  # Defaults are only filled when absent so study metadata can override them
+  # without being silently overwritten by package assumptions.
   if (!name %in% names(x)) {
     data.table::set(x, j = name, value = value)
   }
@@ -130,6 +140,8 @@ add_column_if_missing <- function(x, name, value) {
 }
 
 normalize_anchor_reference <- function(x, anchor_col) {
+  # Treat "T0" as a symbolic placeholder so callers can rename the actual
+  # anchor column without rewriting every metadata file.
   anchor_ref <- trimws(as.character(x))
   anchor_ref[is.na(anchor_ref) | anchor_ref == ""] <- anchor_col
   anchor_ref[toupper(anchor_ref) == "T0"] <- anchor_col
@@ -137,6 +149,8 @@ normalize_anchor_reference <- function(x, anchor_col) {
 }
 
 normalize_metadata <- function(metadata, anchor_col = "T0") {
+  # Canonicalize metadata once so later code can reason about selectors,
+  # offsets, and anchor columns without special cases.
   metadata_dt <- as_data_table(metadata, "metadata")
 
   rename_first_matching_column(
@@ -186,6 +200,8 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
     value = as.character(metadata_dt$concept_id)
   )
 
+  # These defaults keep the minimal metadata shape small while still giving the
+  # windowing and selector code every column it expects.
   add_column_if_missing(
     metadata_dt,
     name = "anchor_start_col",
@@ -228,6 +244,8 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
     value = as.numeric(metadata_dt$range_max)
   )
 
+  # Return a fully standardized table so validation and execution never need to
+  # branch on legacy names or loose column types.
   metadata_dt[]
 }
 
@@ -253,6 +271,8 @@ concepts_to_data_table <- function(concepts) {
       )
     )
 
+    # DuckDB-backed concepts are materialized only for helpers like `derive_t0`
+    # that rely on data.table overlap joins instead of SQL templates.
     concepts_dt <- data.table::as.data.table(
       DBI::dbGetQuery(
         con,
@@ -270,6 +290,8 @@ concepts_to_data_table <- function(concepts) {
     con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
     on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
+    # Reading parquet through DuckDB keeps one code path for all non-table
+    # sources and avoids re-implementing parquet handling in base R.
     concepts_dt <- data.table::as.data.table(
       DBI::dbGetQuery(
         con,
@@ -292,9 +314,13 @@ concepts_to_data_table <- function(concepts) {
   )
 
   if (!"value" %in% names(concepts_dt)) {
+    # Some concept sources are purely event-based; adding `value` keeps the
+    # selector interface uniform across boolean and valued concepts.
     concepts_dt[, value := NA_character_]
   }
 
+  # Date coercion is centralized here so later code can compare dates directly
+  # without worrying about how DBI represented them.
   concepts_dt[, date := as.Date(date)]
   concepts_dt[]
 }

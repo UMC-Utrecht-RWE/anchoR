@@ -28,6 +28,8 @@ derive_t0 <- function(
   output_col = "T0"
 ) {
   population_dt <- as_data_table(population, "population")
+  # `derive_t0()` relies on data.table interval joins, so non-table sources are
+  # materialized here instead of re-implementing the logic in SQL.
   concepts_dt <- concepts_to_data_table(concepts)
 
   assert_has_columns(population_dt, required = "person_id", arg = "population")
@@ -53,6 +55,8 @@ derive_t0 <- function(
   }
 
   concept_ids <- as.character(concept_id)
+  # These helper columns turn each population row into an explicit query window,
+  # which keeps the overlap logic uniform whether bounds were supplied or not.
   population_dt[, .anchor_row_id := .I]
   population_dt[
     ,
@@ -71,6 +75,8 @@ derive_t0 <- function(
     }
   ]
 
+  # Filtering the concept table once up front keeps the later overlap join from
+  # scanning unrelated events for every population row.
   eligible_concepts <- concepts_dt[concept_id %in% concept_ids]
   if (nrow(eligible_concepts) == 0L) {
     population_dt[, (output_col) := as.Date(NA)]
@@ -79,6 +85,9 @@ derive_t0 <- function(
     ]
     return(population_dt[])
   }
+
+  # `foverlaps()` expects intervals on both sides, so point events are modeled
+  # as one-day intervals where start and end are the same date.
   eligible_concepts <- eligible_concepts[
     ,
     .(person_id, concept_date = as.Date(date))
@@ -101,6 +110,8 @@ derive_t0 <- function(
     nomatch = 0L
   )
 
+  # The selector only decides how to collapse matched dates; the expensive part
+  # is the overlap join above, so both variants can share the same matches.
   if (selector == "EARLIEST") {
     derived_dt <- matches[
       , .(derived_t0 = min(concept_date)),
@@ -113,6 +124,8 @@ derive_t0 <- function(
     ]
   }
 
+  # Fill from a blank column so rows with no match remain explicit NA dates
+  # instead of disappearing from the returned population.
   population_dt[, (output_col) := as.Date(NA)]
   population_dt[
     derived_dt,

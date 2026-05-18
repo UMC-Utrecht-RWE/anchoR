@@ -1,4 +1,6 @@
 population_anchor_columns <- function(population_dt, metadata_dt) {
+  # Anchor references are stored in metadata, so fail here before window
+  # calculation if the population does not actually contain those columns.
   anchor_cols <- unique(
     c(metadata_dt$anchor_start_col, metadata_dt$anchor_end_col)
   )
@@ -18,6 +20,8 @@ population_anchor_columns <- function(population_dt, metadata_dt) {
 }
 
 metadata_supported_selectors <- function(metadata_dt, package = "anchoR") {
+  # Selector validation happens before any SQL runs so unsupported study
+  # variables fail with a metadata error instead of a late database error.
   supported_selectors <- available_selectors(package = package)
   unsupported_selectors <- setdiff(
     unique(metadata_dt$selector),
@@ -55,6 +59,8 @@ normalize_concepts_input <- function(concepts) {
   concepts_type <- concepts_input_type(concepts)
 
   if (concepts_type == "table") {
+    # In-memory tables are normalized immediately because downstream code may
+    # mutate and type-cast them by reference.
     return(concepts_to_data_table(concepts))
   }
 
@@ -66,6 +72,8 @@ normalize_concepts_input <- function(concepts) {
   }
 
   if (concepts_type == "parquet") {
+    # For parquet inputs we only validate the source paths here; the heavy read
+    # is deferred so `anchor()` can query parquet directly inside DuckDB.
     normalize_parquet_sources(concepts)
   }
 
@@ -98,6 +106,8 @@ validate_anchor_inputs <- function(
   anchor_col = "T0",
   package = "anchoR"
 ) {
+  # Normalization is centralized here so exported functions can stay short and
+  # still rely on a consistent metadata schema.
   population_dt <- as_data_table(population, "population")
   metadata_dt <- normalize_metadata(
     metadata,
@@ -131,6 +141,8 @@ validate_anchor_inputs <- function(
 
   concepts_obj <- NULL
   if (!is.null(concepts)) {
+    # Concepts can be large, so normalize just enough to guarantee the later
+    # execution path knows if it is dealing with a table, DuckDB, or parquet.
     concepts_obj <- normalize_concepts_input(concepts)
   }
 

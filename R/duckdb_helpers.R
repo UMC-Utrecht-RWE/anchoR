@@ -1,4 +1,6 @@
 parquet_paths_sql <- function(con, concepts) {
+  # Quote file paths once here so parquet-backed SQL can stay readable and does
+  # not have to worry about path escaping in every caller.
   parquet_paths <- normalize_parquet_sources(concepts)
   quoted_paths <- vapply(
     parquet_paths,
@@ -13,6 +15,8 @@ load_concepts_table <- function(con, concepts) {
   concepts_type <- concepts_input_type(concepts)
 
   if (concepts_type == "duckdb") {
+    # A DuckDB source can be queried in place, which avoids copying a large
+    # concept table into the temporary analysis database.
     DBI::dbExecute(
       con,
       sprintf(
@@ -34,6 +38,8 @@ load_concepts_table <- function(con, concepts) {
       )
     )
   } else if (concepts_type == "parquet") {
+    # Parquet is also kept as a view so the package can query raw files
+    # directly instead of first materializing them into R memory.
     DBI::dbExecute(con, "DROP VIEW IF EXISTS concepts;")
     DBI::dbExecute(
       con,
@@ -50,6 +56,8 @@ load_concepts_table <- function(con, concepts) {
       )
     )
   } else {
+    # Only true in-memory tables are copied into DuckDB, because they already
+    # live in R and cannot be queried lazily from the source.
     DBI::dbWriteTable(
       con,
       name = "concepts",
@@ -60,6 +68,8 @@ load_concepts_table <- function(con, concepts) {
 }
 
 write_population_windows <- function(con, population_windows) {
+  # The selector SQL only needs these columns, so writing a narrow table keeps
+  # the temporary database smaller and the SQL templates easier to reason about.
   DBI::dbWriteTable(
     con,
     name = "population_windows",

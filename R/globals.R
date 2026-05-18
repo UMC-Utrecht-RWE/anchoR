@@ -1,6 +1,8 @@
 .datatable.aware <- TRUE
 
 if (getRversion() >= "2.15.1") {
+  # Register NSE symbols once so package checks understand the column names
+  # that data.table evaluates lazily inside `:=`, `get()`, and joins.
   utils::globalVariables(
     c(
       ".",
