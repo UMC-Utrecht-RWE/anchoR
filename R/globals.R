@@ -1,4 +1,4 @@
-.datatable.aware <- TRUE
+.datatable.aware <- TRUE # nolint: object_name_linter.
 
 if (getRversion() >= "2.15.1") {
   # Register NSE symbols once so package checks understand the column names
