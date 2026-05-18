@@ -6,6 +6,8 @@ if (getRversion() >= "2.15.1") {
   utils::globalVariables(
     c(
       ".",
+      ".I",
+      ":=",
       ".anchor_join_key",
       ".anchor_row_id",
       ".window_end",

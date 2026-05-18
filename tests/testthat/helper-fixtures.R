@@ -55,7 +55,10 @@ example_concepts_parquet <- function() {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
   parquet_path <- tempfile(fileext = ".parquet")
-  DBI::dbWriteTable(con, "concepts_source", example_concepts(), overwrite = TRUE)
+  DBI::dbWriteTable(
+    con, "concepts_source", example_concepts(),
+    overwrite = TRUE
+  )
   DBI::dbExecute(
     con,
     sprintf(
