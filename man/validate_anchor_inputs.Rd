@@ -8,7 +8,7 @@ validate_anchor_inputs(
   population,
   metadata,
   concepts = NULL,
-  default_anchor_col = "anchor_date"
+  default_anchor_col = "T0"
 )
 }
 \arguments{

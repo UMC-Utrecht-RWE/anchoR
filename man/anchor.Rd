@@ -21,8 +21,7 @@ anchor(
 
 \item{concepts}{A concept table as a data frame or a DuckDB file path.}
 
-\item{anchor_col}{Column to use when metadata does not specify
-\code{anchor_start_col} or \code{anchor_end_col}.}
+\item{anchor_col}{Column representing T0}
 
 \item{keep_all}{If \code{TRUE}, keep the full population-by-metadata cross join
 and fill unmatched rows with missing values. If \code{FALSE}, return only rows

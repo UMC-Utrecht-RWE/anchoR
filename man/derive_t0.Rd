@@ -11,7 +11,7 @@ derive_t0(
   selector = c("EARLIEST", "LATEST"),
   window_start_col = NULL,
   window_end_col = NULL,
-  output_col = "anchor_date"
+  output_col = "T0"
 )
 }
 \arguments{

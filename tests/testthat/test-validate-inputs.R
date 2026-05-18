@@ -24,7 +24,7 @@ test_that("validate_anchor_inputs fails on missing anchor columns", {
     start_look_back = -1L,
     end_look_back = 0L,
     anchor_date_start = "missing_col",
-    anchor_date_end = "anchor_date"
+    anchor_date_end = "T0"
   )
 
   expect_error(

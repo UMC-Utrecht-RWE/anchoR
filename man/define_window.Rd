@@ -4,7 +4,7 @@
 \alias{define_window}
 \title{Define Anchoring Windows}
 \usage{
-define_window(population, metadata, anchor_col = "anchor_date")
+define_window(population, metadata, anchor_col = "T0")
 }
 \arguments{
 \item{population}{A data frame containing the study population.}

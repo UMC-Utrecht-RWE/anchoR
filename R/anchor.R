@@ -5,8 +5,7 @@
 #' @param population A data frame containing the study population.
 #' @param metadata A data frame describing the variables to anchor.
 #' @param concepts A concept table as a data frame or a DuckDB file path.
-#' @param anchor_col Column to use when metadata does not specify
-#'   `anchor_start_col` or `anchor_end_col`.
+#' @param anchor_col Column representing T0
 #' @param keep_all If `TRUE`, keep the full population-by-metadata cross join
 #'   and fill unmatched rows with missing values. If `FALSE`, return only rows
 #'   with at least one matching concept record.

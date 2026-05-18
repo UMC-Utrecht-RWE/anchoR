@@ -16,8 +16,8 @@ example_metadata <- function() {
     selector = c("LATEST", "COUNT", "RANGE_COUNT"),
     start_look_back = c(-30L, -90L, -30L),
     end_look_back = c(0L, 0L, 30L),
-    anchor_date_start = c("anchor_date", "anchor_date", "anchor_date"),
-    anchor_date_end = c("anchor_date", "anchor_date", "anchor_date"),
+    anchor_date_start = c("T0", "T0", "T0"),
+    anchor_date_end = c("T0", "T0", "T0"),
     range_min = c(NA_real_, NA_real_, 1),
     range_max = c(NA_real_, NA_real_, 5)
   )

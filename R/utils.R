@@ -35,7 +35,7 @@ normalize_selector_name <- function(x) {
   toupper(trimws(as.character(x)))
 }
 
-normalize_metadata <- function(metadata, default_anchor_col = "anchor_date") {
+normalize_metadata <- function(metadata, default_anchor_col = "T0") {
   metadata_dt <- as_data_table(metadata, "metadata")
 
   if (!"selector" %in% names(metadata_dt)) {

@@ -24,7 +24,7 @@ derive_t0 <- function(
   selector = c("EARLIEST", "LATEST"),
   window_start_col = NULL,
   window_end_col = NULL,
-  output_col = "anchor_date"
+  output_col = "T0"
 ) {
   population_dt <- as_data_table(population, "population")
   concepts_dt <- concepts_to_data_table(concepts)

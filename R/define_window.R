@@ -39,7 +39,7 @@ window_function_registry <- function() {
 #' @export
 define_window <- function(population,
                           metadata,
-                          anchor_col = "anchor_date") {
+                          anchor_col = "T0") {
   validated <- validate_anchor_inputs(
     population = population,
     metadata = metadata,

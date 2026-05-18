@@ -18,7 +18,7 @@ validate_anchor_inputs <- function(
   population,
   metadata,
   concepts = NULL,
-  default_anchor_col = "anchor_date"
+  default_anchor_col = "T0"
 ) {
   population_dt <- as_data_table(population, "population")
   metadata_dt <- normalize_metadata(
