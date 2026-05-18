@@ -72,6 +72,8 @@ define_window <- function(
   data.table::setorder(window_dt, .window_row_id)
   window_dt[, .window_row_id := NULL]
 
+  # We add a `window_valid` column to identify rows with valid windows, which
+  # are the only ones that should be kept for downstream processing.
   window_dt[
     ,
     window_valid := !is.na(window_start) &
