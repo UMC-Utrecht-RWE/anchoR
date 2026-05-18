@@ -8,7 +8,8 @@ validate_anchor_inputs(
   population,
   metadata,
   concepts = NULL,
-  anchor_col = "T0"
+  anchor_col = "T0",
+  package = "anchoR"
 )
 }
 \arguments{
@@ -22,6 +23,9 @@ anchor column used for windowing.}
 
 \item{anchor_col}{Column to use when metadata does not specify
 the anchor column.}
+
+\item{package}{Package name used to resolve available selector SQL
+templates.}
 }
 \value{
 Invisibly returns a list with normalized \code{population}, \code{metadata},

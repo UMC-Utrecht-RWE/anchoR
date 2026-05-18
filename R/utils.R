@@ -65,20 +65,6 @@ normalize_anchor_reference <- function(x, anchor_col) {
 }
 
 normalize_metadata <- function(metadata, anchor_col = "T0") {
-  # It may rename existing columns into the package’s canonical names:
-  ## date_extraction_func to selector
-  ## start_look_back to window_start_offset
-  ## end_look_back to window_end_offset
-  # It normalizes values:
-  ## uppercases selector
-  ## coerces offsets to integer
-  # It adds internal columns so downstream code can rely on a fixed schema:
-  ## anchor_start_col
-  ## anchor_end_col
-  ## window_definition
-  ## range_min
-  ## range_max
-
   metadata_dt <- as_data_table(metadata, "metadata")
 
   rename_first_matching_column(
@@ -140,11 +126,6 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   )
   add_column_if_missing(
     metadata_dt,
-    name = "window_definition",
-    value = rep("RELATIVE", nrow(metadata_dt))
-  )
-  add_column_if_missing(
-    metadata_dt,
     name = "range_min",
     value = rep(NA_real_, nrow(metadata_dt))
   )
@@ -163,11 +144,6 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
     metadata_dt,
     j = "anchor_end_col",
     value = normalize_anchor_reference(metadata_dt$anchor_end_col, anchor_col)
-  )
-  data.table::set(
-    metadata_dt,
-    j = "window_definition",
-    value = toupper(trimws(as.character(metadata_dt$window_definition)))
   )
   data.table::set(
     metadata_dt,
@@ -207,7 +183,11 @@ concepts_to_data_table <- function(concepts) {
       DBI::dbGetQuery(
         con,
         paste(
-          "SELECT person_id, concept_id, CAST(date AS DATE) AS date, value",
+          "SELECT
+          person_id,
+          concept_id,
+          CAST(date AS DATE) AS date,
+          value",
           "FROM concepts_db.concept_table"
         )
       )

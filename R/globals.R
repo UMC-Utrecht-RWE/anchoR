@@ -22,7 +22,6 @@ if (getRversion() >= "2.15.1") {
       "selector",
       "value",
       "variable_id",
-      "window_definition",
       "window_end",
       "window_end_offset",
       "window_start",

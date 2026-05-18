@@ -12,7 +12,6 @@ test_that("validate_anchor_inputs standardizes metadata names", {
       "window_end_offset",
       "anchor_start_col",
       "anchor_end_col",
-      "window_definition",
       "range_min",
       "range_max"
     ) %in% names(validated$metadata)
@@ -20,7 +19,6 @@ test_that("validate_anchor_inputs standardizes metadata names", {
 
   expect_equal(validated$metadata$anchor_start_col, rep("T0", 3L))
   expect_equal(validated$metadata$anchor_end_col, rep("T0", 3L))
-  expect_equal(validated$metadata$window_definition, rep("RELATIVE", 3L))
   expect_equal(validated$metadata$range_min[3], 1)
   expect_equal(validated$metadata$range_max[3], 5)
 })
@@ -39,5 +37,15 @@ test_that("validate_anchor_inputs fails on missing anchor columns", {
   expect_error(
     validate_anchor_inputs(example_population(), metadata, example_concepts()),
     "missing anchor columns"
+  )
+})
+
+test_that("validate_anchor_inputs fails on unsupported selectors", {
+  metadata <- example_metadata()
+  metadata[, selector := "LATEST_PRIOR_ANCHOREDPREG"]
+
+  expect_error(
+    validate_anchor_inputs(example_population(), metadata, example_concepts()),
+    "Unsupported selector"
   )
 })

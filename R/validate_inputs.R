@@ -38,6 +38,10 @@ metadata_supported_selectors <- function(metadata_dt, package = "anchoR") {
           "Pregnancy-specific selectors from the legacy pipeline require",
           "study-specific preprocessing and are not implemented in this",
           "simplified package."
+        ),
+        paste(
+          "Use `filter_supported_metadata()` if you want to drop unsupported",
+          "rows before calling `anchor()`."
         )
       ),
       call. = FALSE
@@ -94,7 +98,6 @@ validate_anchor_inputs <- function(
       "window_end_offset",
       "anchor_start_col",
       "anchor_end_col",
-      "window_definition",
       "range_min",
       "range_max"
     ),

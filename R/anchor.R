@@ -27,7 +27,8 @@ anchor <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
-    anchor_col = anchor_col
+    anchor_col = anchor_col,
+    package = package
   )
 
   window_dt <- define_window(

@@ -1,4 +1,4 @@
-relative_window <- function(window_dt) {
+compute_relative_windows <- function(window_dt) {
   window_dt[, window_start := as.Date(NA)]
   window_dt[, window_end := as.Date(NA)]
 
@@ -17,12 +17,6 @@ relative_window <- function(window_dt) {
   }
 
   window_dt[]
-}
-
-window_function_registry <- function() {
-  list(
-    RELATIVE = relative_window
-  )
 }
 
 #' Define Anchoring Windows
@@ -51,13 +45,17 @@ define_window <- function(
 
   population_dt <- validated$population
   metadata_dt <- validated$metadata
-  # population_dt <- validated$population
-  # metadata_dt <- validated$metadata
 
-
+  # We add a temporary join key to perform the cross join in data.table.
   population_dt[, .anchor_join_key := 1L]
   metadata_dt[, .anchor_join_key := 1L]
 
+  # here we want to build one row for every person-variable combination,
+  # because later the package computes:
+  ## the window start/end for that combination
+  ## whether a concept matched in that window
+  ## the final value for that variable for that person
+  # Basically we match each person with each variable_id.
   window_dt <- merge(
     population_dt,
     metadata_dt,
@@ -67,37 +65,10 @@ define_window <- function(
     ,
     .anchor_join_key := NULL
   ]
-
+  # removes that temporary column
   window_dt[, .window_row_id := .I]
 
-  registry <- window_function_registry()
-  unknown_window_defs <- setdiff(
-    unique(window_dt$window_definition),
-    names(registry)
-  )
-
-  if (length(unknown_window_defs) > 0L) {
-    stop(
-      sprintf(
-        "Unsupported window definition(s): %s.",
-        paste(unknown_window_defs, collapse = ", ")
-      ),
-      call. = FALSE
-    )
-  }
-
-  window_dt <- data.table::rbindlist(
-    lapply(
-      unique(window_dt$window_definition),
-      function(window_name) {
-        registry[[window_name]](
-          window_dt[window_definition == window_name]
-        )
-      }
-    ),
-    use.names = TRUE,
-    fill = TRUE
-  )
+  window_dt <- compute_relative_windows(window_dt)
   data.table::setorder(window_dt, .window_row_id)
   window_dt[, .window_row_id := NULL]
 
