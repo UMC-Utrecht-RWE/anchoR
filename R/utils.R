@@ -179,70 +179,34 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
     aliases = "anchor_date_end"
   )
 
-  data.table::set(
-    metadata_dt,
-    j = "selector",
-    value = normalize_selector_name(metadata_dt$selector)
-  )
-  data.table::set(
-    metadata_dt,
-    j = "window_start_offset",
-    value = as.integer(metadata_dt$window_start_offset)
-  )
-  data.table::set(
-    metadata_dt,
-    j = "window_end_offset",
-    value = as.integer(metadata_dt$window_end_offset)
-  )
-  data.table::set(
-    metadata_dt,
-    j = "concept_id",
-    value = as.character(metadata_dt$concept_id)
-  )
+  metadata_dt[, `:=`(
+    selector = normalize_selector_name(selector),
+    window_start_offset = as.integer(window_start_offset),
+    window_end_offset = as.integer(window_end_offset),
+    concept_id = as.character(concept_id)
+  )]
 
   # These defaults keep the minimal metadata shape small while still giving the
   # windowing and selector code every column it expects.
-  add_column_if_missing(
-    metadata_dt,
-    name = "anchor_start_col",
-    value = rep(anchor_col, nrow(metadata_dt))
-  )
-  add_column_if_missing(
-    metadata_dt,
-    name = "anchor_end_col",
-    value = rep(anchor_col, nrow(metadata_dt))
-  )
-  add_column_if_missing(
-    metadata_dt,
-    name = "range_min",
-    value = rep(NA_real_, nrow(metadata_dt))
-  )
-  add_column_if_missing(
-    metadata_dt,
-    name = "range_max",
-    value = rep(NA_real_, nrow(metadata_dt))
-  )
+  if (!"anchor_start_col" %in% names(metadata_dt)) {
+    metadata_dt[
+      , anchor_start_col := anchor_col
+    ]
+  }
+  if (!"anchor_end_col" %in% names(metadata_dt)) {
+    metadata_dt[
+      , anchor_end_col := anchor_col
+    ]
+  }
+  if (!"range_min" %in% names(metadata_dt)) metadata_dt[, range_min := NA_real_]
+  if (!"range_max" %in% names(metadata_dt)) metadata_dt[, range_max := NA_real_]
 
-  data.table::set(
-    metadata_dt,
-    j = "anchor_start_col",
-    value = normalize_anchor_reference(metadata_dt$anchor_start_col, anchor_col)
-  )
-  data.table::set(
-    metadata_dt,
-    j = "anchor_end_col",
-    value = normalize_anchor_reference(metadata_dt$anchor_end_col, anchor_col)
-  )
-  data.table::set(
-    metadata_dt,
-    j = "range_min",
-    value = as.numeric(metadata_dt$range_min)
-  )
-  data.table::set(
-    metadata_dt,
-    j = "range_max",
-    value = as.numeric(metadata_dt$range_max)
-  )
+  metadata_dt[, `:=`(
+    anchor_start_col = normalize_anchor_reference(anchor_start_col, anchor_col),
+    anchor_end_col = normalize_anchor_reference(anchor_end_col, anchor_col),
+    range_min = as.numeric(range_min),
+    range_max = as.numeric(range_max)
+  )]
 
   # Return a fully standardized table so validation and execution never need to
   # branch on legacy names or loose column types.
