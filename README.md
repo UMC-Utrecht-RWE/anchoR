@@ -55,6 +55,3 @@ anchor(
 
 - The current package implements a simplified selector library. Legacy pregnancy-specific selectors are not included by default.
 - Bundled selector SQL templates live under `inst/sql/`.
-- Study-specific reference scripts are preserved under `inst/examples/legacy/`.
-
-For a fuller walkthrough, see the vignette in `vignettes/getting-started.Rmd`.
