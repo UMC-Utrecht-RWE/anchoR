@@ -32,19 +32,19 @@ window_function_registry <- function() {
 #'
 #' @param population A data frame containing the study population.
 #' @param metadata A data frame describing the variables to anchor.
-#' @param default_anchor_col Column to use when metadata does not specify
+#' @param anchor_col Column to use when metadata does not specify
 #'   `anchor_start_col` or `anchor_end_col`.
 #'
 #' @return A `data.table` with one row per population row and metadata row.
 #' @export
 define_window <- function(population,
                           metadata,
-                          default_anchor_col = "anchor_date") {
+                          anchor_col = "anchor_date") {
   validated <- validate_anchor_inputs(
     population = population,
     metadata = metadata,
     concepts = NULL,
-    default_anchor_col = default_anchor_col
+    default_anchor_col = anchor_col
   )
 
   population_dt <- validated$population

@@ -4,14 +4,14 @@
 \alias{define_window}
 \title{Define Anchoring Windows}
 \usage{
-define_window(population, metadata, default_anchor_col = "anchor_date")
+define_window(population, metadata, anchor_col = "anchor_date")
 }
 \arguments{
 \item{population}{A data frame containing the study population.}
 
 \item{metadata}{A data frame describing the variables to anchor.}
 
-\item{default_anchor_col}{Column to use when metadata does not specify
+\item{anchor_col}{Column to use when metadata does not specify
 \code{anchor_start_col} or \code{anchor_end_col}.}
 }
 \value{

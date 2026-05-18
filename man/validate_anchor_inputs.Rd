@@ -13,22 +13,21 @@ validate_anchor_inputs(
 }
 \arguments{
 \item{population}{A data frame containing at least \code{person_id} and the
-anchor columns referenced by the metadata.}
+anchor column used for windowing.}
 
-\item{metadata}{A data frame describing the variables to anchor.}
+\item{metadata}{A data frame in the standard study-variable format.}
 
 \item{concepts}{A concept table as a data frame or a DuckDB file path whose
 \code{concept_table} contains \code{person_id}, \code{concept_id}, and \code{date}.}
 
 \item{default_anchor_col}{Column to use when metadata does not specify
-\code{anchor_start_col} or \code{anchor_end_col}.}
+the anchor column.}
 }
 \value{
 Invisibly returns a list with normalized \code{population}, \code{metadata},
 and \code{concepts}.
 }
 \description{
-Standardizes metadata column names and checks that the population,
-metadata, and concepts objects have the minimum structure required by the
-package.
+Standardizes the study-variable metadata shape and checks the minimum
+structure required by the package.
 }

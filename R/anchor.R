@@ -5,7 +5,7 @@
 #' @param population A data frame containing the study population.
 #' @param metadata A data frame describing the variables to anchor.
 #' @param concepts A concept table as a data frame or a DuckDB file path.
-#' @param default_anchor_col Column to use when metadata does not specify
+#' @param anchor_col Column to use when metadata does not specify
 #'   `anchor_start_col` or `anchor_end_col`.
 #' @param keep_all If `TRUE`, keep the full population-by-metadata cross join
 #'   and fill unmatched rows with missing values. If `FALSE`, return only rows
@@ -19,7 +19,7 @@ anchor <- function(
   population,
   metadata,
   concepts,
-  default_anchor_col = "T0",
+  anchor_col = "T0",
   keep_all = FALSE,
   db_dir = NULL,
   package = "anchoR"
@@ -28,13 +28,13 @@ anchor <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
-    default_anchor_col = default_anchor_col
+    default_anchor_col = anchor_col
   )
 
   window_dt <- define_window(
     population = validated$population,
     metadata = validated$metadata,
-    default_anchor_col = default_anchor_col
+    anchor_col = anchor_col
   )
 
   valid_windows <- window_dt[window_valid == TRUE]

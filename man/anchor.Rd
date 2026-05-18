@@ -8,7 +8,7 @@ anchor(
   population,
   metadata,
   concepts,
-  default_anchor_col = "anchor_date",
+  anchor_col = "T0",
   keep_all = FALSE,
   db_dir = NULL,
   package = "anchoR"
@@ -21,7 +21,7 @@ anchor(
 
 \item{concepts}{A concept table as a data frame or a DuckDB file path.}
 
-\item{default_anchor_col}{Column to use when metadata does not specify
+\item{anchor_col}{Column to use when metadata does not specify
 \code{anchor_start_col} or \code{anchor_end_col}.}
 
 \item{keep_all}{If \code{TRUE}, keep the full population-by-metadata cross join

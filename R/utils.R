@@ -88,22 +88,15 @@ normalize_metadata <- function(metadata, default_anchor_col = "anchor_date") {
     arg = "metadata"
   )
 
-  metadata_dt[
-    ,
-    selector := normalize_selector_name(selector)
-  ][
-    ,
-    window_start_offset := as.integer(window_start_offset)
-  ][
-    ,
-    window_end_offset := as.integer(window_end_offset)
-  ]
+  data.table::set(metadata_dt, j = "selector", value = normalize_selector_name(metadata_dt$selector))
+  data.table::set(metadata_dt, j = "window_start_offset", value = as.integer(metadata_dt$window_start_offset))
+  data.table::set(metadata_dt, j = "window_end_offset", value = as.integer(metadata_dt$window_end_offset))
 
-  metadata_dt[, anchor_start_col := default_anchor_col]
-  metadata_dt[, anchor_end_col := default_anchor_col]
-  metadata_dt[, window_definition := "RELATIVE"]
-  metadata_dt[, range_min := NA_real_]
-  metadata_dt[, range_max := NA_real_]
+  data.table::set(metadata_dt, j = "anchor_start_col", value = rep(default_anchor_col, nrow(metadata_dt)))
+  data.table::set(metadata_dt, j = "anchor_end_col", value = rep(default_anchor_col, nrow(metadata_dt)))
+  data.table::set(metadata_dt, j = "window_definition", value = rep("RELATIVE", nrow(metadata_dt)))
+  data.table::set(metadata_dt, j = "range_min", value = rep(NA_real_, nrow(metadata_dt)))
+  data.table::set(metadata_dt, j = "range_max", value = rep(NA_real_, nrow(metadata_dt)))
 
   metadata_dt[]
 }
