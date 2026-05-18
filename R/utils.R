@@ -60,7 +60,7 @@ concepts_input_type <- function(concepts) {
 
   if (
     length(concepts) == 1L &&
-    identical(tolower(tools::file_ext(concepts)), "duckdb")
+      identical(tolower(tools::file_ext(concepts)), "duckdb")
   ) {
     return("duckdb")
   }
