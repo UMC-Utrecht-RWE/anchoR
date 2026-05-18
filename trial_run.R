@@ -1,5 +1,4 @@
 rm(list = ls())
-devtools::install()
 devtools::document()
 devtools::load_all(".")
 metadata <- picard::load("anchoR_input/study_variables.csv")

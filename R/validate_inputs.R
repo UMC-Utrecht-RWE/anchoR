@@ -1,3 +1,52 @@
+population_anchor_columns <- function(population_dt, metadata_dt) {
+  anchor_cols <- unique(
+    c(metadata_dt$anchor_start_col, metadata_dt$anchor_end_col)
+  )
+  missing_anchor_cols <- setdiff(anchor_cols, names(population_dt))
+
+  if (length(missing_anchor_cols) > 0L) {
+    stop(
+      sprintf(
+        "`population` is missing anchor columns referenced by `metadata`: %s.",
+        paste(missing_anchor_cols, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+
+  invisible(population_dt)
+}
+
+metadata_supported_selectors <- function(metadata_dt, package = "anchoR") {
+  supported_selectors <- available_selectors(package = package)
+  unsupported_selectors <- setdiff(
+    unique(metadata_dt$selector),
+    supported_selectors
+  )
+
+  if (length(unsupported_selectors) > 0L) {
+    stop(
+      paste(
+        "Unsupported selector(s) in `metadata`:",
+        paste(unsupported_selectors, collapse = ", "),
+        sprintf(
+          "Available selectors in package `%s`: %s.",
+          package,
+          paste(supported_selectors, collapse = ", ")
+        ),
+        paste(
+          "Pregnancy-specific selectors from the legacy pipeline require",
+          "study-specific preprocessing and are not implemented in this",
+          "simplified package."
+        )
+      ),
+      call. = FALSE
+    )
+  }
+
+  invisible(metadata_dt)
+}
+
 #' Validate Anchoring Inputs
 #'
 #' Standardizes the study-variable metadata shape and checks the minimum
@@ -10,6 +59,8 @@
 #'   `concept_table` contains `person_id`, `concept_id`, and `date`.
 #' @param anchor_col Column to use when metadata does not specify
 #'   the anchor column.
+#' @param package Package name used to resolve available selector SQL
+#'   templates.
 #'
 #' @return Invisibly returns a list with normalized `population`, `metadata`,
 #'   and `concepts`.
@@ -18,7 +69,8 @@ validate_anchor_inputs <- function(
   population,
   metadata,
   concepts = NULL,
-  anchor_col = "T0"
+  anchor_col = "T0",
+  package = "anchoR"
 ) {
   population_dt <- as_data_table(population, "population")
   metadata_dt <- normalize_metadata(
@@ -28,7 +80,8 @@ validate_anchor_inputs <- function(
 
   assert_has_columns(
     population_dt,
-    required = "person_id", arg = "population"
+    required = "person_id",
+    arg = "population"
   )
 
   assert_has_columns(
@@ -38,29 +91,18 @@ validate_anchor_inputs <- function(
       "concept_id",
       "selector",
       "window_start_offset",
-      "window_end_offset"
+      "window_end_offset",
+      "anchor_start_col",
+      "anchor_end_col",
+      "window_definition",
+      "range_min",
+      "range_max"
     ),
     arg = "metadata"
   )
 
-  anchor_cols <- unique(
-    c(metadata_dt$anchor_start_col, metadata_dt$anchor_end_col)
-  )
-
-  # unsupported_selectors <- setdiff(
-  #   unique(metadata_dt$selector),
-  #   available_selectors()
-  # )
-
-  # if (length(unsupported_selectors) > 0L) {
-  #   stop(
-  #     sprintf(
-  #       "Unsupported selector(s): %s.",
-  #       paste(unsupported_selectors, collapse = ", ")
-  #     ),
-  #     call. = FALSE
-  #   )
-  # }
+  population_anchor_columns(population_dt, metadata_dt)
+  metadata_supported_selectors(metadata_dt, package = package)
 
   concepts_obj <- NULL
   if (!is.null(concepts)) {

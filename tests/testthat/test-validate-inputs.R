@@ -11,9 +11,18 @@ test_that("validate_anchor_inputs standardizes metadata names", {
       "window_start_offset",
       "window_end_offset",
       "anchor_start_col",
-      "anchor_end_col"
+      "anchor_end_col",
+      "window_definition",
+      "range_min",
+      "range_max"
     ) %in% names(validated$metadata)
   ))
+
+  expect_equal(validated$metadata$anchor_start_col, rep("T0", 3L))
+  expect_equal(validated$metadata$anchor_end_col, rep("T0", 3L))
+  expect_equal(validated$metadata$window_definition, rep("RELATIVE", 3L))
+  expect_equal(validated$metadata$range_min[3], 1)
+  expect_equal(validated$metadata$range_max[3], 5)
 })
 
 test_that("validate_anchor_inputs fails on missing anchor columns", {

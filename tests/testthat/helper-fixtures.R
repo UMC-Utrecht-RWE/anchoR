@@ -1,7 +1,7 @@
 example_population <- function() {
   data.table::data.table(
     person_id = c("1", "2"),
-    anchor_date = as.Date(c("2024-01-01", "2024-01-15")),
+    T0 = as.Date(c("2024-01-01", "2024-01-15")),
     lmp_date = as.Date(c("2023-10-01", "2023-10-15")),
     pregnancy_end_date = as.Date(c("2024-03-01", "2024-02-28")),
     candidate_start = as.Date(c("2023-12-01", "2024-01-01")),

@@ -35,3 +35,20 @@ test_that("anchor can keep unmatched rows", {
   expect_true(is.na(unmatched$value))
   expect_true(is.na(unmatched$date))
 })
+
+test_that("anchor honors a non-default anchor column", {
+  population <- data.table::copy(example_population())
+  data.table::setnames(population, "T0", "anchor_date")
+
+  anchored <- anchor(
+    population = population,
+    metadata = example_metadata(),
+    concepts = example_concepts(),
+    anchor_col = "anchor_date",
+    keep_all = FALSE
+  )
+
+  range_2 <- anchored[person_id == "2" & variable_id == "lab_range"]
+  expect_equal(range_2$value, "1")
+  expect_equal(range_2$date, as.Date("2024-01-10"))
+})
