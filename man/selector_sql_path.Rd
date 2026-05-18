@@ -4,12 +4,10 @@
 \alias{selector_sql_path}
 \title{Get the Path to a Selector SQL Template}
 \usage{
-selector_sql_path(selector, package = "anchoR")
+selector_sql_path(selector)
 }
 \arguments{
 \item{selector}{Selector name such as \code{"LATEST"} or \code{"COUNT"}.}
-
-\item{package}{Package name used to resolve \code{inst/sql}.}
 }
 \value{
 An absolute path to the SQL template.

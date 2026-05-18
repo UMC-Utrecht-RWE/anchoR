@@ -4,14 +4,7 @@
 \alias{anchor}
 \title{Anchor Study Variables to an Index Date}
 \usage{
-anchor(
-  population,
-  metadata,
-  concepts,
-  anchor_col = "T0",
-  keep_all = FALSE,
-  package = "anchoR"
-)
+anchor(population, metadata, concepts, anchor_col = "T0", keep_all = FALSE)
 }
 \arguments{
 \item{population}{A data frame containing the study population.}
@@ -26,8 +19,6 @@ parquet file location(s).}
 \item{keep_all}{If \code{TRUE}, keep the full population-by-metadata cross join
 and fill unmatched rows with missing values. If \code{FALSE}, return only rows
 with at least one matching concept record.}
-
-\item{package}{Package name used to resolve selector SQL templates.}
 }
 \value{
 A long \code{data.table} containing anchored values and event dates.

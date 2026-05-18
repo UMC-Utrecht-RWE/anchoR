@@ -1,7 +1,7 @@
-selector_sql_root <- function(package = "anchoR") {
+selector_sql_root <- function() {
   # `system.file()` is the installed-package path; the fallback keeps the same
   # code working under `devtools::load_all()` from the source tree.
-  sql_root <- system.file("sql", package = package)
+  sql_root <- system.file("sql", package = "anchoR")
 
   if (!nzchar(sql_root)) {
     local_root <- file.path(getwd(), "inst", "sql")
@@ -36,13 +36,11 @@ metadata_selector_column <- function(metadata_dt) {
 
 #' List Available Selector SQL Templates
 #'
-#' @param package Package name used to resolve `inst/sql`.
-#'
 #' @return A character vector of selector names.
 #' @export
-available_selectors <- function(package = "anchoR") {
+available_selectors <- function() {
   sql_files <- list.files(
-    selector_sql_root(package = package),
+    selector_sql_root(),
     pattern = "\\.sql$",
     full.names = FALSE
   )
@@ -57,11 +55,10 @@ available_selectors <- function(package = "anchoR") {
 #' warning.
 #'
 #' @param metadata A data frame containing study-variable metadata.
-#' @param package Package name used to resolve `inst/sql`.
 #'
 #' @return A filtered `data.table` with the same columns as the input.
 #' @export
-filter_supported_metadata <- function(metadata, package = "anchoR") {
+filter_supported_metadata <- function(metadata) {
   metadata_dt <- as_data_table(metadata, "metadata")
   selector_col <- metadata_selector_column(metadata_dt)
 
@@ -71,7 +68,7 @@ filter_supported_metadata <- function(metadata, package = "anchoR") {
   raw_selectors <- as.character(metadata_dt[[selector_col]])
   normalized_selectors <- normalize_selector_name(raw_selectors)
   missing_selectors <- is.na(raw_selectors) | trimws(raw_selectors) == ""
-  supported_selectors <- available_selectors(package = package)
+  supported_selectors <- available_selectors()
 
   keep_rows <- !missing_selectors &
     normalized_selectors %in% supported_selectors
@@ -96,8 +93,7 @@ filter_supported_metadata <- function(metadata, package = "anchoR") {
         paste(dropped_selector_values, collapse = ", ")
       ),
       sprintf(
-        "Available selectors in package `%s`: %s.",
-        package,
+        "Available selectors in package `anchoR`: %s.",
         paste(supported_selectors, collapse = ", ")
       )
     )
@@ -122,16 +118,15 @@ filter_supported_metadata <- function(metadata, package = "anchoR") {
 #' Get the Path to a Selector SQL Template
 #'
 #' @param selector Selector name such as `"LATEST"` or `"COUNT"`.
-#' @param package Package name used to resolve `inst/sql`.
 #'
 #' @return An absolute path to the SQL template.
 #' @export
-selector_sql_path <- function(selector, package = "anchoR") {
+selector_sql_path <- function(selector) {
   selector <- normalize_selector_name(selector[[1L]])
   # Selector names and SQL filenames are kept in sync by convention so adding a
   # new selector mostly means dropping one new template into `inst/sql`.
   sql_path <- file.path(
-    selector_sql_root(package = package),
+    selector_sql_root(),
     paste0(tolower(selector), ".sql")
   )
 
@@ -145,20 +140,20 @@ selector_sql_path <- function(selector, package = "anchoR") {
   sql_path
 }
 
-read_selector_sql <- function(selector, package = "anchoR") {
+read_selector_sql <- function(selector) {
   # Keeping SQL in separate template files makes the selector logic inspectable
   # and editable without embedding large query strings inside R functions.
   paste(
-    readLines(selector_sql_path(selector, package = package), warn = FALSE),
+    readLines(selector_sql_path(selector), warn = FALSE),
     collapse = "\n"
   )
 }
 
-run_selector_query <- function(con, selector, package = "anchoR") {
-  DBI::dbGetQuery(con, read_selector_sql(selector, package = package))
+run_selector_query <- function(con, selector) {
+  DBI::dbGetQuery(con, read_selector_sql(selector))
 }
 
-run_selector_queries <- function(con, selectors, package = "anchoR") {
+run_selector_queries <- function(con, selectors) {
   result_list <- vector("list", length(selectors))
 
   # The loop is over selector types, not metadata rows, because each SQL
@@ -174,7 +169,7 @@ run_selector_queries <- function(con, selectors, package = "anchoR") {
         # Warnings are logged and muffled so one noisy backend message does not
         # interrupt a full selector batch that still produced usable results.
         withCallingHandlers(
-          run_selector_query(con, selector_name, package = package),
+          run_selector_query(con, selector_name),
           warning = function(w) {
             logger::log_warn(
               sprintf(

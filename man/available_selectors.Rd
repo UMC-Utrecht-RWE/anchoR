@@ -4,10 +4,7 @@
 \alias{available_selectors}
 \title{List Available Selector SQL Templates}
 \usage{
-available_selectors(package = "anchoR")
-}
-\arguments{
-\item{package}{Package name used to resolve \code{inst/sql}.}
+available_selectors()
 }
 \value{
 A character vector of selector names.

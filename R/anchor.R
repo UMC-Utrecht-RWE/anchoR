@@ -10,7 +10,6 @@
 #' @param keep_all If `TRUE`, keep the full population-by-metadata cross join
 #'   and fill unmatched rows with missing values. If `FALSE`, return only rows
 #'   with at least one matching concept record.
-#' @param package Package name used to resolve selector SQL templates.
 #'
 #' @return A long `data.table` containing anchored values and event dates.
 #' @export
@@ -19,8 +18,7 @@ anchor <- function(
   metadata,
   concepts,
   anchor_col = "T0",
-  keep_all = FALSE,
-  package = "anchoR"
+  keep_all = FALSE
 ) {
   # Normalize inputs at the beginning so the rest
   # of the workflow has stable input.
@@ -28,8 +26,7 @@ anchor <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
-    anchor_col = anchor_col,
-    package = package
+    anchor_col = anchor_col
   )
 
   # Define windows for all person-variable combinations.
@@ -72,8 +69,7 @@ anchor <- function(
 
   result_list <- run_selector_queries(
     con = con,
-    selectors = unique(valid_windows$selector),
-    package = package
+    selectors = unique(valid_windows$selector)
   )
 
   # Different selectors may return slightly different columns, so the combined

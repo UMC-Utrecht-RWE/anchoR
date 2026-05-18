@@ -19,10 +19,10 @@ population_anchor_columns <- function(population_dt, metadata_dt) {
   invisible(population_dt)
 }
 
-metadata_supported_selectors <- function(metadata_dt, package = "anchoR") {
+metadata_supported_selectors <- function(metadata_dt) {
   # Selector validation happens before any SQL runs so unsupported study
   # variables fail with a metadata error instead of a late database error.
-  supported_selectors <- available_selectors(package = package)
+  supported_selectors <- available_selectors()
   unsupported_selectors <- setdiff(
     unique(metadata_dt$selector),
     supported_selectors
@@ -34,8 +34,7 @@ metadata_supported_selectors <- function(metadata_dt, package = "anchoR") {
         "Unsupported selector(s) in `metadata`:",
         paste(unsupported_selectors, collapse = ", "),
         sprintf(
-          "Available selectors in package `%s`: %s.",
-          package,
+          "Available selectors in package `anchoR`: %s.",
           paste(supported_selectors, collapse = ", ")
         ),
         paste(
@@ -93,8 +92,6 @@ normalize_concepts_input <- function(concepts) {
 #'   file location(s).
 #' @param anchor_col Column to use when metadata does not specify
 #'   the anchor column.
-#' @param package Package name used to resolve available selector SQL
-#'   templates.
 #'
 #' @return Invisibly returns a list with normalized `population`, `metadata`,
 #'   and `concepts`.
@@ -103,8 +100,7 @@ validate_anchor_inputs <- function(
   population,
   metadata,
   concepts = NULL,
-  anchor_col = "T0",
-  package = "anchoR"
+  anchor_col = "T0"
 ) {
   # Normalization is centralized here so exported functions can stay short and
   # still rely on a consistent metadata schema.
@@ -137,7 +133,7 @@ validate_anchor_inputs <- function(
   )
 
   population_anchor_columns(population_dt, metadata_dt)
-  metadata_supported_selectors(metadata_dt, package = package)
+  metadata_supported_selectors(metadata_dt)
 
   concepts_obj <- NULL
   if (!is.null(concepts)) {

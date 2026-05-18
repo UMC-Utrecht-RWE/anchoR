@@ -9,7 +9,6 @@ population <- picard::load("anchoR_input/D4_MSC.fst")
 concepts <- "anchoR_input/D3_CONCEPTS_parquet"
 anchor_col <- "T0"
 keep_all <- FALSE
-package <- "anchoR"
 
 # Run the anchor function
 result <- anchor(

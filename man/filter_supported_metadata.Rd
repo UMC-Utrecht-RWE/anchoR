@@ -4,12 +4,10 @@
 \alias{filter_supported_metadata}
 \title{Filter Metadata to Selectors Supported by the Package}
 \usage{
-filter_supported_metadata(metadata, package = "anchoR")
+filter_supported_metadata(metadata)
 }
 \arguments{
 \item{metadata}{A data frame containing study-variable metadata.}
-
-\item{package}{Package name used to resolve \code{inst/sql}.}
 }
 \value{
 A filtered \code{data.table} with the same columns as the input.
