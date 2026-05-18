@@ -50,8 +50,3 @@ anchor(
   keep_all = TRUE
 )
 ```
-
-## Notes
-
-- The current package implements a simplified selector library. Legacy pregnancy-specific selectors are not included by default.
-- Bundled selector SQL templates live under `inst/sql/`.
