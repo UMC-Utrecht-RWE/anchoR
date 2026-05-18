@@ -26,8 +26,7 @@ anchor <- function(
   validated <- validate_anchor_inputs(
     population = population,
     metadata = metadata,
-    concepts = concepts,
-    default_anchor_col = anchor_col
+    concepts = concepts
   )
 
   window_dt <- define_window(

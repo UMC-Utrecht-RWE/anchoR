@@ -8,7 +8,7 @@ validate_anchor_inputs(
   population,
   metadata,
   concepts = NULL,
-  default_anchor_col = "T0"
+  anchor_col = "T0"
 )
 }
 \arguments{
@@ -20,7 +20,7 @@ anchor column used for windowing.}
 \item{concepts}{A concept table as a data frame or a DuckDB file path whose
 \code{concept_table} contains \code{person_id}, \code{concept_id}, and \code{date}.}
 
-\item{default_anchor_col}{Column to use when metadata does not specify
+\item{anchor_col}{Column to use when metadata does not specify
 the anchor column.}
 }
 \value{

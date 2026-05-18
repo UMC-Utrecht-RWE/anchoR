@@ -24,13 +24,15 @@ DBI::dbExecute(
 
 DBI::dbListTables(con)
 concepts <- DBI::dbReadTable(con, view_name)
+anchor_col <- "T0"
+
 
 # Run the anchor function
 result <- anchor(
   population = population,
   metadata = metadata,
   concepts = concepts,
-  anchor_col = "T0",
+  anchor_col = anchor_col,
   keep_all = FALSE,
   package = "anchoR"
 )

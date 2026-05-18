@@ -37,18 +37,23 @@ window_function_registry <- function() {
 #'
 #' @return A `data.table` with one row per population row and metadata row.
 #' @export
-define_window <- function(population,
-                          metadata,
-                          anchor_col = "T0") {
+define_window <- function(
+  population,
+  metadata,
+  anchor_col = "T0"
+) {
   validated <- validate_anchor_inputs(
     population = population,
     metadata = metadata,
     concepts = NULL,
-    default_anchor_col = anchor_col
+    anchor_col = anchor_col
   )
 
   population_dt <- validated$population
   metadata_dt <- validated$metadata
+  # population_dt <- validated$population
+  # metadata_dt <- validated$metadata
+
 
   population_dt[, .anchor_join_key := 1L]
   metadata_dt[, .anchor_join_key := 1L]
@@ -62,11 +67,13 @@ define_window <- function(population,
     ,
     .anchor_join_key := NULL
   ]
+
   window_dt[, .window_row_id := .I]
 
   registry <- window_function_registry()
   unknown_window_defs <- setdiff(
-    unique(window_dt$window_definition), names(registry)
+    unique(window_dt$window_definition),
+    names(registry)
   )
 
   if (length(unknown_window_defs) > 0L) {

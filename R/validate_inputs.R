@@ -8,7 +8,7 @@
 #' @param metadata A data frame in the standard study-variable format.
 #' @param concepts A concept table as a data frame or a DuckDB file path whose
 #'   `concept_table` contains `person_id`, `concept_id`, and `date`.
-#' @param default_anchor_col Column to use when metadata does not specify
+#' @param anchor_col Column to use when metadata does not specify
 #'   the anchor column.
 #'
 #' @return Invisibly returns a list with normalized `population`, `metadata`,
@@ -18,12 +18,12 @@ validate_anchor_inputs <- function(
   population,
   metadata,
   concepts = NULL,
-  default_anchor_col = "T0"
+  anchor_col = "T0"
 ) {
   population_dt <- as_data_table(population, "population")
   metadata_dt <- normalize_metadata(
     metadata,
-    default_anchor_col = default_anchor_col
+    anchor_col = anchor_col
   )
 
   assert_has_columns(
@@ -46,32 +46,21 @@ validate_anchor_inputs <- function(
   anchor_cols <- unique(
     c(metadata_dt$anchor_start_col, metadata_dt$anchor_end_col)
   )
-  missing_anchor_cols <- setdiff(anchor_cols, names(population_dt))
 
-  if (length(missing_anchor_cols) > 0L) {
-    stop(
-      sprintf(
-        "Population is missing anchor columns referenced by metadata: %s.",
-        paste(missing_anchor_cols, collapse = ", ")
-      ),
-      call. = FALSE
-    )
-  }
+  # unsupported_selectors <- setdiff(
+  #   unique(metadata_dt$selector),
+  #   available_selectors()
+  # )
 
-  unsupported_selectors <- setdiff(
-    unique(metadata_dt$selector),
-    available_selectors()
-  )
-
-  if (length(unsupported_selectors) > 0L) {
-    stop(
-      sprintf(
-        "Unsupported selector(s): %s.",
-        paste(unsupported_selectors, collapse = ", ")
-      ),
-      call. = FALSE
-    )
-  }
+  # if (length(unsupported_selectors) > 0L) {
+  #   stop(
+  #     sprintf(
+  #       "Unsupported selector(s): %s.",
+  #       paste(unsupported_selectors, collapse = ", ")
+  #     ),
+  #     call. = FALSE
+  #   )
+  # }
 
   concepts_obj <- NULL
   if (!is.null(concepts)) {
