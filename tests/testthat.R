@@ -1,4 +1,4 @@
 library(testthat)
-library(anchoR)
+library(dax)
 
-test_check("anchoR")
+test_check("dax")

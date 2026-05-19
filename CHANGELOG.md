@@ -18,4 +18,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Future Work
 
 # List of releases
-- unreleased: https://github.com/UMC-Utrecht-RWE/anchoR
+- unreleased: https://github.com/UMC-Utrecht-RWE/dax

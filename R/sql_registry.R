@@ -1,7 +1,7 @@
 selector_sql_root <- function() {
   # `system.file()` is the installed-package path; the fallback keeps the same
   # code working under `devtools::load_all()` from the source tree.
-  sql_root <- system.file("sql", package = "anchoR")
+  sql_root <- system.file("sql", package = "dax")
 
   if (!nzchar(sql_root)) {
     local_root <- file.path(getwd(), "inst", "sql")
@@ -11,7 +11,7 @@ selector_sql_root <- function() {
   }
 
   if (!nzchar(sql_root) || !dir.exists(sql_root)) {
-    stop("Could not locate `inst/sql` for the anchoR package.", call. = FALSE)
+    stop("Could not locate `inst/sql` for the dax package.", call. = FALSE)
   }
 
   sql_root
@@ -93,7 +93,7 @@ filter_supported_metadata <- function(metadata) {
         paste(dropped_selector_values, collapse = ", ")
       ),
       sprintf(
-        "Available selectors in package `anchoR`: %s.",
+        "Available selectors in package `dax`: %s.",
         paste(supported_selectors, collapse = ", ")
       )
     )

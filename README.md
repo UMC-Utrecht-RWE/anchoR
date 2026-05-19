@@ -1,6 +1,8 @@
-# anchoR
+# Date Anchoring X
 
-`anchoR` is a small R package for anchoring study variables to an index date.
+<img src="man/figures/logo.jpg" align="right" height="75" />
+
+`dax` is a small R package for anchoring study variables to an index date.
 
 It is built for a common epidemiology workflow:
 
@@ -18,7 +20,7 @@ The package works with three inputs:
 - `metadata`: one row per study variable, including the concept to look for, the selector to use, and the lookback offsets
 - `concepts`: the clinical events table, supplied as a data frame, a DuckDB file, or parquet location(s)
 
-From those inputs, `anchoR` builds one person-variable window, queries the concept data, and returns a long anchored result.
+From those inputs, `dax` builds one person-variable window, queries the concept data, and returns a long anchored result.
 
 ## Main functions
 
@@ -30,12 +32,12 @@ From those inputs, `anchoR` builds one person-variable window, queries the conce
 ## Minimal example
 
 ```r
-library(anchoR)
+library(dax)
 library(data.table)
 
-population <- fread(system.file("extdata", "example_population.csv", package = "anchoR"))
-metadata <- fread(system.file("extdata", "example_metadata.csv", package = "anchoR"))
-concepts <- fread(system.file("extdata", "example_concepts.csv", package = "anchoR"))
+population <- fread(system.file("extdata", "example_population.csv", package = "dax"))
+metadata <- fread(system.file("extdata", "example_metadata.csv", package = "dax"))
+concepts <- fread(system.file("extdata", "example_concepts.csv", package = "dax"))
 
 population[, c("T0", "lmp_date", "pregnancy_end_date", "candidate_start", "candidate_end") :=
   lapply(.SD, as.Date),
