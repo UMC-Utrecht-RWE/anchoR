@@ -29,8 +29,8 @@ setDT(study_variables_meta)
 
 # fix type mismatches
 for(col in c("start","end")){
-    study_variables_meta[, (col) := as.numeric(get(col))]
-    aesi_meta[, (col) := as.numeric(get(col))]
+  study_variables_meta[, (col) := as.numeric(get(col))]
+  aesi_meta[, (col) := as.numeric(get(col))]
 }
 
 tmp <- study_variables_meta[
@@ -53,6 +53,9 @@ if (any(start_diff | end_diff, na.rm = TRUE)) {
 delete_cols <- c("start","end","date_extraction_func","label","anchor", "window")
 tmp[,(delete_cols) := NULL]
 setnames(tmp, paste0("i.",delete_cols),delete_cols, skip_absent = TRUE)
+
+# ensure that non-lookback data-types are set to DATE
+tmp[window != "lookback", data_type := "DATE"]
 
 # replace aesi rows in study variables with processed aesi rows
 study_variables_meta <- study_variables_meta[
