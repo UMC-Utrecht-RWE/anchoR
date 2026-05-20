@@ -30,21 +30,35 @@ get_anchor_result <- function(
     base::stop(msg, call. = FALSE)
   }
 
+  anchor_hive_path_sql <- as.character(
+    DBI::dbQuoteString(
+      con,
+      normalizePath(anchor_hive_path, winslash = "/", mustWork = TRUE)
+    )
+  )
   DBI::dbExecute(
     con,
-    sprintf(
-      "CREATE VIEW anchored_variables AS SELECT * FROM read_parquet('%s');",
-      anchor_hive_path
+    paste(
+      "CREATE VIEW anchored_variables AS",
+      "SELECT * FROM read_parquet(",
+      anchor_hive_path_sql,
+      ", hive_partitioning = true, union_by_name = true);"
     )
   )
 
   variable_id_list <- unique(metadata$variable_id)
+  quoted_variable_ids <- vapply(
+    variable_id_list,
+    function(id) as.character(DBI::dbQuoteString(con, id)),
+    character(1)
+  )
   anchored_dt <- data.table::as.data.table(
     DBI::dbGetQuery(
       con,
       paste(
-        "SELECT DISTINCT * FROM anchored_variables WHERE variable_id IN ('",
-        paste(variable_id_list, collapse = "', '"), "');"
+        "SELECT DISTINCT * FROM anchored_variables WHERE variable_id IN (",
+        paste(quoted_variable_ids, collapse = ", "),
+        ");"
       )
     )
   )

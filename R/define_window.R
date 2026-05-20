@@ -30,6 +30,38 @@ preg1_window <- function(window_dt) {
   # pregnancy episodes.
 }
 
+cross_join_population_metadata <- function(population_dt, metadata_dt) {
+  # The single-variable orchestration usually reaches `define_window()` with a
+  # one-row metadata slice, so avoid the cartesian merge overhead in that case.
+  if (
+    nrow(metadata_dt) == 1L &&
+      length(intersect(names(population_dt), names(metadata_dt))) == 0L
+  ) {
+    return(
+      cbind(
+        population_dt,
+        metadata_dt[rep.int(1L, nrow(population_dt))]
+      )
+    )
+  }
+
+  population_dt[, .anchor_join_key := 1L]
+  metadata_dt[, .anchor_join_key := 1L]
+
+  # Sorting the cartesian join is wasted work because downstream code keeps its
+  # own row id to preserve the original person-major expansion order.
+  base::merge(
+    population_dt,
+    metadata_dt,
+    by = ".anchor_join_key",
+    allow.cartesian = TRUE,
+    sort = FALSE
+  )[
+    ,
+    .anchor_join_key := NULL
+  ]
+}
+
 #' Define Anchoring Windows
 #'
 #' Cross-joins a population with anchoring metadata and computes one window
@@ -57,25 +89,13 @@ define_window <- function(
   population_dt <- validated$population
   metadata_dt <- validated$metadata
 
-  # We add a temporary join key to perform the cross join in data.table.
-  population_dt[, .anchor_join_key := 1L]
-  metadata_dt[, .anchor_join_key := 1L]
-
   # here we want to build one row for every person-variable combination,
   # because later the package computes:
   ## the window start/end for that combination
   ## whether a concept matched in that window
   ## the final value for that variable for that person
   # Basically we match each person with each variable_id.
-  window_dt <- merge(
-    population_dt,
-    metadata_dt,
-    by = ".anchor_join_key",
-    allow.cartesian = TRUE
-  )[
-    ,
-    .anchor_join_key := NULL
-  ]
+  window_dt <- cross_join_population_metadata(population_dt, metadata_dt)
   # Preserve the pre-processing order so later operations can reorder safely
   # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]
