@@ -140,20 +140,39 @@ selector_sql_path <- function(selector) {
   sql_path
 }
 
-read_selector_sql <- function(selector) {
+add_parquet_export <- function(sql_query, save_parquet_hive_path) {
+  # This helper is for SQL templates that export concept subsets to Parquet files
+  # instead of returning them as query results. The `save_parquet_hive_path`
+  # parameter is a path in the SQL environment's filesystem where the template can
+  # write Parquet files, and the caller is responsible for making sure the path
+  # is accessible and writable by the database backend.
+  export_query <- sprintf(
+    "COPY (%s) TO '%s'
+    (FORMAT 'parquet',
+    PARTITION_BY (variable_id),
+      APPEND TRUE);",
+    sql_query,
+    save_parquet_hive_path
+  )
+
+  export_query
+}
+
+read_selector_sql <- function(selector, save_parquet_hive_path) {
   # Keeping SQL in separate template files makes the selector logic inspectable
   # and editable without embedding large query strings inside R functions.
-  paste(
+  query <- paste(
     readLines(selector_sql_path(selector), warn = FALSE),
     collapse = "\n"
   )
+  add_parquet_export(query, save_parquet_hive_path)
 }
 
-run_selector_query <- function(con, selector) {
-  DBI::dbGetQuery(con, read_selector_sql(selector))
+run_selector_query <- function(con, selector, save_parquet_hive_path) {
+  DBI::dbExecute(con, read_selector_sql(selector, save_parquet_hive_path))
 }
 
-run_selector_queries <- function(con, selectors) {
+run_selector_queries <- function(con, selectors, save_parquet_hive_path) {
   result_list <- vector("list", length(selectors))
 
   # The loop is over selector types, not metadata rows, because each SQL
@@ -164,12 +183,12 @@ run_selector_queries <- function(con, selectors) {
       sprintf("Processing selector: %s", selector_name)
     )
 
-    result_list[[i]] <- tryCatch(
+    tryCatch(
       {
         # Warnings are logged and muffled so one noisy backend message does not
         # interrupt a full selector batch that still produced usable results.
         withCallingHandlers(
-          run_selector_query(con, selector_name),
+          run_selector_query(con, selector_name, save_parquet_hive_path),
           warning = function(w) {
             logger::log_warn(
               sprintf(
@@ -196,6 +215,4 @@ run_selector_queries <- function(con, selectors) {
       }
     )
   }
-
-  result_list
 }
