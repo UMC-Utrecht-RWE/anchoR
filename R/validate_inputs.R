@@ -132,7 +132,21 @@ validate_anchor_inputs <- function(
     ),
     arg = "metadata"
   )
-
+  metadata_dt <- metadata_dt[,c(
+    "variable_id",
+    "concept_id",
+    "window_name",
+    "window_definition",
+    "selector",
+    "window_start_offset",
+    "window_end_offset",
+    "anchor_start_col",
+    "anchor_end_col",
+    "range_min",
+    "range_max"
+  )]
+  
+  
   population_anchor_columns(population_dt, metadata_dt)
   metadata_supported_selectors(metadata_dt)
 
