@@ -1,4 +1,4 @@
-compute_relative_windows <- function(window_dt) {
+GENERIC_definition_window <- function(window_dt) {
   window_dt[, window_start := as.Date(NA)]
   window_dt[, window_end := as.Date(NA)]
 
@@ -23,6 +23,14 @@ compute_relative_windows <- function(window_dt) {
   window_dt[]
 }
 
+PREG1_definition_window <- function(window_dt) {
+  # This is a placeholder for a more complex window definition that might be
+  # needed for pregnancy-related variables. For now, it just calls the generic
+  # definition, but in the future it could add additional logic specific to
+  # pregnancy episodes.
+  GENERIC_definition_window(window_dt)
+}
+
 #' Define Anchoring Windows
 #'
 #' Cross-joins a population with anchoring metadata and computes one window
@@ -36,10 +44,9 @@ compute_relative_windows <- function(window_dt) {
 #' @return A `data.table` with one row per population row and metadata row.
 #' @export
 define_window <- function(
-  population,
-  metadata,
-  anchor_col = "T0"
-) {
+    population,
+    metadata,
+    anchor_col = "T0") {
   validated <- validate_anchor_inputs(
     population = population,
     metadata = metadata,
@@ -72,6 +79,18 @@ define_window <- function(
   # Preserve the pre-processing order so later operations can reorder safely
   # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]
+
+
+  for (window_fun in unique(window_dt[, window_definition])) {
+    args <- list("window_dt" = window_dt)
+    tryCatch(
+      window_fun_def <- get(paste0(window_fun, "_definition_window"), mode = "function"),
+      error = function(e) {
+        stop(paste0("Error occurred while fetching window function: ", e$message))
+      }
+    )
+  }
+
 
   window_dt <- compute_relative_windows(window_dt)
   data.table::setorder(window_dt, .window_row_id)
