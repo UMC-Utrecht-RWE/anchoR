@@ -97,11 +97,10 @@ normalize_concepts_input <- function(concepts) {
 #'   and `concepts`.
 #' @export
 validate_anchor_inputs <- function(
-  population,
-  metadata,
-  concepts = NULL,
-  anchor_col = "T0"
-) {
+    population,
+    metadata,
+    concepts = NULL,
+    anchor_col = "T0") {
   # Normalization is centralized here so exported functions can stay short and
   # still rely on a consistent metadata schema.
   population_dt <- as_data_table(population, "population")
@@ -121,6 +120,8 @@ validate_anchor_inputs <- function(
     required = c(
       "variable_id",
       "concept_id",
+      "window_name",
+      "window_definition",
       "selector",
       "window_start_offset",
       "window_end_offset",
