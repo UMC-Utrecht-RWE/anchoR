@@ -13,6 +13,8 @@ example_metadata <- function() {
   data.table::data.table(
     variable_id = c("cov_latest", "cov_count", "lab_range"),
     concept_id = c("COV_A", "COV_B", "LAB_X"),
+    window_name = c("lookback", "risk", "lookforward"),
+    window_definition = c("GENERIC", "PREG1", "PREG2"),
     selector = c("LATEST", "COUNT", "RANGE_COUNT"),
     start_look_back = c(-30L, -90L, -30L),
     end_look_back = c(0L, 0L, 30L),
