@@ -14,22 +14,37 @@ anchor(
 )
 }
 \arguments{
-\item{population}{A data frame containing the study population.}
+\item{population}{A data frame containing the study population. Must include
+a \code{person_id} column and the anchor date column specified by
+\code{anchor_col}.}
 
-\item{metadata}{A data frame describing the variables to anchor.}
+\item{metadata}{A data frame describing the variables to anchor. Must contain
+the columns required by \code{validate_anchor_inputs()}.}
 
-\item{concepts}{A concept table as a data frame, a DuckDB file path, or
-parquet file location(s).}
+\item{concepts}{A concept table as a data frame, a DuckDB file path whose
+\code{concept_table} contains \code{person_id}, \code{concept_id}, and
+\code{date}, or parquet file location(s).}
 
-\item{anchor_col}{Column representing T0}
+\item{anchor_col}{Character. Name of the column in \code{population} to use
+as the index date when metadata does not specify an anchor column.
+Defaults to \code{"T0"}.}
 
-\item{keep_all}{If \code{TRUE}, keep the full population-by-metadata cross join
-and fill unmatched rows with missing values. If \code{FALSE}, return only rows
-with at least one matching concept record.}
+\item{keep_all}{Logical. If \code{TRUE}, keeps the full
+population-by-metadata cross join and fills unmatched rows with missing
+values. If \code{FALSE} (default), returns only rows with at least one
+matching concept record.}
+
+\item{save_parquet_hive_path}{Character. Path to an existing (or creatable)
+directory where selector query results are written as a partitioned parquet
+hive. Must not be \code{NULL}.}
 }
 \value{
-A long \code{data.table} containing anchored values and event dates.
+Invisibly, the function writes parquet files to
+\code{save_parquet_hive_path}. When no valid windows exist and
+\code{keep_all = TRUE}, a \code{data.table} with missing anchored values
+is returned directly.
 }
 \description{
-Applies metadata-driven windowing and selector rules to a concept table.
+Applies metadata-driven windowing and selector rules to a concept table,
+producing one anchored value and event date per person-variable combination.
 }

@@ -141,11 +141,12 @@ selector_sql_path <- function(selector) {
 }
 
 add_parquet_export <- function(sql_query, save_parquet_hive_path) {
-  # This helper is for SQL templates that export concept subsets to Parquet files
-  # instead of returning them as query results. The `save_parquet_hive_path`
-  # parameter is a path in the SQL environment's filesystem where the template can
-  # write Parquet files, and the caller is responsible for making sure the path
-  # is accessible and writable by the database backend.
+  # This helper is for SQL templates that export concept subsets to Parquet
+  # files instead of returning them as query results.
+  # The `save_parquet_hive_path` parameter is a path in the SQL environment's
+  # filesystem where the template can write Parquet files, and the caller is
+  # responsible for making sure the path is accessible and writable by
+  # the database backend.
   export_query <- sprintf(
     "COPY (%s) TO '%s'
     (FORMAT 'parquet',

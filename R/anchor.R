@@ -28,12 +28,13 @@
 #'   is returned directly.
 #' @export
 anchor <- function(
-    population,
-    metadata,
-    concepts,
-    anchor_col = "T0",
-    keep_all = FALSE,
-    save_parquet_hive_path = NULL) {
+  population,
+  metadata,
+  concepts,
+  anchor_col = "T0",
+  keep_all = FALSE,
+  save_parquet_hive_path = NULL
+) {
   # Normalize inputs at the beginning so the rest
   # of the workflow has stable input.
   validated <- validate_anchor_inputs(
@@ -54,10 +55,11 @@ anchor <- function(
   if (!dir.exists(save_parquet_hive_path) && !is.null(save_parquet_hive_path)) {
     dir.create(save_parquet_hive_path, recursive = TRUE)
   } else if (is.null(save_parquet_hive_path)) {
-    stop(
-      "The `save_parquet_hive_path` argument must be a valid directory path when parquet export is enabled.",
-      call. = FALSE
+    msg <- sprintf(
+      "`save_parquet_hive_path` must be a valid path!"
     )
+    logger::log_error(msg)
+    base::stop(msg, call. = FALSE)
   }
   # Remove impossible anchors.
   valid_windows <- window_dt[window_valid == TRUE]

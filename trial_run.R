@@ -20,7 +20,6 @@ anchor(
 )
 
 result <- get_anchor_result(
-  population = population,
   metadata = metadata[1:20, ],
   anchor_hive_path = "anchoR_input/anchored_variables_parquet"
 )

@@ -5,8 +5,6 @@
 #' \code{data.table} with one column per variable for both \code{value} and
 #' \code{date}.
 #'
-#' @param population A data frame containing the study population. Used to
-#'   determine which variables are relevant.
 #' @param metadata A data frame describing the study variables. Must contain at
 #'   least a \code{variable_id} column.
 #' @param anchor_hive_path A character string giving the path to the directory
@@ -18,34 +16,35 @@
 #'   per variable in \code{metadata}.
 #' @export
 get_anchor_result <- function(
-    population,
-    metadata,
-    anchor_hive_path = NULL) {
+  metadata,
+  anchor_hive_path = NULL
+) {
   # Different selectors may return slightly different columns, so the combined
   # result needs a forgiving row bind instead of assuming one rigid shape.
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
-  if (!dir.exists(anchor_hive_path) && !is.null(anchor_hive_path)) {
-    stop(
-      "The `anchor_hive_path` argument must be a valid directory path when parquet export is enabled.",
-      call. = FALSE
-    )
-  } else if (is.null(anchor_hive_path)) {
-    stop(
-      "The `anchor_hive_path` argument must be a valid directory path when parquet export is enabled.",
-      call. = FALSE
-    )
+  if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
+    msg <- sprintf("`anchor_hive_path` must be a valid path!")
+    logger::log_error(msg)
+    base::stop(msg, call. = FALSE)
   }
 
-  DBI::dbExecute(con, sprintf("CREATE VIEW anchored_variables AS SELECT * FROM read_parquet('%s');", anchor_hive_path))
+  DBI::dbExecute(
+    con,
+    sprintf(
+      "CREATE VIEW anchored_variables AS SELECT * FROM read_parquet('%s');",
+      anchor_hive_path
+    )
+  )
 
   variable_id_list <- unique(metadata$variable_id)
   anchored_dt <- data.table::as.data.table(
     DBI::dbGetQuery(
       con,
       paste(
-        "SELECT DISTINCT * FROM anchored_variables WHERE variable_id IN ('", paste(variable_id_list, collapse = "', '"), "');"
+        "SELECT DISTINCT * FROM anchored_variables WHERE variable_id IN ('",
+        paste(variable_id_list, collapse = "', '"), "');"
       )
     )
   )
@@ -56,10 +55,10 @@ get_anchor_result <- function(
   }
 
   data.table::setorder(anchored_dt, anchor_row_id)
-  anchored_dt <- data.table::dcast(anchored_dt,
+  data.table::dcast(
+    anchored_dt,
     anchor_row_id ~ variable_id, # change anchor_row_id by person_id + t0
     value.var = c("value", "date"),
     fill = list(value = NA_character_, date = as.Date(NA))
-  )
-  anchored_dt[]
+  )[]
 }
