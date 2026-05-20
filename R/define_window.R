@@ -1,4 +1,4 @@
-compute_relative_windows <- function(window_dt) {
+generic_window <- function(window_dt) {
   window_dt[, window_start := as.Date(NA)]
   window_dt[, window_end := as.Date(NA)]
 
@@ -21,6 +21,13 @@ compute_relative_windows <- function(window_dt) {
   # The helper returns the same table so `define_window()` can keep its flow
   # linear and avoid carrying multiple temporary objects.
   window_dt[]
+}
+
+preg1_window <- function(window_dt) {
+  # This is a placeholder for a more complex window definition that might be
+  # needed for pregnancy-related variables. For now, it just calls the generic
+  # definition, but in the future it could add additional logic specific to
+  # pregnancy episodes.
 }
 
 #' Define Anchoring Windows
@@ -73,7 +80,44 @@ define_window <- function(
   # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]
 
-  window_dt <- compute_relative_windows(window_dt)
+
+  for (window_fun in unique(window_dt[, window_definition])) {
+    fun_name <- tolower(paste0(window_fun, "_window"))
+    row_idx <- window_dt[, which(window_definition == window_fun)]
+
+    if (!exists(fun_name, mode = "function")) {
+      msg <- sprintf("Window function does not exist: %s", fun_name)
+      logger::log_error(msg)
+      base::stop(msg, call. = FALSE)
+    }
+
+    tryCatch(
+      {
+        window_subset <- base::do.call(
+          what = get(fun_name, mode = "function"),
+          args = list(window_dt = window_dt[row_idx])
+        )
+
+        window_dt[
+          row_idx,
+          `:=`(
+            window_start = window_subset$window_start,
+            window_end = window_subset$window_end
+          )
+        ]
+      },
+      error = function(e) {
+        msg <- sprintf(
+          "Error while applying window function '%s': %s",
+          fun_name,
+          conditionMessage(e)
+        )
+        logger::log_error(msg)
+        base::stop(msg, call. = FALSE)
+      }
+    )
+  }
+
   data.table::setorder(window_dt, .window_row_id)
   window_dt[, .window_row_id := NULL]
 
