@@ -12,4 +12,4 @@ INNER JOIN concepts AS c
 WHERE w.selector = 'COUNT'
 GROUP BY
     w.anchor_row_id,
-    w.variable_id;
+    w.variable_id

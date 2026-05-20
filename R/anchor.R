@@ -1,24 +1,39 @@
 #' Anchor Study Variables to an Index Date
 #'
-#' Applies metadata-driven windowing and selector rules to a concept table.
+#' Applies metadata-driven windowing and selector rules to a concept table,
+#' producing one anchored value and event date per person-variable combination.
 #'
-#' @param population A data frame containing the study population.
-#' @param metadata A data frame describing the variables to anchor.
-#' @param concepts A concept table as a data frame, a DuckDB file path, or
-#'   parquet file location(s).
-#' @param anchor_col Column representing T0
-#' @param keep_all If `TRUE`, keep the full population-by-metadata cross join
-#'   and fill unmatched rows with missing values. If `FALSE`, return only rows
-#'   with at least one matching concept record.
+#' @param population A data frame containing the study population. Must include
+#'   a \code{person_id} column and the anchor date column specified by
+#'   \code{anchor_col}.
+#' @param metadata A data frame describing the variables to anchor. Must contain
+#'   the columns required by \code{validate_anchor_inputs()}.
+#' @param concepts A concept table as a data frame, a DuckDB file path whose
+#'   \code{concept_table} contains \code{person_id}, \code{concept_id}, and
+#'   \code{date}, or parquet file location(s).
+#' @param anchor_col Character. Name of the column in \code{population} to use
+#'   as the index date when metadata does not specify an anchor column.
+#'   Defaults to \code{"T0"}.
+#' @param keep_all Logical. If \code{TRUE}, keeps the full
+#'   population-by-metadata cross join and fills unmatched rows with missing
+#'   values. If \code{FALSE} (default), returns only rows with at least one
+#'   matching concept record.
+#' @param save_parquet_hive_path Character. Path to an existing (or creatable)
+#'   directory where selector query results are written as a partitioned parquet
+#'   hive. Must not be \code{NULL}.
 #'
-#' @return A long `data.table` containing anchored values and event dates.
+#' @return Invisibly, the function writes parquet files to
+#'   \code{save_parquet_hive_path}. When no valid windows exist and
+#'   \code{keep_all = TRUE}, a \code{data.table} with missing anchored values
+#'   is returned directly.
 #' @export
 anchor <- function(
   population,
   metadata,
   concepts,
   anchor_col = "T0",
-  keep_all = FALSE
+  keep_all = FALSE,
+  save_parquet_hive_path = NULL
 ) {
   # Normalize inputs at the beginning so the rest
   # of the workflow has stable input.
@@ -37,6 +52,15 @@ anchor <- function(
     anchor_col = anchor_col
   )
 
+  if (!dir.exists(save_parquet_hive_path) && !is.null(save_parquet_hive_path)) {
+    dir.create(save_parquet_hive_path, recursive = TRUE)
+  } else if (is.null(save_parquet_hive_path)) {
+    msg <- sprintf(
+      "`save_parquet_hive_path` must be a valid path!"
+    )
+    logger::log_error(msg)
+    base::stop(msg, call. = FALSE)
+  }
   # Remove impossible anchors.
   valid_windows <- window_dt[window_valid == TRUE]
   if (nrow(valid_windows) == 0L) {
@@ -67,47 +91,9 @@ anchor <- function(
   # would only make the SQL side do unnecessary work.
   write_population_windows(con, valid_windows)
 
-  result_list <- run_selector_queries(
+  run_selector_queries(
     con = con,
-    selectors = unique(valid_windows$selector)
+    selectors = unique(valid_windows$selector),
+    save_parquet_hive_path = save_parquet_hive_path
   )
-
-  # Different selectors may return slightly different columns, so the combined
-  # result needs a forgiving row bind instead of assuming one rigid shape.
-  result_dt <- data.table::rbindlist(
-    lapply(result_list, data.table::as.data.table),
-    use.names = TRUE,
-    fill = TRUE
-  )
-
-  if (keep_all) {
-    # Keep the full design matrix when the caller wants explicit missing rows
-    # for unmatched variables.
-    anchored_dt <- merge(
-      window_dt,
-      result_dt,
-      by = c("anchor_row_id", "variable_id"),
-      all.x = TRUE,
-      sort = FALSE
-    )
-  } else {
-    # Sparse output is useful when the caller only cares about rows that
-    # produced at least one anchored concept record.
-    anchored_dt <- merge(
-      valid_windows,
-      result_dt,
-      by = c("anchor_row_id", "variable_id"),
-      all = FALSE,
-      sort = FALSE
-    )
-  }
-
-  if ("date" %in% names(anchored_dt)) {
-    # DBI can round-trip DATE columns as character depending on the source, so
-    # coerce back here to keep the public output type stable.
-    anchored_dt[, date := as.Date(date)]
-  }
-
-  data.table::setorder(anchored_dt, anchor_row_id)
-  anchored_dt[]
 }

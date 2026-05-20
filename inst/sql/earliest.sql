@@ -23,4 +23,4 @@ SELECT
     date,
     n
 FROM candidate_rows
-WHERE row_number_ = 1;
+WHERE row_number_ = 1
