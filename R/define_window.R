@@ -1,4 +1,4 @@
-GENERIC_definition_window <- function(window_dt) {
+generic_window <- function(window_dt) {
   window_dt[, window_start := as.Date(NA)]
   window_dt[, window_end := as.Date(NA)]
 
@@ -23,12 +23,11 @@ GENERIC_definition_window <- function(window_dt) {
   window_dt[]
 }
 
-PREG1_definition_window <- function(window_dt) {
+preg1_window <- function(window_dt) {
   # This is a placeholder for a more complex window definition that might be
   # needed for pregnancy-related variables. For now, it just calls the generic
   # definition, but in the future it could add additional logic specific to
   # pregnancy episodes.
-  GENERIC_definition_window(window_dt)
 }
 
 #' Define Anchoring Windows
@@ -44,9 +43,10 @@ PREG1_definition_window <- function(window_dt) {
 #' @return A `data.table` with one row per population row and metadata row.
 #' @export
 define_window <- function(
-    population,
-    metadata,
-    anchor_col = "T0") {
+  population,
+  metadata,
+  anchor_col = "T0"
+) {
   validated <- validate_anchor_inputs(
     population = population,
     metadata = metadata,
@@ -82,16 +82,18 @@ define_window <- function(
 
 
   for (window_fun in unique(window_dt[, window_definition])) {
-    fun_name <- paste0(window_fun, "_definition_window")
+    fun_name <- tolower(paste0(window_fun, "_window"))
     row_idx <- window_dt[, which(window_definition == window_fun)]
 
     if (!exists(fun_name, mode = "function")) {
-      stop(paste0("Window function does not exist: ", fun_name))
+      msg <- sprintf("Window function does not exist: %s", fun_name)
+      logger::log_error(msg)
+      base::stop(msg, call. = FALSE)
     }
 
     tryCatch(
       {
-        window_subset <- do.call(
+        window_subset <- base::do.call(
           what = get(fun_name, mode = "function"),
           args = list(window_dt = window_dt[row_idx])
         )
@@ -105,7 +107,13 @@ define_window <- function(
         ]
       },
       error = function(e) {
-        stop(paste0("Error while applying window function '", fun_name, "': ", e$message))
+        msg <- sprintf(
+          "Error while applying window function '%s': %s",
+          fun_name,
+          conditionMessage(e)
+        )
+        logger::log_error(msg)
+        base::stop(msg, call. = FALSE)
       }
     )
   }
