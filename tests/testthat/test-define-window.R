@@ -14,6 +14,8 @@ test_that("define_window supports alternate anchor columns", {
   metadata <- data.table::data.table(
     variable_id = "preg_cov",
     concept_id = "PREG_X",
+    window_name = "lookback",
+    window_definition = "GENERIC",
     selector = "LATEST",
     start_look_back = 0L,
     end_look_back = 0L,
