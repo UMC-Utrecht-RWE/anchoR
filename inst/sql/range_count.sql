@@ -15,4 +15,4 @@ WHERE w.selector = 'RANGE_COUNT'
   AND TRY_CAST(c.value AS DOUBLE) BETWEEN w.range_min AND w.range_max
 GROUP BY
     w.anchor_row_id,
-    w.variable_id;
+    w.variable_id

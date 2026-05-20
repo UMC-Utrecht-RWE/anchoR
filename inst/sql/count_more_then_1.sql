@@ -13,4 +13,4 @@ WHERE w.selector = 'COUNT_MORE_THEN_1'
 GROUP BY
     w.anchor_row_id,
     w.variable_id
-HAVING COUNT(*) >= 2;
+HAVING COUNT(*) >= 2
