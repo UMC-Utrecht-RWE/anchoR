@@ -181,7 +181,7 @@ run_selector_queries <- function(con, selectors, save_parquet_hive_path) {
   for (i in seq_along(selectors)) {
     selector_name <- selectors[[i]]
     logger::log_info(
-      sprintf("Processing selector: %s", selector_name)
+      sprintf("\tProcessing selector: %s", selector_name)
     )
 
     tryCatch(
