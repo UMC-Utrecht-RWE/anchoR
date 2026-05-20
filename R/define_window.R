@@ -82,17 +82,34 @@ define_window <- function(
 
 
   for (window_fun in unique(window_dt[, window_definition])) {
-    args <- list("window_dt" = window_dt)
+    fun_name <- paste0(window_fun, "_definition_window")
+    row_idx <- window_dt[, which(window_definition == window_fun)]
+
+    if (!exists(fun_name, mode = "function")) {
+      stop(paste0("Window function does not exist: ", fun_name))
+    }
+
     tryCatch(
-      window_fun_def <- get(paste0(window_fun, "_definition_window"), mode = "function"),
+      {
+        window_subset <- do.call(
+          what = get(fun_name, mode = "function"),
+          args = list(window_dt = window_dt[row_idx])
+        )
+
+        window_dt[
+          row_idx,
+          `:=`(
+            window_start = window_subset$window_start,
+            window_end = window_subset$window_end
+          )
+        ]
+      },
       error = function(e) {
-        stop(paste0("Error occurred while fetching window function: ", e$message))
+        stop(paste0("Error while applying window function '", fun_name, "': ", e$message))
       }
     )
   }
 
-
-  window_dt <- compute_relative_windows(window_dt)
   data.table::setorder(window_dt, .window_row_id)
   window_dt[, .window_row_id := NULL]
 
