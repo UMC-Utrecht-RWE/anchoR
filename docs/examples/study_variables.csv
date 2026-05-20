@@ -1,0 +1,173 @@
+variable_id,concept_id,raw_concept,exposure,outcome,covariate,data_type,start_look_back,end_look_back,date_extraction_func,Matching,variable_description
+SV_AGE,PP_AGE,D3,FALSE,FALSE,TRUE,INT,-54750.5,0,LATEST,FALSE,Age
+SV_SEX,PP_SEX,D3,FALSE,FALSE,TRUE,BOOL,-54750,0,LATEST,TRUE,Sex
+VACC_DATE,NA,D3,FALSE,FALSE,TRUE,FACTOR,0,0,LATEST,TRUE,Date of vaccination
+SV_PREG_TRIMESTER,PP_PREG_TRIMESTRE,D3 Pregnancy,FALSE,FALSE,TRUE,FACTOR,-3652.5,0,LATEST,FALSE,Pregnancy status trimester
+SV_REGION,PP_REGION,dap_specific_concept,FALSE,FALSE,TRUE,CHAR,0,0,LATEST,TRUE,Geographic region
+SV_SES_STATUS,PP_SES_STATUS,dap_specific_concept,FALSE,FALSE,TRUE,CHAR,0,0,LATEST,TRUE,Socioeconomic status/education level
+SV_AGE_CAT,PP_AGE_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,0,0,LATEST,FALSE,Age categories
+SV_PREG_STATUS,PP_PREG_STATUS,D3,FALSE,FALSE,TRUE,BOOL,0,0,LATEST,TRUE,Pregnancy status 
+SV_PRIOR_COVID_DG,PP_HISTCOVID,pre-processed,FALSE,FALSE,TRUE,BOOL,-1825,0,LATEST,TRUE,COVID-19 History: Previous diagnosis of COVID-19
+SV_PRIOR_COVID_POSTEST,PP_COVID19_POSTEST,pre-processed,FALSE,FALSE,TRUE,BOOL,-1825,0,LATEST,FALSE,COVID-19: Previous positive test results for COVID-19
+SV_BRAND_COVID_VACC,PP_BRAND_COVID_VACC,dap_specific_concept,FALSE,FALSE,TRUE,CHAR,0,0,LATEST,TRUE,Brand of last COVID-19 vaccine received
+SV_HIST_COVID_VACC,PP_HIST_COVID_VACC,dap_specific_concept,FALSE,FALSE,TRUE,CHAR,0,0,LATEST,TRUE,History of COVID-19 vaccination
+SV_IMMUNOCOMPROMISED,PP_IMMUNOCOMPROMISED,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,TRUE,Inmunocompromised
+CDC_RISK,PP_CDC_RISK,pre-processed,FALSE,FALSE,TRUE,FACTOR,-3652.5,0,LATEST,TRUE,Number of pre-existing conditions considered by CDC
+SV_SMOKING_STATUS,PP_SMOKING_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,-1095.75,0,LATEST,FALSE,Personal Life characteristics: Smoking status
+SV_BMI_3YEARS,BMI_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,-1095.75,0,LATEST,FALSE,"""Personal Life characteristics: Body Mass Index"""
+SV_OBESITY,L_OBESITY_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-1095.75,0,LATEST,FALSE,Personal Life characteristics: Obesity diagnosis or obesity surgery
+COD_GBSYNDROME,N_GBS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History  of Guillain-Barre syndrome (Val) 
+COD_ACUTE_ENCEPHALOMYELITIS,N_ADEM_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Acute disseminated encephalomyelitis
+COD_NARCOLEPSY,N_NARCOLEPSY_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Narcolepsy (Val)
+COD_ACUTE_ASEPTIC_ARTHRITIS,M_ARTASEPTIC_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Acute aseptic arthritis
+COD_DM1,E_DM1_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365000.25,0,LATEST,FALSE,History of Diabetes mellitus type I
+COD_ITC,B_ITP_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of (Idiopathic) thrombocytopenia (Val)
+COD_TTS,PP_TTS,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Thrombosis thrombocytopenia syndrome (Val) 
+COD_MYOSITIS,M_MYOSITIS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Myositis
+COD_ACUTE_CV_INJURY,PP_ACI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Acute cardiovascular injury
+COD_ARRHYTHMIA,C_ARRH_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Arrhythmia
+COD_HF,C_HF_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Heart failure
+COD_STRESS_CARDIOMYOPATHY,C_CMSTRESS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Stress cardiomyopathy
+COD_CAD,C_CAD_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Coronary artery disease
+COD_MYOCARDITIS,C_MYOCARD_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Myocarditis (Val)
+COD_PERICARDITIS,C_PERICARD_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Pericarditis (Val)
+COD_COAGULATUIN,PP_COAGDIS,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Coagulation disorders: thromboembolism
+COD_SINGLE_ORGAN_VASCULITIS,V_VASCULITISSINGLEORG_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Single organ cutaneous vasculitis
+COD_CVST,N_CVST_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Cerebral venous sinus thrombosis
+COD_ACUTE_LIVER_INJURY,D_LIVERACUTE_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Acute liver injury
+COD_ACUTE_KIDNEY_INJURY,G_KIACUTE_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Acute kidney injury 
+COD_ACUTE_PANCREATITIS,D_PANCRACUTE_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Acute pancreatitis
+COD_RHABDOMYOLYSIS,M_RHABDOMYOLISIS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Rhabdomyolysis
+COD_GLOMERULONEPHRITIS,G_GLOMERULONEPHRITIS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Glomerulonephritis
+COD_CONVULSION,N_CONVULSION_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Generalised convulsion
+COD_MENINGOENCEPHALITIS,N_MENINGOENC_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Meningoencephalitis
+COD_TRANSVERSE_MYELITIS,N_MYELITISTRANSV_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Transverse myelitis (Val)
+COD_BELLS_PALSY,N_BELLP_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Bells palsy 
+COD_ACUTE_RESP_DISS_SYNDROME,R_ARDS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Acute respiratory distress syndrome
+COD_ERYTHEMA_MULTIFORME,SK_ERYTHMULTI_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Erythema multiforme
+COD_CHILBLAIN_LESIONS,V_CHILBLAIN_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Chilblain-like lesions
+COD_SECONDARY_AMENORRHEA,G_SECONDARYAMENORRHEA_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Secondary amenorrhea
+COD_HYPERMENORRHOEA,G_HEAVYMENSTRUAL_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Hypermenorrhoea
+COD_ANAPHYLAXIS,IM_ANAPHYLAXIS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Anaphylaxis (Val)
+COD_MIS,O_MIS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,History of Multisystem inflammatory syndrome
+COD_SUBACUTE_THYROIDITIS,E_THYROIDSUBACUTE_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Subacute thyroiditis
+PRIOR_ANAPHYLAXIS,PP_ANAPHYLAXIS,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: anaphylaxis
+PRIOR_ALLERGIES,PP_ALLERGY,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: allergies
+PRIOR_ANY_DM,PP_ANY_DM,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: diabetes mellitus type 1 and 2
+PRIOR_DM_WITHCOMPLICATIONS,E_DMCOMPL_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: diabetes with complications - Charlson index
+PRIOR_DM_NOCOMPLICATIONS,E_DIABETESNOCOMPLICATIONS_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: diabetes no complications - Charlson index
+PRIOR_HYPERTENSION,PP_HYPERTENSION,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: hypertension - CDC risk group
+PRIOR_CVD,PP_CVD,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: cardiovascular disease
+PRIOR_CEREBROVASCULAR_DISEASE,N_CEREBROVASC_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: cerebrovascular disease - Charlson index
+PRIOR_MYOCARDIAL_INFARCT,C_AMI_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: myocardial infarct - Charlson index
+PRIOR_CHF,C_HF_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: congestive heart failure - Charlson index
+PRIOR_PVD,V_PERIPHVD_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: peripheral vascular disease - Charlson index
+PRIOR_CRD,PP_CRD,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: chronic respiratory disease - Charlson index
+PRIOR_CKD,PP_CKD,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: chronic kidney disease - Charlson index
+PRIOR_MILD_MOD_KD,G_MILDMODERATERENALDISEASE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: mild to moderate kidney disease - Charlson index
+PRIOR_ACUTE_KD,G_SEVERERENALDISEASE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: severe kidney disease - Charlson index
+PRIOR_CLD,PP_LIVERCHRONIC,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: chronic liver disease - Charlson index
+PRIOR_MOD_SEV_LD,D_MODERATESEVERLIVERDISEASE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: moderate or severe liver disease - Charlson index
+PRIOR_MILD_LD,D_MILDLIVERDISEASE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: mild liver disease -  Charlson index
+PRIOR_ANY_CANCER,PP_CANCER,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: any cancer diagnosis except non melanoma skin cancer
+COD_ANY_CANCER,ONC_ANYMALIGNANCY_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,any cancer diagnosis except non melanoma skin cancer
+PRIOR_RHEUMATICDISEASE,M_RHEUMATICDISEASE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: Rheumatic disease - Charlson index
+PRIOR_PEPTICULCER,D_PEPTICULCER_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: Peptic ulcer disease - Charlson index
+PRIOR_DEMENTIA,N_DEMENTIA_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: Dementia - Charlson index
+PRIOR_HEMIPLEGIA,N_HEMIPLEGCHARLSON_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: Hemiplegia or paraplegia - Charlson index
+PRIOR_METASTASIS,ONC_METASTATICSOLIDTUMOR_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: metastasis solid tumor - Charlson index
+PRIOR_AUTOINMUNE_DISORDERS,PP_AUTOINMUNE,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: autoinmune disorders
+PRIOR_INFLUENZA_RESPINF,PP_INFLUENZA_RESINF,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: influenza infection or other respiratory infection
+PRIOR_AIDS,I_AIDS_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: AIDS - Charlson index
+PRIOR_HIV,PP_HIV,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: HIV infection - CDC risk group
+COD_HIVNOAIDS,I_HIVNOAIDS_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,HIV infection no AIDS - Charlson index
+PRIOR_SCD,PP_SICKLECELL,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Comorbidities: sickle cell disease - CDC risk group
+PRIOR_IMMUNODEFICIENCIES,PP_IMMUNODEFSUP,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST,FALSE,Immunodefiencies and immunosuppressing conditions
+PRIOR_IMMUNO_MED_1YEAR,PP_IMMUNOSUP_MED,pre-processed,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Immunosupressant medication use
+DP_IMMUNOSUPPR_1YEAR,DP_IMMUNOSUPPR,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Drug proxy: Immunosupressant
+CHARLSON_INDEX,PP_CHARLSON_INDEX,pre-processed,FALSE,FALSE,TRUE,FACTOR,-3652.5,0,LATEST,FALSE,Comorbidities: charlson comorbidity index score
+CU_ANALGESICS,DP_ANALGESIC,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Analgesics
+CU_ANTIBIOTICS,DP_ANTIBIO,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Antibiotics
+CU_ANTIVIRAL,DP_ANTIVIR,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Antiviral medications
+CU_CORTICOSTEROIDS,DP_CORTICOST,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Corticosteroids
+CU_AINES,DP_NSAID,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Non-steroidal anti-inflammatory drugs
+CU_PSYCHOTROPICS,DP_PSYCH,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Psychotropics
+CU_STATINS,DP_STAT,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Statins
+CU_ORAL_ANTICOAGULANTS,DP_NOAC,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Novel oral anticoagulants
+CU_WARFARIN,DP_WAR,drug codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Comedication use: Warfarin
+SV_HU_PRIOR_HOSP_NUM,HU_CURRENT_HOSP_NUM,pre-processed,FALSE,FALSE,TRUE,INT,-365.25,0,range_count,FALSE,Healthcare utilization: Number of hospitalizations
+SV_HU_PRIOR_ED_NUM,HU_CURRENT_ED_NUM,pre-processed,FALSE,FALSE,TRUE,INT,-365.25,0,range_count,FALSE,Healthcare utilization: Number of emergency department visits
+SV_HU_PRIOR_PC_NUM,HU_CURRENT_PC_NUM,pre-processed,FALSE,FALSE,TRUE,INT,-365.25,0,range_count,FALSE,Healthcare utilization: Number of primary care visits
+SV_HU_PRIOR_CS_NUM,TP_CANCERSCREEN_COV,pre-processed,FALSE,FALSE,TRUE,INT,-365.25,0,range_count,FALSE,Healthcare utilization: Number of visits for cancer screening
+SV_HU_PRIOR_OTHER_NUM,HU_CURRENT_OTHER_NUM,pre-processed,FALSE,FALSE,TRUE,BOOL,-365.25,0,range_count,FALSE,Healthcare utilization: Other preventive health services
+SV_HU_PRIOR_ANY_COVID_TEST,PP_COVIDTEST,pre-processed,FALSE,FALSE,TRUE,INT,-365.25,0,range_count,FALSE,Healthcare utilization: Number of any COVID-19 test
+SV_HU_CURRENT_HOSP_NUM,HU_CURRENT_HOSP_NUM,pre-processed,FALSE,FALSE,TRUE,INT,-14,0,range_count,FALSE,Healthcare utilization: Number of hospitalizations
+SV_HU_CURRENT_ED_NUM,HU_CURRENT_ED_NUM,pre-processed,FALSE,FALSE,TRUE,INT,-14,0,range_count,FALSE,Healthcare utilization: Number of emergency department visits
+SV_HU_CURRENT_PC_NUM,HU_CURRENT_PC_NUM,pre-processed,FALSE,FALSE,TRUE,INT,-14,0,range_count,FALSE,Healthcare utilization: Number of primary care visits
+SV_HU_CURRENT_CS_NUM,TP_CANCERSCREEN_COV,concept codelist,FALSE,FALSE,TRUE,INT,-14,0,range_count,FALSE,Healthcare utilization: Number of visits for cancer screening
+SV_HU_CURRENT_OTHER_NUM,HU_CURRENT_OTHER_NUM,pre-processed,FALSE,FALSE,TRUE,BOOL,-14,0,range_count,FALSE,Healthcare utilization: Other preventive health services
+SV_HU_CURRENT_ANY_COVID_TEST,PP_COVIDTEST,pre-processed,FALSE,FALSE,TRUE,INT,-14,0,range_count,FALSE,Healthcare utilization: Number of any COVID-19 test
+SV_VP_INF,VP_INF,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Influenza
+SV_VP_PNC,VP_PNC,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Pneumococcal
+SV_VP_DTP,VP_DTP,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Diphtheria
+SV_VP_TPV,VP_TPV,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Polio
+SV_VP_MMR,VP_MMR,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Measles
+SV_VP_HIB,VP_HIB,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Haemophilus influenza type b
+SV_VP_HB,VP_HB,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Hepatitis B virus
+SV_VP_VZV,VP_VZV,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Varicella-zoster virus
+SV_VP_HZ,VP_HZ,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Herpes-zoster
+SV_VP_HPV,VP_HPV,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Human papillomavirus
+SV_VP_MNG,VP_MNG,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Meningitis
+SV_VP_ROT,VP_ROT,dap_specific_concept,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Vaccines: Rotavirus
+F_PARALYSIS,N_PARALYSIS_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Paralysis
+F_HEMIPLEGIA,N_HEMIPLEGCHARLSON_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Hemiplegia
+F_PARKINSON,N_PARKINSON_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Parkinson
+F_SKIN_ULCER,SK_ULCERFRAIL_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Skin ulcer
+F_WEAKNESS,L_WEAK_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Weakness
+F_STROKE,N_STROKE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Stroke/brain injury
+F_AMBULANCE,H_AMBULANCE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Ambulance transport
+F_DEMENTIA,N_DEMENTIA_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Dementia
+F_DIFFICULTY_WALKING,L_WALK_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Difficulty walking
+F_PSYCIATRIC_ILLNESS,MENT_PSIC_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Psychiatric illness
+F_SEPSIS,I_SEPSIS_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Sepsis
+F_MYOCARDIAL_INFARCT,C_MI_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Myocardial infarct
+F_PODIATRIC_CARE,TP_PODIATRIC_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Podiatric care
+F_BLADDER_INCONTINENCE,G_BLADINCONT_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Bladder incontinence
+F_DIAB_COMPLICATIONS,E_DMCOMPL_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Diabetes with chronic complications
+F_ARTHRITIS,M_ARTHR_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Arthritis
+F_COAGULATION_DEF,B_COAGDEF_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Coagulation deficiencies
+F_VERTIGO,N_VERTIG_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Vertigo
+F_LIPID_ANOMALY,E_LIPID_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,LATEST,FALSE,Frailty: Lipid abnormalities
+COD_LEARN_DISABILITIES,O_LEARNDISAB_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.25,0,LATEST,FALSE,Learning disabilities
+COD_CEREBRALPALSY,O_CEREBRALPALSY_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.25,0,LATEST,FALSE,Cerebral palsy
+COD_DOWN,O_DOWN_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.25,0,LATEST,FALSE,Down Syndrome
+COD_NEURONMOTORDISEASE,N_NEURONMOTORDISEASE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.25,0,LATEST,FALSE,Neuron Motor Disease
+COD_SUDDEN_DEATH,O_DEATHSUDDEN_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365000.25,0,LATEST,FALSE,Suddent death
+COD_UTI_NCO,G_UTI_AESI,concept codelist,FALSE,TRUE,FALSE,BOOL,-365,0,LATEST,FALSE,Negative Control Outcome: Urinary tract infection 
+SV_HU_CONTACT,PP_HU_CONTACT,pre-processed,FALSE,FALSE,TRUE,BOOL,-7,0,LATEST,FALSE,Sensitivity variable: Contact with healthcare during the last 7 days
+SV_BMI_PREG,BMI_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,-1095.75,0,LATEST_PRIOR_ANCHOREDPREG,FALSE,Pregnacy: Body Mass Index
+SV_SMOKING_PREG,PP_SMOKING_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,-1095.75,0,LATEST_PRIOR_ANCHOREDPREG,FALSE,Pregnancy: Smoking status
+SV_PRIOR_PRETERM,P_PRETERMBIRTH_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-36500025,0,LATEST_IN_PREG_PRIOR_ANCHOREDPREG,FALSE,History of pre-term deliveries: Any PRETERM records in previous pregnancies
+SV_PRIOR_GESTHYP,P_GESTATIONHYPERTESION_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-36500025,0,LATEST_IN_PREG_PRIOR_ANCHOREDPREG,FALSE,History of Gestational Hypertension: Any GESTHYP records during previous pregnancies
+SV_PRIOR_GESTDIAB,P_GESTDIAB_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-36500025,0,LATEST_IN_PREG_PRIOR_ANCHOREDPREG,FALSE,History of Gestational Diabetes_: Any GESTDIAB records during previous pregnancies
+SV_PRIOR_SASB,PP_SASB,pre-processed,FALSE,FALSE,TRUE,BOOL,-36500025,0,LATEST_IN_PREG_PRIOR_ANCHOREDPREG,FALSE,History of Spontaneous Abortion or Still birth: Any SA or SB records during previous pregnancies
+SV_PRIOR_CESAREAN,PP_CESAREAN,concept codelist,FALSE,FALSE,TRUE,BOOL,-36500025,0,LATEST_IN_PREG_PRIOR_ANCHOREDPREG,FALSE,Before Pregnancy: Cesarean: Any CAESAREAN records in previous pregnancies
+SV_GRAVIDITY,L_GRAVIDITY_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-36500025,0,COUNT_PRIOR_PREG_AND_ANCHOREDPREG,FALSE,Gravidity: Count pregnancy episodes including the exposed/unexposed pregnancy
+SV_INFERTILITY,PP_INFERTILITY,pre-processed,FALSE,FALSE,TRUE,BOOL,NA,NA,EARLIEST_DURING_PRIORPREG_30EXTENDED,FALSE,INFERTILITY: Any INFERTILITY records during pregnancies (from _30 days before to end) within the study period
+SV_TORCH,PP_TORCH,pre-processed,FALSE,FALSE,TRUE,BOOL,NA,NA,EARLIEST_DURING_PREG_AND_IN_ANCHOREDPREG_30EXTENDED,FALSE,TORCH: Any TORCH records during any pregnancy (from 30 days before to end) during the study period
+SV_HIV_PRIOR_PREG,PP_HIV,pre-processed,FALSE,FALSE,TRUE,BOOL,-3652.5,0,LATEST_PRIOR_ANCHOREDPREG,FALSE,Used for Censoring the TORCH variable
+SV_TERATOGEN,DP_TERATOGEN,concept codelist,FALSE,FALSE,TRUE,BOOL,NA,NA,EARLIEST_DURING_PREG_AND_IN_ANCHOREDPREG_30EXTENDED,FALSE,Teratogenic drug:Any DP_TERATOGENIC records during any pregnancy (from 30 days before to end) during the study period
+SV_MUTIPLEPREG,L_PREGNMULTIPLE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,NA,NA,EARLIEST_DURING_PREG_AND_IN_ANCHOREDPREG,FALSE,Multiple pregnancies: Any MULTIPLE records during any pregnancy during the study period
+SV_CESAREAN,PP_CESAREAN,concept codelist,FALSE,FALSE,TRUE,BOOL,NA,NA,EARLIEST_DURING_PREG_AND_IN_ANCHOREDPREG,FALSE,Any CAESAREAN records during any pregnancy during the study period
+SV_GESTDIAB,P_GESTDIAB_AESI,concept codelist,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Any Record of GESTDIAB during included pregnancies in the study period from the latest of the dates between the T0 and 20 weeks of gestation (start_pregnancy_date+ 20*7) until the end of the pregnancy?
+SV_PREECLAMP,P_PREECLAMP_AESI,concept codelist,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Any Record of PREECLAMP during included pregnancies in the study period  from the latest of the dates between the T0 and 20 weeks of gestation (start_pregnancy_date + 20*7) until the end of the pregnancy +L162
+SV_MATERNAL_DEATH,PP_MATERNAL_DEATH,pre-processed,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Record of MATERNAL DEATH during pregnancy and within 42 days after delivery in included pregnancies
+SV_SA,P_SPONTABO_AESI,concept codelist,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Any Record of SA during included pregnancies in the study period  from the T0 until 20 weeks after start of pregnancy
+SV_SB,P_STILLBIRTH_AESI,concept codelist,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Any Record of STILLBIRTH during included pregnancies in the study period  from the latest of the dates between the T0 and 21weeks of gestation (start_pregnancy_date + 21*7) until the end of the pregnancy
+SV_PRETERM_BIRTH,P_PRETERMBIRTH_AESI,pre-processed,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Any Record of PRETERMBIRTH_ during included pregnancies in the study period  from the latest of the dates between the T0 and 21weeks of gestation (start_pregnancy_date + 21*7) until 37 weeks of gestation
+SV_MCA,PP_MCA,pre-processed,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Record of MCA in infants from included pregnancies
+SV_FGR,P_FGR_AESI,concept codelist,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Any record of FGR during included pregnancies. Within all pregnancies  if the pregnnacy is exposed then search from the latest date between the start and the t0
+SV_MICROCEPHALY,PP_MICROCEPHALY,concept codelist,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Any Record of MICROCEPHALY during included pregnancies in the study period  from the latest of the dates between the T0 and 24 weeks of gestation (start_pregnancy_date + 24*7) until the end of the pregnancy  + 6 weeks
+SV_NEONATAL_DEATH,PP_NEONATAL_DEATH,pre-processed,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Neonatal death: Within 28 days after a live birth
+SV_TOPFA,PP_TOPFA,concept codelist,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,TOPFA: Within all pregnancies  if the pregnnacy is exposed then search from the latest date between the start and the t0
+SV_SGA,PP_SGA,concept codelist,FALSE,TRUE,FALSE,BOOL,NA,NA,NA,FALSE,Small for gestation age: In infants and mother from included pregnancies after T0  LB==1
