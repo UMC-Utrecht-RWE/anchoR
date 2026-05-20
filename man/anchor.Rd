@@ -4,7 +4,14 @@
 \alias{anchor}
 \title{Anchor Study Variables to an Index Date}
 \usage{
-anchor(population, metadata, concepts, anchor_col = "T0", keep_all = FALSE)
+anchor(
+  population,
+  metadata,
+  concepts,
+  anchor_col = "T0",
+  keep_all = FALSE,
+  save_parquet_hive_path = NULL
+)
 }
 \arguments{
 \item{population}{A data frame containing the study population.}
