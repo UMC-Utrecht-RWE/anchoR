@@ -24,6 +24,7 @@ anchor_by_variable(
 
 result <- get_anchor_result(
   metadata = metadata[1:20, ],
-  anchor_hive_path = anchor_hive_path
+  anchor_hive_path = anchor_hive_path,
+  result_shape = "wide"
 )
 head(result)

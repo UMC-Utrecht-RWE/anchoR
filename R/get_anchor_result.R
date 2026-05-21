@@ -10,6 +10,8 @@
 #' @param anchor_hive_path A character string giving the path to the directory
 #'   that contains the anchored parquet hive. Must be a valid existing
 #'   directory.
+#' @param result_shape A character string specifying the desired shape of the
+#'  output. It can only be "wide" or "narrow". Narrow is
 #'
 #' @return A wide \code{data.table} with one row per \code{anchor_row_id} and
 #'   one pair of columns (\code{value_<variable_id>}, \code{date_<variable_id>})
@@ -68,11 +70,24 @@ get_anchor_result <- function(
     anchored_dt[, date := as.Date(date)]
   }
 
+  if ("value" %in% names(anchored_dt)) {
+    # Forces value to be a boolean TRUE or FALSE.
+    anchored_dt[, value := as.logical(value)]
+  }
+
   data.table::setorder(anchored_dt, anchor_row_id)
-  data.table::dcast(
-    anchored_dt,
-    anchor_row_id ~ variable_id, # change anchor_row_id by person_id + t0
-    value.var = c("value", "date"),
-    fill = list(value = NA_character_, date = as.Date(NA))
-  )[]
+  if (result_shape == "narrow") {
+    anchored_dt[]
+  } else if (result_shape == "wide") {
+    data.table::dcast(
+      anchored_dt,
+      anchor_row_id ~ variable_id, # change anchor_row_id by person_id + t0
+      value.var = c("value", "date"),
+      fill = list(value = NA_character_, date = as.Date(NA))
+    )[]
+  } else {
+    msg <- sprintf("`result_shape` must be either 'wide' or 'narrow'!")
+    logger::log_error(msg)
+    base::stop(msg, call. = FALSE)
+  }
 }
