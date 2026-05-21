@@ -30,6 +30,52 @@ preg1_window <- function(window_dt) {
   # pregnancy episodes.
 }
 
+#' Cross-join population and metadata for window definition.
+#' This helper function performs a cross join between the population and
+#' metadata data tables, which is necessary for defining windows for each
+#' person-variable combination.
+#' It includes an optimization to avoid the overhead of a cartesian merge when
+#' the metadata has only one row and there are no overlapping column names
+#' between the population and metadata.
+#' @param population_dt A data.table containing the study population.
+#' @param metadata_dt A data.table containing the metadata for the variables.
+#' @return A data.table resulting from the cross join of population_dt and
+#' metadata_dt, with an additional column .window_row_id to preserve the
+#' original order of rows.
+#' @keywords internal
+#' @noRd
+cross_join_population_metadata <- function(population_dt, metadata_dt) {
+  # The single-variable orchestration usually reaches `define_window()` with a
+  # one-row metadata slice, so avoid the cartesian merge overhead in that case.
+  if (
+    nrow(metadata_dt) == 1L &&
+      length(intersect(names(population_dt), names(metadata_dt))) == 0L
+  ) {
+    return(
+      cbind(
+        population_dt,
+        metadata_dt[rep.int(1L, nrow(population_dt))]
+      )
+    )
+  }
+
+  population_dt[, .anchor_join_key := 1L]
+  metadata_dt[, .anchor_join_key := 1L]
+
+  # Sorting the cartesian join is wasted work because downstream code keeps its
+  # own row id to preserve the original person-major expansion order.
+  base::merge(
+    population_dt,
+    metadata_dt,
+    by = ".anchor_join_key",
+    allow.cartesian = TRUE,
+    sort = FALSE
+  )[
+    ,
+    .anchor_join_key := NULL
+  ]
+}
+
 #' Define Anchoring Windows
 #'
 #' Cross-joins a population with anchoring metadata and computes one window
@@ -57,25 +103,13 @@ define_window <- function(
   population_dt <- validated$population
   metadata_dt <- validated$metadata
 
-  # We add a temporary join key to perform the cross join in data.table.
-  population_dt[, .anchor_join_key := 1L]
-  metadata_dt[, .anchor_join_key := 1L]
-
   # here we want to build one row for every person-variable combination,
   # because later the package computes:
   ## the window start/end for that combination
   ## whether a concept matched in that window
   ## the final value for that variable for that person
   # Basically we match each person with each variable_id.
-  window_dt <- merge(
-    population_dt,
-    metadata_dt,
-    by = ".anchor_join_key",
-    allow.cartesian = TRUE
-  )[
-    ,
-    .anchor_join_key := NULL
-  ]
+  window_dt <- cross_join_population_metadata(population_dt, metadata_dt)
   # Preserve the pre-processing order so later operations can reorder safely
   # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]

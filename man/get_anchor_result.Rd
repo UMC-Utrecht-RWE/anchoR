@@ -4,7 +4,7 @@
 \alias{get_anchor_result}
 \title{Retrieve and Reshape Anchored Variable Results}
 \usage{
-get_anchor_result(metadata, anchor_hive_path = NULL)
+get_anchor_result(metadata, anchor_hive_path = NULL, result_shape = "wide")
 }
 \arguments{
 \item{metadata}{A data frame describing the study variables. Must contain at
@@ -13,11 +13,18 @@ least a \code{variable_id} column.}
 \item{anchor_hive_path}{A character string giving the path to the directory
 that contains the anchored parquet hive. Must be a valid existing
 directory.}
+
+\item{result_shape}{A character string specifying the desired shape of the
+output. Must be either \code{"wide"} or \code{"narrow"}.}
 }
 \value{
-A wide \code{data.table} with one row per \code{anchor_row_id} and
-one pair of columns (\code{value_<variable_id>}, \code{date_<variable_id>})
-per variable in \code{metadata}.
+When \code{result_shape = "narrow"}, a long \code{data.table}
+containing \code{person_id}, \code{T0}, \code{variable_id},
+\code{window_name}, \code{date}, and \code{value}. When
+\code{result_shape = "wide"}, a wide \code{data.table} with one row per
+\code{person_id} and \code{T0} pair, and one pair of columns
+(\code{value_<variable_id>}, \code{date_<variable_id>}) per variable in
+\code{metadata}.
 }
 \description{
 Reads parquet files from an anchor hive directory via DuckDB, filters to the
