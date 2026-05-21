@@ -277,7 +277,11 @@ anchor <- function(
       nrow(valid_windows)
     )
   )
-  write_population_windows(con, valid_windows)
+  write_population_windows(
+    con,
+    valid_windows,
+    anchor_col = anchor_col
+  )
 
   selector_names <- unique(valid_windows$selector)
   run_selector_queries(

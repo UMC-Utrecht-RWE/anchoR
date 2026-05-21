@@ -1,6 +1,9 @@
 SELECT
     w.anchor_row_id,
+    w.person_id,
+    w.T0,
     w.variable_id,
+    w.window_name,
     CAST(COUNT(*) AS VARCHAR) AS value,
     MAX(c.date) AS date,
     COUNT(*) AS n
@@ -12,4 +15,7 @@ INNER JOIN concepts AS c
 WHERE w.selector = 'COUNT'
 GROUP BY
     w.anchor_row_id,
-    w.variable_id
+    w.person_id,
+    w.T0,
+    w.variable_id,
+    w.window_name

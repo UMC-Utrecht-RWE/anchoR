@@ -67,9 +67,21 @@ load_concepts_table <- function(con, concepts) {
   }
 }
 
-write_population_windows <- function(con, population_windows) {
+write_population_windows <- function(
+  con, population_windows, anchor_col = "T0"
+) {
   # The selector SQL only needs these columns, so writing a narrow table keeps
   # the temporary database smaller and the SQL templates easier to reason about.
+  if (!anchor_col %in% names(population_windows)) {
+    stop(
+      sprintf(
+        "Anchor column `%s` was not found in `population_windows`.",
+        anchor_col
+      ),
+      call. = FALSE
+    )
+  }
+
   DBI::dbWriteTable(
     con,
     name = "population_windows",
@@ -78,8 +90,10 @@ write_population_windows <- function(con, population_windows) {
       .(
         anchor_row_id,
         person_id,
+        T0 = get(anchor_col),
         concept_id,
         variable_id,
+        window_name,
         selector,
         window_start,
         window_end,

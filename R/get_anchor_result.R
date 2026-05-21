@@ -11,15 +11,20 @@
 #'   that contains the anchored parquet hive. Must be a valid existing
 #'   directory.
 #' @param result_shape A character string specifying the desired shape of the
-#'  output. It can only be "wide" or "narrow". Narrow is
+#'   output. Must be either \code{"wide"} or \code{"narrow"}.
 #'
-#' @return A wide \code{data.table} with one row per \code{anchor_row_id} and
-#'   one pair of columns (\code{value_<variable_id>}, \code{date_<variable_id>})
-#'   per variable in \code{metadata}.
+#' @return When \code{result_shape = "narrow"}, a long \code{data.table}
+#'   containing \code{person_id}, \code{T0}, \code{variable_id},
+#'   \code{window_name}, \code{date}, and \code{value}. When
+#'   \code{result_shape = "wide"}, a wide \code{data.table} with one row per
+#'   \code{anchor_row_id} and one pair of columns
+#'   (\code{value_<variable_id>}, \code{date_<variable_id>}) per variable in
+#'   \code{metadata}.
 #' @export
 get_anchor_result <- function(
   metadata,
-  anchor_hive_path = NULL
+  anchor_hive_path = NULL,
+  result_shape = "wide"
 ) {
   # Different selectors may return slightly different columns, so the combined
   # result needs a forgiving row bind instead of assuming one rigid shape.
@@ -69,15 +74,37 @@ get_anchor_result <- function(
     # coerce back here to keep the public output type stable.
     anchored_dt[, date := as.Date(date)]
   }
-
-  if ("value" %in% names(anchored_dt)) {
-    # Forces value to be a boolean TRUE or FALSE.
-    anchored_dt[, value := as.logical(value)]
+  if ("T0" %in% names(anchored_dt)) {
+    anchored_dt[, T0 := as.Date(T0)]
   }
 
   data.table::setorder(anchored_dt, anchor_row_id)
   if (result_shape == "narrow") {
-    anchored_dt[]
+    required_narrow_cols <- c(
+      "person_id",
+      "T0",
+      "variable_id",
+      "window_name",
+      "date",
+      "value"
+    )
+    missing_cols <- setdiff(required_narrow_cols, names(anchored_dt))
+    if (length(missing_cols) > 0L) {
+      msg <- sprintf(
+        paste(
+          "Anchored results are missing required narrow-output columns:",
+          "%s."
+        ),
+        paste(missing_cols, collapse = ", ")
+      )
+      logger::log_error(msg)
+      base::stop(msg, call. = FALSE)
+    }
+
+    anchored_dt[
+      ,
+      ..required_narrow_cols
+    ][]
   } else if (result_shape == "wide") {
     data.table::dcast(
       anchored_dt,

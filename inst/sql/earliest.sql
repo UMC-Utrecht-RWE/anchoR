@@ -1,7 +1,10 @@
 WITH candidate_rows AS (
     SELECT
         w.anchor_row_id,
+        w.person_id,
+        w.T0,
         w.variable_id,
+        w.window_name,
         COALESCE(CAST(c.value AS VARCHAR), 'TRUE') AS value,
         c.date,
         COUNT(*) OVER (PARTITION BY w.anchor_row_id) AS n,
@@ -18,7 +21,10 @@ WITH candidate_rows AS (
 )
 SELECT
     anchor_row_id,
+    person_id,
+    T0,
     variable_id,
+    window_name,
     value,
     date,
     n
