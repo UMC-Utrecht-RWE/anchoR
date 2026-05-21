@@ -20,9 +20,7 @@
 | window             | metadata window                                                                      |           |          |        |                     |             |                         |
 | value              | value of the covariate; may be date, boolean, integer, factor as defined by metadata |           | x        | chr    |                     |             | DATE, BOOL, INT, FACTOR |
 
-
 # EXAMPLE
-
 
 | **person_id** | **anchor_type** | **anchor_date** | variable_id                 | window    | **value**  |
 | :------------ | :-------------- | :-------------- | :-------------------------- | :-------- | :--------- |
@@ -30,4 +28,3 @@
 | 1             | T0              | 2024-09-01      | COD_ACUTE_ASEPTIC_ARTHRITIS | induction | NA         |
 | 1             | T0              | 2024-09-01      | COD_ACUTE_ASEPTIC_ARTHRITIS | risk      | 2024-09-05 |
 | 1             | T0              | 2024-09-01      | SV_OBESITY                  | lookback  | TRUE       |
-
