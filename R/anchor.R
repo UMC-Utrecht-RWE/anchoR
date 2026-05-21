@@ -1,5 +1,13 @@
-# Internal parquet-hive helpers are kept here because `anchor()` and
-# `anchor_by_variable()` share the same filesystem contract for partitions.
+#' Resolve and create the anchor parquet hive root if needed.
+#' It checks if a path is usable before any partition work:
+#' - it rejects NULL
+#' - it creates the hive directory if it does not exist
+#' - it returns a normalized absolute path
+#' @param save_parquet_hive_path Character scalar path to the hive root.
+#'
+#' @return A normalized absolute path.
+#' @keywords internal
+#' @noRd
 ensure_anchor_hive_path <- function(save_parquet_hive_path) {
   logger::log_trace("Validating `save_parquet_hive_path` input.")
   if (is.null(save_parquet_hive_path)) {
@@ -30,6 +38,14 @@ ensure_anchor_hive_path <- function(save_parquet_hive_path) {
   normalized_path
 }
 
+#' Build the Hive-style partition directory name for a given variable.
+#'
+#' @param save_parquet_hive_path Character scalar path to the hive root.
+#' @param variable_id Character scalar variable ID.
+#'
+#' @return A character scalar path to the partition directory.
+#' @keywords internal
+#' @noRd
 anchor_partition_path <- function(save_parquet_hive_path, variable_id) {
   partition_path <- file.path(
     save_parquet_hive_path,
@@ -46,6 +62,15 @@ anchor_partition_path <- function(save_parquet_hive_path, variable_id) {
   partition_path
 }
 
+#' Move a staged parquet partition into the target hive, trying a single
+#' filesystem move first and falling back to copy-and-delete if that fails.
+#'
+#' @param source_partition_path Character path for staged partition directory.
+#' @param target_partition_path Character path for target partition directory.
+#' @param variable_id Character scalar variable ID, used for logging.
+#' @return Invisibly returns the target partition path if the move succeeded.
+#' @keywords internal
+#' @noRd
 move_anchor_partition <- function(
   source_partition_path,
   target_partition_path,

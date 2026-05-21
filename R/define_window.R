@@ -30,6 +30,20 @@ preg1_window <- function(window_dt) {
   # pregnancy episodes.
 }
 
+#' Cross-join population and metadata for window definition.
+#' This helper function performs a cross join between the population and
+#' metadata data tables, which is necessary for defining windows for each
+#' person-variable combination.
+#' It includes an optimization to avoid the overhead of a cartesian merge when
+#' the metadata has only one row and there are no overlapping column names
+#' between the population and metadata.
+#' @param population_dt A data.table containing the study population.
+#' @param metadata_dt A data.table containing the metadata for the variables.
+#' @return A data.table resulting from the cross join of population_dt and
+#' metadata_dt, with an additional column .window_row_id to preserve the
+#' original order of rows.
+#' @keywords internal
+#' @noRd
 cross_join_population_metadata <- function(population_dt, metadata_dt) {
   # The single-variable orchestration usually reaches `define_window()` with a
   # one-row metadata slice, so avoid the cartesian merge overhead in that case.
