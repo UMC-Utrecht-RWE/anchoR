@@ -27,6 +27,8 @@ test_that("validate_anchor_inputs fails on missing anchor columns", {
   metadata <- data.table::data.table(
     variable_id = "x",
     concept_id = "Y",
+    window_name = "lookback",
+    window_definition = "GENERIC",
     selector = "LATEST",
     start_look_back = -1L,
     end_look_back = 0L,
