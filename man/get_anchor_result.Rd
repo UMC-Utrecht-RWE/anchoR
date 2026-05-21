@@ -22,7 +22,7 @@ When \code{result_shape = "narrow"}, a long \code{data.table}
 containing \code{person_id}, \code{T0}, \code{variable_id},
 \code{window_name}, \code{date}, and \code{value}. When
 \code{result_shape = "wide"}, a wide \code{data.table} with one row per
-\code{anchor_row_id} and one pair of columns
+\code{person_id} and \code{T0} pair, and one pair of columns
 (\code{value_<variable_id>}, \code{date_<variable_id>}) per variable in
 \code{metadata}.
 }

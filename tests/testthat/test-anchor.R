@@ -154,9 +154,10 @@ test_that("get_anchor_result reshapes variable-by-variable hive output", {
     metadata = metadata,
     anchor_hive_path = hive_path
   )
-  data.table::setorder(anchored, anchor_row_id)
+  data.table::setorder(anchored, person_id, T0)
 
-  expect_equal(anchored$anchor_row_id, c(1L, 2L))
+  expect_equal(anchored$person_id, c("1", "2"))
+  expect_equal(anchored$T0, as.Date(c("2024-01-01", "2024-01-15")))
   expect_equal(anchored$value_cov_latest, c("TRUE", "FALSE"))
   expect_true(is.na(anchored$value_lab_range[[1L]]))
   expect_equal(anchored$value_lab_range[[2L]], "1")
