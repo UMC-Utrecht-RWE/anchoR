@@ -1,32 +1,35 @@
 library(data.table)
 # wrangling different metadatas into the same format
-study_variables_meta <- picard::load("anchoR_input/study_variables.csv")
-aesi_meta <- picard::load("anchoR_input/aesi_windows_metadata.csv", sep = ";")
+metadata <- picard::load("anchoR_input/study_variables.csv")
+aesi_metadata <- picard::load(
+  "anchoR_input/aesi_windows_metadata 1.csv",
+  sep = ";"
+)
 
-# change column names of study_variables_meta to be shorter, match aesi_meta
-names(study_variables_meta)[
-  names(study_variables_meta) == "variable_description"
+# change column names of metadata to be shorter, match aesi_metadata
+names(metadata)[
+  names(metadata) == "variable_description"
 ] <- "label"
-names(study_variables_meta)[
-  names(study_variables_meta) == "start_look_back"
+names(metadata)[
+  names(metadata) == "start_look_back"
 ] <- "start"
-names(study_variables_meta)[
-  names(study_variables_meta) == "end_look_back"
+names(metadata)[
+  names(metadata) == "end_look_back"
 ] <- "end"
 
 # make explicit any information which is typically implicit in study_variables;
 # lookback, anchor
-if (!"window" %in% names(study_variables_meta)) {
-  study_variables_meta$window <- "lookback"
+if (!"window" %in% names(metadata)) {
+  metadata$window <- "lookback"
 }
-if (!"anchor" %in% names(study_variables_meta)) {
-  study_variables_meta$anchor <- "T0"
+if (!"anchor" %in% names(metadata)) {
+  metadata$anchor <- "T0"
 }
 
 
 # check if all aesi's are present in study variables already, if not remove them
 missing_vars <- setdiff(
-  unique(aesi_meta$variable_id), study_variables_meta$variable_id
+  unique(aesi_metadata$variable_id), metadata$variable_id
 )
 if (length(missing_vars > 0)) {
   warning(
@@ -35,21 +38,21 @@ if (length(missing_vars > 0)) {
   )
 }
 
-aesi_meta <- aesi_meta[!aesi_meta$variable_id %in% missing_vars, ]
+aesi_metadata <- aesi_metadata[!aesi_metadata$variable_id %in% missing_vars, ]
 
-# now, add the aesi_meta additional rows to study variables
+# now, add the aesi_metadata additional rows to study variables
 # first, inherit missing columns from study variables
-setDT(aesi_meta)
-setDT(study_variables_meta)
+data.table::setDT(aesi_metadata)
+data.table::setDT(metadata)
 
 # fix type mismatches
 for (col in c("start", "end")) {
-  study_variables_meta[, (col) := as.numeric(get(col))]
-  aesi_meta[, (col) := as.numeric(get(col))]
+  metadata[, (col) := as.numeric(get(col))]
+  aesi_metadata[, (col) := as.numeric(get(col))]
 }
 
-tmp <- study_variables_meta[
-  aesi_meta,
+tmp <- metadata[
+  aesi_metadata,
   on = "variable_id",
   allow.cartesian = TRUE
 ]
@@ -57,6 +60,7 @@ tmp <- study_variables_meta[
 # check if lookback windows defined differently, throw warning,
 # inherit aesi definition
 tmp_lookback <- tmp[window == "lookback"]
+
 start_diff <- !is.na(tmp_lookback$start) & !is.na(tmp_lookback$i.start) &
   tmp_lookback$start != tmp_lookback$i.start
 end_diff <- !is.na(tmp_lookback$end) & !is.na(tmp_lookback$i.end) &
@@ -65,8 +69,8 @@ end_diff <- !is.na(tmp_lookback$end) & !is.na(tmp_lookback$i.end) &
 
 if (any(start_diff | end_diff, na.rm = TRUE)) {
   warning(
-    "Mismatch detected between study_variables_meta and
-    aesi_meta for start/end for \n",
+    "Mismatch detected between metadata and
+    aesi_metadata for start/end for \n",
     paste(
       c(unique(tmp[start_diff | end_diff, "variable_id"]))$variable_id,
       collapse = ","
@@ -84,17 +88,17 @@ setnames(tmp, paste0("i.", delete_cols), delete_cols, skip_absent = TRUE)
 tmp[window != "lookback", data_type := "DATE"]
 
 # replace aesi rows in study variables with processed aesi rows
-study_variables_meta <- study_variables_meta[
+metadata <- metadata[
   !variable_id %in% tmp$variable_id
 ]
 
-study_variables_meta <- rbindlist(
-  list(study_variables_meta, tmp),
+metadata <- rbindlist(
+  list(metadata, tmp),
   use.names = TRUE,
   fill = TRUE
 )
 
 picard::save(
-  study_variables_meta,
+  metadata,
   "anchoR_input/study_variables_multiwindow.csv"
 )
