@@ -27,4 +27,15 @@ result <- get_anchor_result(
   anchor_hive_path = anchor_hive_path,
   result_shape = "wide"
 )
-head(result)
+
+new_metadata <- metadata[, is_expected_missing := FALSE]
+new_metadata <- metadata[1:5, is_expected_missing := TRUE]
+new_metadata <- metadata[, variable_type := "TF"]
+new_metadata <- metadata[1:2, variable_type := "BOOLEAN"]
+new_metadata <- metadata[5:10, variable_type := "CAT"]
+
+result2 <- get_anchor_result(
+  metadata = new_metadata[1:20, ],
+  anchor_hive_path = anchor_hive_path,
+  result_shape = "wide"
+)
