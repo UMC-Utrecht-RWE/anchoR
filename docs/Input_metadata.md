@@ -5,7 +5,7 @@
 | Description               | Input metadata file for `anchoR`. In the current workflow this is a wide study-variable table with one row per variable-window specification.                                              |
 | Source                    | User-supplied. In practice this often comes from BRIDGE `study_variables` metadata, optionally extended with extra window rows for AESIs, censoring variables, or other follow-up windows. |
 | Content                   | Variable definitions, window definitions, selectors, and descriptive study metadata.                                                                                                       |
-| Population                | Study variables.                                                                                                                                                                           |
+| Population                | Study variables e.g.: `study_variable.csv`.                                                                                                                                                |
 | Unit of Observation (UoO) | One row per `variable_id x window_name` definition. In a single-window setup this is often just one row per `variable_id`.                                                                 |
 
 # CODEBOOK
