@@ -4,7 +4,12 @@
 \alias{get_anchor_result}
 \title{Retrieve and Reshape Anchored Variable Results}
 \usage{
-get_anchor_result(metadata, anchor_hive_path = NULL, result_shape = "wide")
+get_anchor_result(
+  metadata,
+  anchor_hive_path = NULL,
+  result_shape = "wide",
+  impute_missing = FALSE
+)
 }
 \arguments{
 \item{metadata}{A data frame describing the study variables. Must contain at
@@ -16,13 +21,19 @@ directory.}
 
 \item{result_shape}{A character string specifying the desired shape of the
 output. Must be either \code{"wide"} or \code{"narrow"}.}
+
+\item{impute_missing}{Logical; when \code{TRUE} and
+\code{result_shape = "wide"}, missing \code{value_<variable_id>} cells are
+imputed using \code{metadata} columns \code{is_expected_missing} and
+\code{variable_type} via \code{imputing_missing()}.}
 }
 \value{
 When \code{result_shape = "narrow"}, a long \code{data.table}
 containing \code{person_id}, \code{T0}, \code{variable_id},
 \code{window_name}, \code{date}, and \code{value}. When
 \code{result_shape = "wide"}, a wide \code{data.table} with one row per
-\code{person_id} and \code{T0} pair, and one pair of columns
+\code{person_id}, \code{T0}, and \code{window_name} combination, and one
+pair of columns
 (\code{value_<variable_id>}, \code{date_<variable_id>}) per variable in
 \code{metadata}.
 }
