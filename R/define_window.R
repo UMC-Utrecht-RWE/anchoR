@@ -28,6 +28,7 @@ preg1_window <- function(window_dt) {
   # needed for pregnancy-related variables. For now, it just calls the generic
   # definition, but in the future it could add additional logic specific to
   # pregnancy episodes.
+  generic_window(window_dt)
 }
 
 #' Cross-join population and metadata for window definition.
