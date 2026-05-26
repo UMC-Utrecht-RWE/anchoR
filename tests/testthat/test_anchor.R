@@ -90,7 +90,7 @@ testthat::test_that("anchor accepts parquet concept sources", {
   testthat::expect_equal(anchored$date, as.Date("2024-01-10"))
 })
 
-testthat::test_that("anchor_by_variable refreshes only requested variable partition", {
+testthat::test_that("it refreshes only requested variable partition", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)

@@ -31,7 +31,7 @@ read_anchor_hive_columns <- function(anchor_hive_path) {
   anchored_dt[]
 }
 
-testthat::test_that("anchor saves person_id, T0, and window_name to parquet output", {
+testthat::test_that("saves person_id, T0, and window_name to parquet output", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -132,7 +132,7 @@ testthat::test_that("get_anchor_result wide is keyed by person_id and T0", {
   expect_true(is.na(anchored$value_cov_count_generic[[2L]]))
 })
 
-testthat::test_that("get_anchor_result wide fails on duplicate variable_id values", {
+testthat::test_that("it fails on duplicate variable_id values", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
