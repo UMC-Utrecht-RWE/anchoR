@@ -12,16 +12,10 @@
 
 The current population object shown in `trial_run.R` contains the following core columns.
 
-| column                                      | format | required by anchoR            | description                                                                                                                         |
-| ------------------------------------------- | ------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `person_id`                                 | chr    | yes                           | Person identifier used to join against the concepts source.                                                                         |
-| `T0`                                        | Date   | yes, when `anchor_col = "T0"` | Main anchor date in the current workflow.                                                                                           |
-| `match_id`                                  | num    | no                            | Matching identifier from the cohort design.                                                                                         |
-| `boot_id`                                   | int    | no                            | Bootstrap or resampling identifier.                                                                                                 |
-| `group`                                     | chr    | no                            | Cohort or exposure-group label, for example `CONTROL`, `EXPOSED`, `UNMATCHED`.                                                      |
-| `matching_status_start`                     | Date   | no                            | Study-specific date carried in the population object. Can also be used as an alternate anchor if referenced explicitly in metadata. |
-| `matching_status_end`                       | Date   | no                            | Study-specific date carried in the population object. Can also be used as an alternate anchor if referenced explicitly in metadata. |
-| `SV_*`, `CDC_RISK`, and other study columns | mixed  | no                            | Additional pre-computed study variables or descriptors carried in the same wide population table.                                   |
+| column      | format | description                                                         |
+| ----------- | ------ | ------------------------------------------------------------------- |
+| `person_id` | chr    | Person identifier used to join against the concepts source.         |
+| `T0`        | Date   | Main anchor date in the current workflow, when `anchor_col = "T0"`. |
 
 # CURRENT USAGE
 

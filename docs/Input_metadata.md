@@ -13,22 +13,17 @@
 The current metadata object used in `trial_run.R` contains the following
 columns.
 
-| column                 | format    | used by anchoR | description                                                                                                                                                                                                                     |
-| ---------------------- | --------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `variable_id`          | chr       | yes            | Name of the study variable. This becomes the output variable identifier. Repeat `variable_id` across rows to define multiple windows for the same variable.                                                                     |
-| `concept_id`           | chr       | yes            | Concept identifier queried in the concepts source. May be missing for variables that are handled upstream or are not directly anchorable from the concepts table.                                                               |
-| `raw_concept`          | chr       | no             | Provenance / source-system label for the variable or concept.                                                                                                                                                                   |
-| `exposure`             | lgl       | no             | Study metadata flag indicating whether the variable is an exposure.                                                                                                                                                             |
-| `outcome`              | lgl       | no             | Study metadata flag indicating whether the variable is an outcome.                                                                                                                                                              |
-| `covariate`            | lgl       | no             | Study metadata flag indicating whether the variable is used as a covariate.                                                                                                                                                     |
-| `data_type`            | chr       | no             | Intended output type, for example `INT`, `BOOL`, `CHAR`, `FACTOR`. Useful for downstream interpretation; not currently enforced by core anchoring logic.                                                                        |
-| `window_start_offset`  | num       | yes            | Start of the anchoring window relative to the anchor date. In the current source metadata these values may be fractional (for example `-54750.5`); `anchoR` currently coerces offsets with `as.integer()` during normalization. |
-| `window_end_offset`    | int / num | yes            | End of the anchoring window relative to the anchor date.                                                                                                                                                                        |
-| `window_name`          | chr       | yes            | Label of the window, for example `lookback`, `risk`, `induction`, `control`.                                                                                                                                                    |
-| `window_definition`    | chr       | yes            | Name of the window-construction function. In the current metadata this is typically `GENERIC`.                                                                                                                                  |
-| `selector`             | chr       | yes            | Rule used to collapse one or more matching concept rows inside the window, for example `LATEST`, `EARLIEST`, `COUNT`, `RANGE_COUNT`.                                                                                            |
-| `Matching`             | lgl       | no             | Study metadata flag from the source workflow.                                                                                                                                                                                   |
-| `variable_description` | chr       | no             | Human-readable variable label / description.                                                                                                                                                                                    |
+| column | format | description |
+| ------ | ------ | ----------- ||
+| `variable_id`         | chr       | Name of the study variable. This becomes the output variable identifier. Repeat `variable_id` across rows to define multiple windows for the same variable.                                                                     |
+| `concept_id`          | chr       | Concept identifier queried in the concepts source. May be missing for variables that are handled upstream or are not directly anchorable from the concepts table.                                                               |
+| `data_type`           | chr       | Intended output type, for example `INT`, `BOOL`, `CHAR`, `FACTOR`. Useful for downstream interpretation; not currently enforced by core anchoring logic.                                                                        |
+| `window_start_offset` | num       | Start of the anchoring window relative to the anchor date. In the current source metadata these values may be fractional (for example `-54750.5`); `anchoR` currently coerces offsets with `as.integer()` during normalization. |
+| `window_end_offset`   | int / num | End of the anchoring window relative to the anchor date.                                                                                                                                                                        |
+| `window_name`         | chr       | Label of the window, for example `lookback`, `risk`, `induction`, `control`.                                                                                                                                                    |
+| `window_definition`   | chr       | Name of the window-construction function. In the current metadata this is typically `GENERIC`.                                                                                                                                  |
+| `selector`            | chr       | Rule used to collapse one or more matching concept rows inside the window, for example `LATEST`, `EARLIEST`, `COUNT`, `RANGE_COUNT`.                                                                                            |
+
 
 Optional columns supported by the package, even when absent from the current metadata object:
 
@@ -59,11 +54,14 @@ If `anchor_start_col` and `anchor_end_col` are not present, the metadata is inte
 
 Example rows matching the current metadata structure:
 
-| `variable_id` | `concept_id` | `raw_concept`          | `exposure` | `outcome` | `covariate` | `data_type` | `window_start_offset` | `window_end_offset` | `window_name` | `window_definition` | `selector` | `Matching` | `variable_description` |
-| :------------ | :----------- | :--------------------- | :--------- | :-------- | :---------- | :---------- | --------------------: | ------------------: | :------------ | :------------------ | :--------- | :--------- | :--------------------- |
-| `SV_AGE`      | `PP_AGE`     | `D3`                   | `FALSE`    | `FALSE`   | `TRUE`      | `INT`       |            `-54750.5` |                 `0` | `lookback`    | `GENERIC`           | `LATEST`   | `FALSE`    | `Age`                  |
-| `SV_SEX`      | `PP_SEX`     | `D3`                   | `FALSE`    | `FALSE`   | `TRUE`      | `BOOL`      |            `-54750.0` |                 `0` | `lookback`    | `GENERIC`           | `LATEST`   | `TRUE`     | `Sex`                  |
-| `SV_REGION`   | `PP_REGION`  | `dap_specific_concept` | `FALSE`    | `FALSE`   | `TRUE`      | `CHAR`      |                 `0.0` |                 `0` | `lookback`    | `GENERIC`           | `LATEST`   | `TRUE`     | `Geographic region`    |
+
+| variable_id                 | concept_id        | label                                | anchor | window    | start | end  | date_extraction_func | data_type |
+| :-------------------------- | :---------------- | :----------------------------------- | :----- | :-------- | :---- | :--- | :------------------- | :-------- |
+| COD_ACUTE_ASEPTIC_ARTHRITIS | M_ARTASEPTIC_AESI | Acute aseptic arthritis              | T0     | lookback  | -365  | -1   | LATEST               | BOOL      |
+| COD_ACUTE_ASEPTIC_ARTHRITIS | M_ARTASEPTIC_AESI | Acute aseptic arthritis              | T0     | induction | 0     | 0    | EARLIEST             | DATE      |
+| COD_ACUTE_ASEPTIC_ARTHRITIS | M_ARTASEPTIC_AESI | Acute aseptic arthritis              | T0     | risk      | 1     | 42   | EARLIEST             | DATE      |
+| SV_OBESITY                  | L_OBESITY_COV     | Obesity diagnosis or obesity surgery | T0     | lookback  | -1095 | 0    | LATEST               | BOOL      |
+
 
 # MULTIPLE WINDOWS
 
