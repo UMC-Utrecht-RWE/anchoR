@@ -7,8 +7,11 @@
 get_anchor_result(
   metadata,
   anchor_hive_path = NULL,
+  population = NULL,
   result_shape = "wide",
-  impute_missing = FALSE
+  impute_missing = FALSE,
+  cast_window = FALSE,
+  only_date = FALSE
 )
 }
 \arguments{
@@ -19,6 +22,10 @@ least a \code{variable_id} column.}
 that contains the anchored parquet hive. Must be a valid existing
 directory.}
 
+\item{population}{Optional data frame with population rows to be represented
+in wide output. When provided, it must contain \code{person_id} and
+\code{T0} columns.}
+
 \item{result_shape}{A character string specifying the desired shape of the
 output. Must be either \code{"wide"} or \code{"narrow"}.}
 
@@ -26,6 +33,16 @@ output. Must be either \code{"wide"} or \code{"narrow"}.}
 \code{result_shape = "wide"}, missing \code{value_<variable_id>} cells are
 imputed using \code{metadata} columns \code{is_expected_missing} and
 \code{variable_type} via \code{imputing_missing()}.}
+
+\item{cast_window}{Logical; controls wide reshaping formula. When
+\code{FALSE} (default), results are cast by
+\code{person_id + T0 + window_name ~ variable_id}. When \code{TRUE},
+results are cast by \code{person_id + T0 ~ window_name + variable_id}.}
+
+\item{only_date}{Logical; when \code{TRUE} and
+\code{result_shape = "wide"}, only date columns are cast (no
+\code{value_<...>} columns). When \code{FALSE}, both value and date
+columns are cast.}
 }
 \value{
 When \code{result_shape = "narrow"}, a long \code{data.table}
