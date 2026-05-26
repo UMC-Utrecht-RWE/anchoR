@@ -24,7 +24,6 @@ Suggests:
     lintr (>= 3.2.0),
     styler (>= 1.10.3),
     devtools (>= 2.4.6),
-    knitr (>= 1.48),
     rmarkdown (>= 2.29),
     roxygen2 (>= 7.3.2),
     testthat (>= 3.2.3),
@@ -33,4 +32,3 @@ Suggests:
 Depends:
     R (>= 4.0.0)
 Config/testthat/edition: 3
-VignetteBuilder: knitr
