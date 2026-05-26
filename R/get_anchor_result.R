@@ -158,11 +158,46 @@ get_anchor_result <- function(
       fill = list(value = NA_character_, date = as.Date(NA))
     )[]
     
-    missing_variables <- setdiff(unique(metadata$variable_id), names(wide_anchored))
+    missing_variables <- setdiff(unique(metadata$variable_id), unique(anchored_dt$variable_id))
     lapply(missing_variables, function(x){
       wide_anchored[, eval(paste0("value_", x)) := NA]
       wide_anchored[, eval(paste0("date_", x)) := NA]
     })
+
+    expected_missing_col <- intersect(
+      c(
+        "variable_id",
+        "is_expected_missing",
+        "variable_type"
+      ),
+      names(metadata)
+    )
+
+    if (length(expected_missing_col) == 3) {
+
+      metadata_fill <- metadata[, .(variable_id
+                                    , is_expected_missing 
+                                    , variable_type )]
+      
+      for (i in seq_len(nrow(metadata_fill))) {
+        i_variable_id <- metadata_fill$variable_id[[i]]
+        i_is_expected_missing <- isTRUE(metadata_fill$is_expected_missing[[i]])
+        i_variable_type <- metadata_fill$variable_type[[i]]
+        value_col <- paste0("value_", i_variable_id)
+
+        if (!value_col %in% names(wide_anchored) || i_is_expected_missing) {
+          next
+        }
+
+        if (i_variable_type %in% c("TF", "BOOL", "BOOLEAN", "LOGICAL")) {
+          wide_anchored[is.na(get(value_col)), (value_col) := FALSE]
+          wide_anchored[, (value_col) := as.logical(get(value_col))]
+        } else if (i_variable_type %in% c("CAT", "FACTOR")) {
+          wide_anchored[is.na(get(value_col)), (value_col) := 0]
+        }
+      }
+    }
+
     return(wide_anchored)
   } else {
     msg <- sprintf("`result_shape` must be either 'wide' or 'narrow'!")
