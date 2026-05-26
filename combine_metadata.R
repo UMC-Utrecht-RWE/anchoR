@@ -1,8 +1,8 @@
 library(data.table)
 # wrangling different metadatas into the same format
-metadata <- picard::load("anchoR_input/study_variables.csv")
+metadata <- picard::load("docs/examples/study_variables.csv")
 aesi_metadata <- picard::load(
-  "anchoR_input/aesi_windows_metadata 1.csv",
+  "docs/examples/aesi_windows_metadata.csv",
   sep = ";"
 )
 
@@ -20,7 +20,7 @@ names(metadata)[
 # make explicit any information which is typically implicit in study_variables;
 # lookback, anchor
 if (!"window" %in% names(metadata)) {
-  metadata$window <- "lookback"
+  metadata$window <- "covariate"
 }
 if (!"anchor" %in% names(metadata)) {
   metadata$anchor <- "T0"
@@ -51,33 +51,14 @@ for (col in c("start", "end")) {
   aesi_metadata[, (col) := as.numeric(get(col))]
 }
 
+# merge objects together
 tmp <- metadata[
   aesi_metadata,
   on = "variable_id",
   allow.cartesian = TRUE
 ]
 
-# check if lookback windows defined differently, throw warning,
-# inherit aesi definition
-tmp_lookback <- tmp[window == "lookback"]
-
-start_diff <- !is.na(tmp_lookback$start) & !is.na(tmp_lookback$i.start) &
-  tmp_lookback$start != tmp_lookback$i.start
-end_diff <- !is.na(tmp_lookback$end) & !is.na(tmp_lookback$i.end) &
-  tmp_lookback$end != tmp_lookback$i.end
-
-
-if (any(start_diff | end_diff, na.rm = TRUE)) {
-  warning(
-    "Mismatch detected between metadata and
-    aesi_metadata for start/end for \n",
-    paste(
-      c(unique(tmp[start_diff | end_diff, "variable_id"]))$variable_id,
-      collapse = ","
-    ),
-    "\n ovewriting with aesi_windows_metadata version"
-  )
-}
+# tidy up merged object
 delete_cols <- c(
   "start", "end", "date_extraction_func", "label", "anchor", "window"
 )
@@ -85,12 +66,7 @@ tmp[, (delete_cols) := NULL]
 setnames(tmp, paste0("i.", delete_cols), delete_cols, skip_absent = TRUE)
 
 # ensure that non-lookback data-types are set to DATE
-tmp[window != "lookback", data_type := "DATE"]
-
-# replace aesi rows in study variables with processed aesi rows
-metadata <- metadata[
-  !variable_id %in% tmp$variable_id
-]
+tmp[!window %in% c("lookback", "covariate") , data_type := "DATE"]
 
 metadata <- rbindlist(
   list(metadata, tmp),
@@ -100,5 +76,5 @@ metadata <- rbindlist(
 
 picard::save(
   metadata,
-  "anchoR_input/study_variables_multiwindow.csv"
+  "docs/examples/study_variables_multiwindow.csv"
 )
