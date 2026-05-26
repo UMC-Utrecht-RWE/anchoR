@@ -1,4 +1,4 @@
-test_that("validate_anchor_inputs standardizes metadata names", {
+testthat::test_that("validate_anchor_inputs standardizes metadata names", {
   validated <- validate_anchor_inputs(
     population = example_population(),
     metadata = example_metadata(),
@@ -17,13 +17,13 @@ test_that("validate_anchor_inputs standardizes metadata names", {
     ) %in% names(validated$metadata)
   ))
 
-  expect_equal(validated$metadata$anchor_start_col, rep("T0", 3L))
-  expect_equal(validated$metadata$anchor_end_col, rep("T0", 3L))
-  expect_equal(validated$metadata$range_min[3], 1)
-  expect_equal(validated$metadata$range_max[3], 5)
+  testthat::expect_equal(validated$metadata$anchor_start_col, rep("T0", 3L))
+  testthat::expect_equal(validated$metadata$anchor_end_col, rep("T0", 3L))
+  testthat::expect_equal(validated$metadata$range_min[3], 1)
+  testthat::expect_equal(validated$metadata$range_max[3], 5)
 })
 
-test_that("validate_anchor_inputs fails on missing anchor columns", {
+testthat::test_that("validate_anchor_inputs fails on missing anchor columns", {
   metadata <- data.table::data.table(
     variable_id = "x",
     concept_id = "Y",
@@ -42,7 +42,7 @@ test_that("validate_anchor_inputs fails on missing anchor columns", {
   )
 })
 
-test_that("validate_anchor_inputs fails on unsupported selectors", {
+testthat::test_that("validate_anchor_inputs fails on unsupported selectors", {
   metadata <- example_metadata()
   metadata[, selector := "LATEST_PRIOR_ANCHOREDPREG"]
 

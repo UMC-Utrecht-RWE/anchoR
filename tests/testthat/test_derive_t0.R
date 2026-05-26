@@ -1,4 +1,4 @@
-test_that("derive_t0 finds the earliest event in the requested window", {
+testthat::test_that("finds the earliest event in the requested window", {
   population <- example_population()
   concepts <- example_concepts()
 
@@ -11,10 +11,10 @@ test_that("derive_t0 finds the earliest event in the requested window", {
     window_end_col = "candidate_end"
   )
 
-  expect_equal(derived$T0, as.Date(c("2024-01-05", "2024-01-10")))
+  testthat::expect_equal(derived$T0, as.Date(c("2024-01-05", "2024-01-10")))
 })
 
-test_that("derive_t0 returns NA when no concept is found", {
+testthat::test_that("derive_t0 returns NA when no concept is found", {
   population <- example_population()
   concepts <- example_concepts()
 
@@ -27,7 +27,7 @@ test_that("derive_t0 returns NA when no concept is found", {
   expect_true(all(is.na(derived$T0)))
 })
 
-test_that("derive_t0 accepts parquet concept sources", {
+testthat::test_that("derive_t0 accepts parquet concept sources", {
   derived <- derive_t0(
     population = example_population(),
     concepts = example_concepts_parquet(),
@@ -37,5 +37,5 @@ test_that("derive_t0 accepts parquet concept sources", {
     window_end_col = "candidate_end"
   )
 
-  expect_equal(derived$T0, as.Date(c("2024-01-05", "2024-01-10")))
+  testthat::expect_equal(derived$T0, as.Date(c("2024-01-05", "2024-01-10")))
 })
