@@ -12,7 +12,7 @@ anchor_col <- "T0"
 keep_all <- FALSE
 
 
-if(!"window_name" %in% names(metadata)){
+if (!"window_name" %in% names(metadata)) {
   metadata[, window_name := ""]
 }
 # Run the anchoring one study variable at a time.
@@ -106,4 +106,3 @@ result9 <- get_anchor_result(
   anchor_hive_path = anchor_hive_path,
   result_shape = "narrow"
 )
-
