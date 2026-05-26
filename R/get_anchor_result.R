@@ -151,12 +151,19 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
-    data.table::dcast(
+    wide_anchored <- data.table::dcast(
       anchored_dt,
-      person_id + T0 ~ variable_id,
+      person_id + T0 + window_name ~ variable_id,
       value.var = c("value", "date"),
       fill = list(value = NA_character_, date = as.Date(NA))
     )[]
+    
+    missing_variables <- setdiff(unique(metadata$variable_id), names(wide_anchored))
+    lapply(missing_variables, function(x){
+      wide_anchored[, eval(paste0("value_", x)) := NA]
+      wide_anchored[, eval(paste0("date_", x)) := NA]
+    })
+    return(wide_anchored)
   } else {
     msg <- sprintf("`result_shape` must be either 'wide' or 'narrow'!")
     logger::log_error(msg)
