@@ -66,7 +66,7 @@ tmp[, (delete_cols) := NULL]
 setnames(tmp, paste0("i.", delete_cols), delete_cols, skip_absent = TRUE)
 
 # ensure that non-lookback data-types are set to DATE
-tmp[!window %in% c("lookback", "covariate") , data_type := "DATE"]
+tmp[!window %in% c("lookback", "covariate"), data_type := "DATE"]
 
 metadata <- rbindlist(
   list(metadata, tmp),

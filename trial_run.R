@@ -2,7 +2,7 @@ rm(list = ls())
 devtools::document()
 devtools::load_all(".")
 metadata <- picard::load("anchoR_input/study_variables.csv")
-
+metadata <- picard::load("docs/examples/study_variables_multiwindow.csv")
 metadata <- filter_supported_metadata(metadata)
 
 population <- picard::load("anchoR_input/D4_MSC_nosubpop.fst")
