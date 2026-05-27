@@ -27,7 +27,7 @@ read_anchor_hive <- function(anchor_hive_path) {
   anchored_dt[]
 }
 
-test_that("anchor writes selector results to the parquet hive", {
+testthat::test_that("anchor writes selector results to the parquet hive", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -41,15 +41,15 @@ test_that("anchor writes selector results to the parquet hive", {
 
   anchored <- read_anchor_hive(hive_path)
 
-  expect_equal(anchored$variable_id, c("cov_latest", "cov_latest"))
-  expect_equal(anchored$value, c("TRUE", "FALSE"))
-  expect_equal(
+  testthat::expect_equal(anchored$variable_id, c("cov_latest", "cov_latest"))
+  testthat::expect_equal(anchored$value, c("TRUE", "FALSE"))
+  testthat::expect_equal(
     anchored$date,
     as.Date(c("2023-12-20", "2024-01-14"))
   )
 })
 
-test_that("anchor honors a non-default anchor column", {
+testthat::test_that("anchor honors a non-default anchor column", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -67,12 +67,12 @@ test_that("anchor honors a non-default anchor column", {
 
   anchored <- read_anchor_hive(hive_path)
 
-  expect_equal(anchored$variable_id, "lab_range")
-  expect_equal(anchored$value, "1")
-  expect_equal(anchored$date, as.Date("2024-01-10"))
+  testthat::expect_equal(anchored$variable_id, "lab_range")
+  testthat::expect_equal(anchored$value, "1")
+  testthat::expect_equal(anchored$date, as.Date("2024-01-10"))
 })
 
-test_that("anchor accepts parquet concept sources", {
+testthat::test_that("anchor accepts parquet concept sources", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -86,11 +86,11 @@ test_that("anchor accepts parquet concept sources", {
 
   anchored <- read_anchor_hive(hive_path)
 
-  expect_equal(anchored$value, "1")
-  expect_equal(anchored$date, as.Date("2024-01-10"))
+  testthat::expect_equal(anchored$value, "1")
+  testthat::expect_equal(anchored$date, as.Date("2024-01-10"))
 })
 
-test_that("anchor_by_variable refreshes only the requested variable partition", {
+testthat::test_that("it refreshes only requested variable partition", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -125,16 +125,16 @@ test_that("anchor_by_variable refreshes only the requested variable partition", 
 
   anchored <- read_anchor_hive(hive_path)
 
-  expect_equal(nrow(anchored[variable_id == "cov_latest"]), 2L)
-  expect_equal(
+  testthat::expect_equal(nrow(anchored[variable_id == "cov_latest"]), 2L)
+  testthat::expect_equal(
     anchored[variable_id == "cov_latest" & anchor_row_id == 1L, value],
     "UPDATED"
   )
-  expect_equal(nrow(anchored[variable_id == "cov_count"]), 1L)
-  expect_equal(anchored[variable_id == "cov_count", value], "2")
+  testthat::expect_equal(nrow(anchored[variable_id == "cov_count"]), 1L)
+  testthat::expect_equal(anchored[variable_id == "cov_count", value], "2")
 })
 
-test_that("get_anchor_result reshapes variable-by-variable hive output", {
+testthat::test_that("reshapes variable-by-variable hive output", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -156,9 +156,9 @@ test_that("get_anchor_result reshapes variable-by-variable hive output", {
   )
   data.table::setorder(anchored, person_id, T0)
 
-  expect_equal(anchored$person_id, c("1", "2"))
-  expect_equal(anchored$T0, as.Date(c("2024-01-01", "2024-01-15")))
-  expect_equal(anchored$value_cov_latest, c("TRUE", "FALSE"))
+  testthat::expect_equal(anchored$person_id, c("1", "2"))
+  testthat::expect_equal(anchored$T0, as.Date(c("2024-01-01", "2024-01-15")))
+  testthat::expect_equal(anchored$value_cov_latest, c("TRUE", "FALSE"))
   expect_true(is.na(anchored$value_lab_range[[1L]]))
-  expect_equal(anchored$value_lab_range[[2L]], "1")
+  testthat::expect_equal(anchored$value_lab_range[[2L]], "1")
 })

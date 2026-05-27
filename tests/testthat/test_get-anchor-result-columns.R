@@ -31,7 +31,7 @@ read_anchor_hive_columns <- function(anchor_hive_path) {
   anchored_dt[]
 }
 
-test_that("anchor saves person_id, T0, and window_name to parquet output", {
+testthat::test_that("saves person_id, T0, and window_name to parquet output", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -46,12 +46,12 @@ test_that("anchor saves person_id, T0, and window_name to parquet output", {
   anchored <- read_anchor_hive_columns(hive_path)
 
   expect_true(all(c("person_id", "T0", "window_name") %in% names(anchored)))
-  expect_equal(anchored$person_id, c("1", "2"))
-  expect_equal(anchored$T0, as.Date(c("2024-01-01", "2024-01-15")))
-  expect_equal(anchored$window_name, c("lookback", "lookback"))
+  testthat::expect_equal(anchored$person_id, c("1", "2"))
+  testthat::expect_equal(anchored$T0, as.Date(c("2024-01-01", "2024-01-15")))
+  testthat::expect_equal(anchored$window_name, c("lookback", "lookback"))
 })
 
-test_that("get_anchor_result narrow includes person_id, T0, and window_name", {
+testthat::test_that("narrow includes person_id, T0, and window_name", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -81,19 +81,19 @@ test_that("get_anchor_result narrow includes person_id, T0, and window_name", {
     result_shape = "narrow"
   )
 
-  expect_equal(
+  testthat::expect_equal(
     names(anchored),
     c("person_id", "T0", "variable_id", "window_name", "date", "value")
   )
-  expect_equal(anchored$person_id, "1")
-  expect_equal(anchored$T0, as.Date("2024-01-01"))
-  expect_equal(anchored$variable_id, "cov_count_generic")
-  expect_equal(anchored$window_name, "risk")
-  expect_equal(anchored$date, as.Date("2023-12-15"))
-  expect_equal(anchored$value, "2")
+  testthat::expect_equal(anchored$person_id, "1")
+  testthat::expect_equal(anchored$T0, as.Date("2024-01-01"))
+  testthat::expect_equal(anchored$variable_id, "cov_count_generic")
+  testthat::expect_equal(anchored$window_name, "risk")
+  testthat::expect_equal(anchored$date, as.Date("2023-12-15"))
+  testthat::expect_equal(anchored$value, "2")
 })
 
-test_that("get_anchor_result wide is keyed by person_id and T0", {
+testthat::test_that("get_anchor_result wide is keyed by person_id and T0", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
@@ -124,15 +124,15 @@ test_that("get_anchor_result wide is keyed by person_id and T0", {
   )
   data.table::setorder(anchored, person_id, T0)
 
-  expect_equal(names(anchored)[1:2], c("person_id", "T0"))
-  expect_equal(anchored$person_id, c("1", "2"))
-  expect_equal(anchored$T0, as.Date(c("2024-01-01", "2024-01-15")))
-  expect_equal(anchored$value_cov_latest_generic, c("TRUE", "FALSE"))
-  expect_equal(anchored$value_cov_count_generic[[1L]], "2")
+  testthat::expect_equal(names(anchored)[1:2], c("person_id", "T0"))
+  testthat::expect_equal(anchored$person_id, c("1", "2"))
+  testthat::expect_equal(anchored$T0, as.Date(c("2024-01-01", "2024-01-15")))
+  testthat::expect_equal(anchored$value_cov_latest_generic, c("TRUE", "FALSE"))
+  testthat::expect_equal(anchored$value_cov_count_generic[[1L]], "2")
   expect_true(is.na(anchored$value_cov_count_generic[[2L]]))
 })
 
-test_that("get_anchor_result wide fails on duplicate variable_id values", {
+testthat::test_that("it fails on duplicate variable_id values", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)

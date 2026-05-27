@@ -1,4 +1,3 @@
-library(testthat)
 library(anchoR)
 
-test_check("anchoR")
+testthat::test_check("anchoR")

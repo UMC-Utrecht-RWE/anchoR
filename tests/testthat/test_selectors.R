@@ -1,4 +1,4 @@
-test_that("available_selectors lists bundled SQL templates", {
+testthat::test_that("available_selectors lists bundled SQL templates", {
   selectors <- available_selectors()
 
   expect_true(
@@ -21,8 +21,8 @@ test_that(
     filtered <- filter_supported_metadata(metadata)
 
     expect_s3_class(filtered, "data.table")
-    expect_equal(filtered$variable_id, "a")
-    expect_equal(names(filtered), names(metadata))
+    testthat::expect_equal(filtered$variable_id, "a")
+    testthat::expect_equal(names(filtered), names(metadata))
   }
 )
 
@@ -37,6 +37,6 @@ test_that(
 
     filtered <- filter_supported_metadata(metadata)
 
-    expect_equal(filtered$selector, c("LATEST", "count"))
+    testthat::expect_equal(filtered$selector, c("LATEST", "count"))
   }
 )

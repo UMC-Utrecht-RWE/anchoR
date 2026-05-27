@@ -1,4 +1,4 @@
-test_that("selector_sql_path resolves SQL resources", {
+testthat::test_that("selector_sql_path resolves SQL resources", {
   sql_path <- selector_sql_path("LATEST")
 
   expect_true(file.exists(sql_path))
