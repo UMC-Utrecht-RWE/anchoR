@@ -9,7 +9,6 @@ anchor_by_variable(
   metadata,
   concepts,
   anchor_col = "T0",
-  keep_all = FALSE,
   save_parquet_hive_path = NULL
 )
 }
@@ -28,11 +27,6 @@ the columns required by \code{validate_anchor_inputs()}.}
 \item{anchor_col}{Character. Name of the column in \code{population} to use
 as the index date when metadata does not specify an anchor column.
 Defaults to \code{"T0"}.}
-
-\item{keep_all}{Logical. If \code{TRUE}, keeps the full
-population-by-metadata cross join and fills unmatched rows with missing
-values. If \code{FALSE} (default), returns only rows with at least one
-matching concept record.}
 
 \item{save_parquet_hive_path}{Character. Path to an existing (or creatable)
 directory where selector query results are written as a partitioned parquet

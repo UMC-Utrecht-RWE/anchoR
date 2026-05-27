@@ -9,7 +9,6 @@ anchor(
   metadata,
   concepts,
   anchor_col = "T0",
-  keep_all = FALSE,
   save_parquet_hive_path = NULL
 )
 }
@@ -29,11 +28,6 @@ the columns required by \code{validate_anchor_inputs()}.}
 as the index date when metadata does not specify an anchor column.
 Defaults to \code{"T0"}.}
 
-\item{keep_all}{Logical. If \code{TRUE}, keeps the full
-population-by-metadata cross join and fills unmatched rows with missing
-values. If \code{FALSE} (default), returns only rows with at least one
-matching concept record.}
-
 \item{save_parquet_hive_path}{Character. Path to an existing (or creatable)
 directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
@@ -41,7 +35,7 @@ hive. Must not be \code{NULL}.}
 \value{
 Invisibly, the function writes parquet files to
 \code{save_parquet_hive_path}. When no valid windows exist and
-\code{keep_all = TRUE}, a \code{data.table} with missing anchored values
+a \code{data.table} with missing anchored values
 is returned directly.
 }
 \description{

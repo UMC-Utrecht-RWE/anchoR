@@ -158,17 +158,13 @@ move_anchor_partition <- function(
 #' @param anchor_col Character. Name of the column in \code{population} to use
 #'   as the index date when metadata does not specify an anchor column.
 #'   Defaults to \code{"T0"}.
-#' @param keep_all Logical. If \code{TRUE}, keeps the full
-#'   population-by-metadata cross join and fills unmatched rows with missing
-#'   values. If \code{FALSE} (default), returns only rows with at least one
-#'   matching concept record.
 #' @param save_parquet_hive_path Character. Path to an existing (or creatable)
 #'   directory where selector query results are written as a partitioned parquet
 #'   hive. Must not be \code{NULL}.
 #'
 #' @return Invisibly, the function writes parquet files to
 #'   \code{save_parquet_hive_path}. When no valid windows exist and
-#'   \code{keep_all = TRUE}, a \code{data.table} with missing anchored values
+#'   a \code{data.table} with missing anchored values
 #'   is returned directly.
 #' @export
 anchor <- function(
@@ -176,7 +172,6 @@ anchor <- function(
   metadata,
   concepts,
   anchor_col = "T0",
-  keep_all = FALSE,
   save_parquet_hive_path = NULL
 ) {
   # Normalize inputs at the beginning so the rest
@@ -238,18 +233,9 @@ anchor <- function(
           "No valid windows remained after filtering for %d metadata row(s).",
           "Returning %s output."
         ),
-        nrow(validated$metadata),
-        if (keep_all) "with missing anchors" else "an empty sparse result"
+        nrow(validated$metadata)
       )
     )
-    if (keep_all) {
-      # Some downstream code expects one row per person-variable pair even when
-      # nothing can be anchored, so keep the design matrix and mark it missing.
-      window_dt[
-        , `:=`(value = NA_character_, date = as.Date(NA), n = NA_integer_)
-      ]
-      return(window_dt[])
-    }
 
     # When sparse output is requested, an empty typed table is clearer than
     # returning the full cross join filled with missing values.
@@ -307,7 +293,6 @@ anchor_by_variable <- function(
   metadata,
   concepts,
   anchor_col = "T0",
-  keep_all = FALSE,
   save_parquet_hive_path = NULL
 ) {
   validated <- validate_anchor_inputs(
@@ -324,12 +309,11 @@ anchor_by_variable <- function(
     sprintf(
       paste(
         "`anchor_by_variable()` received %d population row(s),",
-        "%d metadata row(s), anchor_col `%s`, keep_all = %s."
+        "%d metadata row(s), anchor_col `%s`."
       ),
       nrow(validated$population),
       nrow(metadata_dt),
-      anchor_col,
-      keep_all
+      anchor_col
     )
   )
 
@@ -369,7 +353,6 @@ anchor_by_variable <- function(
           metadata = variable_metadata,
           concepts = validated$concepts,
           anchor_col = anchor_col,
-          keep_all = keep_all,
           save_parquet_hive_path = staging_hive_path
         )
 

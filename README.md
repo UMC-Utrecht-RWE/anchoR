@@ -46,7 +46,6 @@ concepts[, date := as.Date(date)]
 anchor(
   population = population,
   metadata = metadata,
-  concepts = concepts,
-  keep_all = TRUE
+  concepts = concepts
 )
 ```
