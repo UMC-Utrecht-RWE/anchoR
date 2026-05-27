@@ -9,7 +9,7 @@ anchor(
   metadata,
   concepts,
   anchor_col = "T0",
-  save_parquet_hive_path = NULL
+  anchor_hive_path = NULL
 )
 }
 \arguments{
@@ -28,12 +28,12 @@ the columns required by \code{validate_anchor_inputs()}.}
 as the index date when metadata does not specify an anchor column.
 Defaults to \code{"T0"}.}
 
-\item{save_parquet_hive_path}{Character. Path to an existing (or creatable)
+\item{anchor_hive_path}{Character. Path to an existing (or creatable)
 directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
 }
 \value{
-Invisibly, function writes parquet files to save_parquet_hive_path
+Invisibly, function writes parquet files to anchor_hive_path
 }
 \description{
 Applies metadata-driven windowing and selector rules to a concept table,
