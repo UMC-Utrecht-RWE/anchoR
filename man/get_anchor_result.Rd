@@ -16,23 +16,23 @@ get_anchor_result(
 }
 \arguments{
 \item{metadata}{A data frame describing the study variables. Must contain at
-least a \code{variable_id} column.}
+least a variable_id column.}
 
 \item{anchor_hive_path}{A character string giving the path to the directory
 that contains the anchored parquet hive. Must be a valid existing
 directory.}
 
 \item{population}{Optional data frame with population rows to be represented
-in wide output. When provided, it must contain \code{person_id} and
-\code{T0} columns.}
+in wide output. When provided, it must contain person_id and
+T0 columns.}
 
 \item{result_shape}{A character string specifying the desired shape of the
-output. Must be either \code{"wide"} or \code{"narrow"}.}
+output. Must be either "wide" or "narrow".}
 
-\item{impute_missing}{Logical; when \code{TRUE} and
-\code{result_shape = "wide"}, missing \code{value_<variable_id>} cells are
-imputed using \code{metadata} columns \code{is_expected_missing} and
-\code{variable_type} via \code{imputing_missing()}.}
+\item{impute_missing}{Logical; when TRUE and
+result_shape = "wide", missing value_<variable_id> cells are
+imputed using metadata columns is_expected_missing and
+variable_type via imputing_missing().}
 
 \item{cast_window}{Logical; controls wide reshaping formula. When
 \code{FALSE} (default), results are cast by
@@ -40,23 +40,16 @@ imputed using \code{metadata} columns \code{is_expected_missing} and
 results are cast by \code{person_id + T0 ~ window_name + variable_id}.}
 
 \item{only_date}{Logical; when \code{TRUE} and
-\code{result_shape = "wide"}, only date columns are cast (no
+result_shape = "wide", only date columns are cast (no
 \code{value_<...>} columns). When \code{FALSE}, both value and date
 columns are cast.}
 }
 \value{
-When \code{result_shape = "narrow"}, a long \code{data.table}
-containing \code{person_id}, \code{T0}, \code{variable_id},
-\code{window_name}, \code{date}, and \code{value}. When
-\code{result_shape = "wide"}, a wide \code{data.table} with one row per
-\code{person_id}, \code{T0}, and \code{window_name} combination, and one
-pair of columns
-(\code{value_<variable_id>}, \code{date_<variable_id>}) per variable in
-\code{metadata}.
+A data.table with anchored variable results in the specified shape.
 }
 \description{
 Reads parquet files from an anchor hive directory via DuckDB, filters to the
 requested variables, and pivots the long-format result into a wide
-\code{data.table} with one column per variable for both \code{value} and
-\code{date}.
+data.table with one column per variable for both value and
+date.
 }

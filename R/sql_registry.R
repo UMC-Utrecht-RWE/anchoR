@@ -176,6 +176,12 @@ run_selector_query <- function(con, selector, save_parquet_hive_path) {
 run_selector_queries <- function(con, selectors, save_parquet_hive_path) {
   result_list <- vector("list", length(selectors))
 
+  if (is.null(save_parquet_hive_path) || !dir.exists(save_parquet_hive_path)) {
+    msg <- "`save_parquet_hive_path` must be a valid path!"
+    logger::log_error(msg)
+    base::stop(msg, call. = FALSE)
+  }
+
   # The loop is over selector types, not metadata rows, because each SQL
   # template processes all matching person-variable windows in one batch.
   for (i in seq_along(selectors)) {
@@ -205,14 +211,13 @@ run_selector_queries <- function(con, selectors, save_parquet_hive_path) {
       error = function(e) {
         # Errors are logged with selector context before being rethrown so the
         # caller still gets a failing run and a useful breadcrumb trail.
-        logger::log_error(
-          sprintf(
-            "Error while processing selector %s: %s",
-            selector_name,
-            conditionMessage(e)
-          )
+        msg <- sprintf(
+          "Error while processing selector %s: %s",
+          selector_name,
+          conditionMessage(e)
         )
-        stop(e)
+        logger::log_error(msg)
+        base::stop(msg, call. = FALSE)
       }
     )
   }

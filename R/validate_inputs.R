@@ -29,26 +29,20 @@ metadata_supported_selectors <- function(metadata_dt) {
   )
 
   if (length(unsupported_selectors) > 0L) {
-    stop(
-      paste(
-        "Unsupported selector(s) in `metadata`:",
-        paste(unsupported_selectors, collapse = ", "),
-        sprintf(
-          "Available selectors in package `anchoR`: %s.",
-          paste(supported_selectors, collapse = ", ")
-        ),
-        paste(
-          "Pregnancy-specific selectors from the legacy pipeline require",
-          "study-specific preprocessing and are not implemented in this",
-          "simplified package."
-        ),
-        paste(
-          "Use `filter_supported_metadata()` if you want to drop unsupported",
-          "rows before calling `anchor()`."
-        )
+    msg <- paste(
+      "Unsupported selector(s) in `metadata`:",
+      paste(unsupported_selectors, collapse = ", "),
+      sprintf(
+        "Available selectors in package `anchoR`: %s.",
+        paste(supported_selectors, collapse = ", ")
       ),
-      call. = FALSE
+      paste(
+        "Use `filter_supported_metadata()` if you want to drop unsupported",
+        "rows before calling `anchor()`."
+      )
     )
+    logger::log_error(msg)
+    base::stop(msg, call. = FALSE)
   }
 
   invisible(metadata_dt)
@@ -122,10 +116,10 @@ validate_anchor_inputs <- function(
       "variable_id",
       "concept_id",
       "window_name",
-      "window_definition",
+      "constructor",
       "selector",
-      "window_start_offset",
-      "window_end_offset",
+      "start_offset",
+      "end_offset",
       "anchor_start_col",
       "anchor_end_col",
       "range_min",
@@ -137,10 +131,10 @@ validate_anchor_inputs <- function(
     "variable_id",
     "concept_id",
     "window_name",
-    "window_definition",
+    "constructor",
     "selector",
-    "window_start_offset",
-    "window_end_offset",
+    "start_offset",
+    "end_offset",
     "anchor_start_col",
     "anchor_end_col",
     "range_min",

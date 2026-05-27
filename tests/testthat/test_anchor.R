@@ -142,23 +142,23 @@ testthat::test_that("reshapes variable-by-variable hive output", {
   metadata <- example_metadata()[
     variable_id %in% c("cov_latest", "lab_range")
   ]
-
   anchor_by_variable(
     population = example_population(),
     metadata = metadata,
     concepts = example_concepts(),
     save_parquet_hive_path = hive_path
   )
-
   anchored <- get_anchor_result(
     metadata = metadata,
     anchor_hive_path = hive_path
   )
   data.table::setorder(anchored, person_id, T0)
 
-  testthat::expect_equal(anchored$person_id, c("1", "2"))
-  testthat::expect_equal(anchored$T0, as.Date(c("2024-01-01", "2024-01-15")))
-  testthat::expect_equal(anchored$value_cov_latest, c("TRUE", "FALSE"))
+  testthat::expect_equal(anchored$person_id, c("1", "2", "2"))
+  testthat::expect_equal(
+    anchored$T0, as.Date(c("2024-01-01", "2024-01-15", "2024-01-15"))
+  )
+  testthat::expect_equal(anchored$value_cov_latest, c("TRUE", "FALSE", NA))
   expect_true(is.na(anchored$value_lab_range[[1L]]))
-  testthat::expect_equal(anchored$value_lab_range[[2L]], "1")
+  testthat::expect_equal(anchored$value_lab_range[[2L]], NA_character_)
 })

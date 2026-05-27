@@ -7,14 +7,14 @@ generic_window <- function(window_dt) {
   for (col in unique(window_dt$anchor_start_col)) {
     window_dt[
       anchor_start_col == col,
-      window_start := as.Date(get(col) + window_start_offset)
+      window_start := as.Date(get(col) + start_offset)
     ]
   }
 
   for (col in unique(window_dt$anchor_end_col)) {
     window_dt[
       anchor_end_col == col,
-      window_end := as.Date(get(col) + window_end_offset)
+      window_end := as.Date(get(col) + end_offset)
     ]
   }
 
@@ -48,18 +48,6 @@ preg1_window <- function(window_dt) {
 cross_join_population_metadata <- function(population_dt, metadata_dt) {
   # The single-variable orchestration usually reaches `define_window()` with a
   # one-row metadata slice, so avoid the cartesian merge overhead in that case.
-  if (
-    nrow(metadata_dt) == 1L &&
-      length(intersect(names(population_dt), names(metadata_dt))) == 0L
-  ) {
-    return(
-      cbind(
-        population_dt,
-        metadata_dt[rep.int(1L, nrow(population_dt))]
-      )
-    )
-  }
-
   population_dt[, .anchor_join_key := 1L]
   metadata_dt[, .anchor_join_key := 1L]
 
@@ -110,15 +98,17 @@ define_window <- function(
   ## whether a concept matched in that window
   ## the final value for that variable for that person
   # Basically we match each person with each variable_id.
-  window_dt <- cross_join_population_metadata(population_dt, metadata_dt)
+  window_dt <- cross_join_population_metadata(
+    population_dt, metadata_dt
+  )
   # Preserve the pre-processing order so later operations can reorder safely
   # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]
 
 
-  for (window_fun in unique(window_dt[, window_definition])) {
+  for (window_fun in unique(window_dt[, constructor])) {
     fun_name <- tolower(paste0(window_fun, "_window"))
-    row_idx <- window_dt[, which(window_definition == window_fun)]
+    row_idx <- window_dt[, which(constructor == window_fun)]
 
     if (!exists(fun_name, mode = "function")) {
       msg <- sprintf("Window function does not exist: %s", fun_name)

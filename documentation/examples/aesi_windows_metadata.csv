@@ -1,0 +1,117 @@
+variable_id;label;anchor;window;start;end;date_extraction_func
+COD_ACUTE_ASEPTIC_ARTHRITIS;Acute aseptic arthritis;T0;lookback;-365;-1;LATEST
+COD_ACUTE_CV_INJURY;Acute cardiovascular injury;T0;lookback;-365;-1;LATEST
+COD_ACUTE_ENCEPHALOMYELITIS;Acute disseminated encephalomyelitis;T0;lookback;-365;-1;LATEST
+COD_ACUTE_KIDNEY_INJURY;Acute kidney injury;T0;lookback;-365;-1;LATEST
+COD_ACUTE_LIVER_INJURY;Acute liver injury;T0;lookback;-365;-1;LATEST
+COD_ACUTE_PANCREATITIS;Acute pancreatitis;T0;lookback;-365;-1;LATEST
+COD_ACUTE_RESP_DISS_SYNDROME;Acute respiratory distress syndrome;T0;lookback;-365;-1;LATEST
+COD_ANAPHYLAXIS;Anaphylaxis;T0;lookback;-365;-1;LATEST
+COD_ANY_DEATH;Death (any cause);T0;lookback;-365;-1;LATEST
+COD_ARRHYTHMIA;Arrhythmia;T0;lookback;-365;-1;LATEST
+COD_BELLS_PALSY;Bell's palsy;T0;lookback;-365;-1;LATEST
+COD_CAD;Coronary artery disease;T0;lookback;-365;-1;LATEST
+COD_CHILBLAIN_LESIONS;Chilblain-like lesions;T0;lookback;-365;-1;LATEST
+COD_COAGULATUIN;Coagulation disorders: thromboembolism, haemorrhage;T0;lookback;-365;-1;LATEST
+COD_CONVULSION;Generalised convulsion;T0;lookback;-365;-1;LATEST
+COD_CVST;Cerebral venous sinus thrombosis;T0;lookback;-365;-1;LATEST
+COD_DM1;Diabetes mellitus type 1;T0;lookback;-3652;-1;LATEST
+COD_ERYTHEMA_MULTIFORME;Erythema multiforme;T0;lookback;-365;-1;LATEST
+COD_GBSYNDROME;Guillain-Barre syndrome;T0;lookback;-365;-1;LATEST
+COD_GLOMERULONEPHRITIS;Glomerulonephritis;T0;lookback;-365;-1;LATEST
+COD_HF;Heart failure;T0;lookback;-365;-1;LATEST
+COD_HYPERMENORRHOEA;Hypermenorrhoea;T0;lookback;-365;-1;LATEST
+COD_ITC;Idiopathic thrombocytopenia;T0;lookback;-365;-1;LATEST
+COD_MENINGOENCEPHALITIS;Meningoencephalitis;T0;lookback;-365;-1;LATEST
+COD_MIS;Multisystem inflammatory syndrome;T0;lookback;-365;-1;LATEST
+COD_MYOCARDITIS;Myocarditis (1-21 days);T0;lookback;-365;-1;LATEST
+COD_MYOSITIS;Myositis;T0;lookback;-365;-1;LATEST
+COD_NARCOLEPSY;Narcolepsy;T0;lookback;-365;-1;LATEST
+COD_PERICARDITIS;Pericarditis (1-21 days);T0;lookback;-365;-1;LATEST
+COD_RHABDOMYOLYSIS;Rhabdomyolysis;T0;lookback;-365;-1;LATEST
+COD_SECONDARY_AMENORRHEA;Secondary amenorrhoea;T0;lookback;-365;-1;LATEST
+COD_SINGLE_ORGAN_VASCULITIS;Single organ cutaneous vasculitis;T0;lookback;-365;-1;LATEST
+COD_STRESS_CARDIOMYOPATHY;Stress cardiomyopathy;T0;lookback;-365;-1;LATEST
+COD_SUBACUTE_THYROIDITIS;Subacute thyroiditis;T0;lookback;-365;-1;LATEST
+COD_SUDDEN_DEATH;Sudden death;T0;lookback;-365;-1;LATEST
+COD_TRANSVERSE_MYELITIS;Transverse myelitis;T0;lookback;-365;-1;LATEST
+COD_TTS;Thrombotic thrombocytopenia syndrome;T0;lookback;-365;-1;LATEST
+COD_UTI_NCO;Urinary Track Infection;T0;lookback;-365;-1;LATEST
+COMP_MYOPERI;Myocarditis or Pericarditis (1-21 days);T0;lookback;-365;-1;LATEST
+COD_ACUTE_ASEPTIC_ARTHRITIS;Acute aseptic arthritis;T0;induction;0;0;EARLIEST
+COD_ACUTE_CV_INJURY;Acute cardiovascular injury;T0;induction;0;0;EARLIEST
+COD_ACUTE_ENCEPHALOMYELITIS;Acute disseminated encephalomyelitis;T0;induction;0;0;EARLIEST
+COD_ACUTE_KIDNEY_INJURY;Acute kidney injury;T0;induction;0;0;EARLIEST
+COD_ACUTE_LIVER_INJURY;Acute liver injury;T0;induction;0;0;EARLIEST
+COD_ACUTE_PANCREATITIS;Acute pancreatitis;T0;induction;0;0;EARLIEST
+COD_ACUTE_RESP_DISS_SYNDROME;Acute respiratory distress syndrome;T0;induction;0;0;EARLIEST
+COD_ANY_DEATH;Death (any cause);T0;induction;0;0;EARLIEST
+COD_ARRHYTHMIA;Arrhythmia;T0;induction;0;0;EARLIEST
+COD_BELLS_PALSY;Bell's palsy;T0;induction;0;0;EARLIEST
+COD_CAD;Coronary artery disease;T0;induction;0;0;EARLIEST
+COD_CHILBLAIN_LESIONS;Chilblain-like lesions;T0;induction;0;0;EARLIEST
+COD_COAGULATUIN;Coagulation disorders: thromboembolism, haemorrhage;T0;induction;0;0;EARLIEST
+COD_CONVULSION;Generalised convulsion;T0;induction;0;0;EARLIEST
+COD_CVST;Cerebral venous sinus thrombosis;T0;induction;0;0;EARLIEST
+COD_DM1;Diabetes mellitus type 1;T0;induction;0;0;EARLIEST
+COD_ERYTHEMA_MULTIFORME;Erythema multiforme;T0;induction;0;0;EARLIEST
+COD_GBSYNDROME;Guillain-Barre syndrome;T0;induction;0;0;EARLIEST
+COD_GLOMERULONEPHRITIS;Glomerulonephritis;T0;induction;0;0;EARLIEST
+COD_HF;Heart failure;T0;induction;0;0;EARLIEST
+COD_HYPERMENORRHOEA;Hypermenorrhoea;T0;induction;0;0;EARLIEST
+COD_ITC;Idiopathic thrombocytopenia;T0;induction;0;0;EARLIEST
+COD_MENINGOENCEPHALITIS;Meningoencephalitis;T0;induction;0;0;EARLIEST
+COD_MIS;Multisystem inflammatory syndrome;T0;induction;0;0;EARLIEST
+COD_MYOCARDITIS;Myocarditis (1-21 days);T0;induction;0;0;EARLIEST
+COD_MYOSITIS;Myositis;T0;induction;0;0;EARLIEST
+COD_NARCOLEPSY;Narcolepsy;T0;induction;0;0;EARLIEST
+COD_PERICARDITIS;Pericarditis (1-21 days);T0;induction;0;0;EARLIEST
+COD_RHABDOMYOLYSIS;Rhabdomyolysis;T0;induction;0;0;EARLIEST
+COD_SECONDARY_AMENORRHEA;Secondary amenorrhoea;T0;induction;0;0;EARLIEST
+COD_SINGLE_ORGAN_VASCULITIS;Single organ cutaneous vasculitis;T0;induction;0;0;EARLIEST
+COD_STRESS_CARDIOMYOPATHY;Stress cardiomyopathy;T0;induction;0;0;EARLIEST
+COD_SUBACUTE_THYROIDITIS;Subacute thyroiditis;T0;induction;0;0;EARLIEST
+COD_SUDDEN_DEATH;Sudden death;T0;induction;0;0;EARLIEST
+COD_TRANSVERSE_MYELITIS;Transverse myelitis;T0;induction;0;0;EARLIEST
+COD_TTS;Thrombotic thrombocytopenia syndrome;T0;induction;0;0;EARLIEST
+COD_UTI_NCO;Urinary Track Infection;T0;induction;0;0;EARLIEST
+COMP_MYOPERI;Myocarditis or Pericarditis (1-21 days);T0;induction;0;0;EARLIEST
+COD_ACUTE_ASEPTIC_ARTHRITIS;Acute aseptic arthritis;T0;risk;1;42;EARLIEST
+COD_ACUTE_CV_INJURY;Acute cardiovascular injury;T0;risk;1;365;EARLIEST
+COD_ACUTE_ENCEPHALOMYELITIS;Acute disseminated encephalomyelitis;T0;risk;1;9999;EARLIEST
+COD_ACUTE_KIDNEY_INJURY;Acute kidney injury;T0;risk;1;365;EARLIEST
+COD_ACUTE_LIVER_INJURY;Acute liver injury;T0;risk;1;365;EARLIEST
+COD_ACUTE_PANCREATITIS;Acute pancreatitis;T0;risk;1;365;EARLIEST
+COD_ACUTE_RESP_DISS_SYNDROME;Acute respiratory distress syndrome;T0;risk;1;365;EARLIEST
+COD_ANAPHYLAXIS;Anaphylaxis;T0;risk;0;1;EARLIEST
+COD_ANY_DEATH;Death (any cause);T0;risk;1;365;EARLIEST
+COD_ARRHYTHMIA;Arrhythmia;T0;risk;1;365;EARLIEST
+COD_BELLS_PALSY;Bell's palsy;T0;risk;1;42;EARLIEST
+COD_CAD;Coronary artery disease;T0;risk;1;365;EARLIEST
+COD_CHILBLAIN_LESIONS;Chilblain-like lesions;T0;risk;1;42;EARLIEST
+COD_COAGULATUIN;Coagulation disorders: thromboembolism, haemorrhage;T0;risk;1;28;EARLIEST
+COD_CONVULSION;Generalised convulsion;T0;risk;1;42;EARLIEST
+COD_CVST;Cerebral venous sinus thrombosis;T0;risk;1;28;EARLIEST
+COD_DM1;Diabetes mellitus type 1;T0;risk;1;365;EARLIEST
+COD_ERYTHEMA_MULTIFORME;Erythema multiforme;T0;risk;1;42;EARLIEST
+COD_GBSYNDROME;Guillain-Barre syndrome;T0;risk;1;42;EARLIEST
+COD_GLOMERULONEPHRITIS;Glomerulonephritis;T0;risk;1;180;EARLIEST
+COD_HF;Heart failure;T0;risk;1;365;EARLIEST
+COD_HYPERMENORRHOEA;Hypermenorrhoea;T0;risk;1;183;EARLIEST
+COD_ITC;Idiopathic thrombocytopenia;T0;risk;1;42;EARLIEST
+COD_MENINGOENCEPHALITIS;Meningoencephalitis;T0;risk;1;42;EARLIEST
+COD_MIS;Multisystem inflammatory syndrome;T0;risk;1;42;EARLIEST
+COD_MYOCARDITIS;Myocarditis (1-21 days);T0;risk;1;21;EARLIEST
+COD_MYOSITIS;Myositis;T0;risk;1;365;EARLIEST
+COD_NARCOLEPSY;Narcolepsy;T0;risk;1;42;EARLIEST
+COD_PERICARDITIS;Pericarditis (1-21 days);T0;risk;1;21;EARLIEST
+COD_RHABDOMYOLYSIS;Rhabdomyolysis;T0;risk;1;365;EARLIEST
+COD_SECONDARY_AMENORRHEA;Secondary amenorrhoea;T0;risk;1;183;EARLIEST
+COD_SINGLE_ORGAN_VASCULITIS;Single organ cutaneous vasculitis;T0;risk;1;28;EARLIEST
+COD_STRESS_CARDIOMYOPATHY;Stress cardiomyopathy;T0;risk;1;365;EARLIEST
+COD_SUBACUTE_THYROIDITIS;Subacute thyroiditis;T0;risk;1;365;EARLIEST
+COD_SUDDEN_DEATH;Sudden death;T0;risk;1;365;EARLIEST
+COD_TRANSVERSE_MYELITIS;Transverse myelitis;T0;risk;1;42;EARLIEST
+COD_TTS;Thrombotic thrombocytopenia syndrome;T0;risk;1;15;EARLIEST
+COD_UTI_NCO;Urinary Track Infection;T0;risk;1;21;EARLIEST
+COMP_MYOPERI;Myocarditis or Pericarditis (1-21 days);T0;risk;1;21;EARLIEST
