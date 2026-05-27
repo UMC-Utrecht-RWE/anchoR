@@ -48,18 +48,6 @@ preg1_window <- function(window_dt) {
 cross_join_population_metadata <- function(population_dt, metadata_dt) {
   # The single-variable orchestration usually reaches `define_window()` with a
   # one-row metadata slice, so avoid the cartesian merge overhead in that case.
-  if (
-    nrow(metadata_dt) == 1L &&
-      length(intersect(names(population_dt), names(metadata_dt))) == 0L
-  ) {
-    return(
-      cbind(
-        population_dt,
-        metadata_dt[rep.int(1L, nrow(population_dt))]
-      )
-    )
-  }
-
   population_dt[, .anchor_join_key := 1L]
   metadata_dt[, .anchor_join_key := 1L]
 

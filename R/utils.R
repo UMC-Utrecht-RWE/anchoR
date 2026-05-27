@@ -113,6 +113,18 @@ normalize_parquet_sources <- function(concepts) {
   as.character(parquet_sources)
 }
 
+#' Takes a data frame x, a target column name (new standard name), and aliases
+#' (vector of old possible names). If the target column already exists
+#' it returns data unchanged (no rename needed).
+#' If matching aliases found → renames the first matching one to the target name
+#' @param x data frame or data table to rename columns in
+#' @param target the new standard column name to rename to
+#' @param aliases vector of old possible column names that should be renamed
+#' to the target if the target doesn't already exist
+#' @return x with the first matching alias renamed to target, or unchanged if
+#' target already exists or no aliases found
+#' @keywords internal
+#' @noRd
 rename_first_matching_column <- function(x, target, aliases) {
   # Metadata arrives with study-specific names, so rename once instead of
   # making every downstream function know all historical aliases.
