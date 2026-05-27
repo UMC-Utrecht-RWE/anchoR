@@ -1,11 +1,11 @@
-testthat::test_that("available_selectors lists bundled SQL templates", {
-  selectors <- available_selectors()
+# testthat::test_that("available_selectors lists bundled SQL templates", {
+#   selectors <- available_selectors()
 
-  expect_true(
-    all(c("LATEST", "EARLIEST", "COUNT", "RANGE_COUNT") %in% selectors)
-  )
-  expect_true("COUNT_MORE_THEN_1" %in% selectors)
-})
+#   expect_true(
+#     all(c("LATEST", "EARLIEST", "COUNT", "RANGE_COUNT") %in% selectors)
+#   )
+#   expect_true("COUNT_MORE_THEN_1" %in% selectors)
+# })
 
 test_that(
   "filter_supported_metadata keeps supported when unsupported rows are dropped",

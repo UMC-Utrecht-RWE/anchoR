@@ -160,12 +160,12 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   )
   rename_first_matching_column(
     metadata_dt,
-    target = "window_start_offset",
+    target = "start_offset",
     aliases = "start_look_back"
   )
   rename_first_matching_column(
     metadata_dt,
-    target = "window_end_offset",
+    target = "end_offset",
     aliases = "end_look_back"
   )
   rename_first_matching_column(
@@ -181,8 +181,8 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
 
   metadata_dt[, `:=`(
     selector = normalize_selector_name(selector),
-    window_start_offset = as.integer(window_start_offset),
-    window_end_offset = as.integer(window_end_offset),
+    start_offset = as.integer(start_offset),
+    end_offset = as.integer(end_offset),
     concept_id = as.character(concept_id)
   )]
 

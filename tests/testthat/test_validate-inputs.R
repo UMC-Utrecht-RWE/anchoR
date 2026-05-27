@@ -8,8 +8,8 @@ testthat::test_that("validate_anchor_inputs standardizes metadata names", {
   expect_true(all(
     c(
       "selector",
-      "window_start_offset",
-      "window_end_offset",
+      "start_offset",
+      "end_offset",
       "anchor_start_col",
       "anchor_end_col",
       "range_min",
@@ -28,7 +28,7 @@ testthat::test_that("validate_anchor_inputs fails on missing anchor columns", {
     variable_id = "x",
     concept_id = "Y",
     window_name = "lookback",
-    window_definition = "GENERIC",
+    constructor = "GENERIC",
     selector = "LATEST",
     start_look_back = -1L,
     end_look_back = 0L,

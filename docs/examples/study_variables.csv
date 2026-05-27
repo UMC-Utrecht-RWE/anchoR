@@ -1,4 +1,4 @@
-variable_id,concept_id,raw_concept,exposure,outcome,covariate,data_type,window_start_offset,window_end_offset,window_name,window_definition,selector,Matching,variable_description
+variable_id,concept_id,raw_concept,exposure,outcome,covariate,data_type,start_offset,end_offset,window_name,constructor,selector,Matching,variable_description
 SV_AGE,PP_AGE,D3,FALSE,FALSE,TRUE,INT,-54750.5,0,lookback,GENERIC,LATEST,FALSE,Age
 SV_SEX,PP_SEX,D3,FALSE,FALSE,TRUE,BOOL,-54750,0,lookback,GENERIC,LATEST,TRUE,Sex
 VACC_DATE,NA,D3,FALSE,FALSE,TRUE,FACTOR,0,0,lookback,GENERIC,LATEST,TRUE,Date of vaccination
@@ -6,7 +6,7 @@ SV_PREG_TRIMESTER,PP_PREG_TRIMESTRE,D3 Pregnancy,FALSE,FALSE,TRUE,FACTOR,-3652.5
 SV_REGION,PP_REGION,dap_specific_concept,FALSE,FALSE,TRUE,CHAR,0,0,lookback,GENERIC,LATEST,TRUE,Geographic region
 SV_SES_STATUS,PP_SES_STATUS,dap_specific_concept,FALSE,FALSE,TRUE,CHAR,0,0,lookback,GENERIC,LATEST,TRUE,Socioeconomic status/education level
 SV_AGE_CAT,PP_AGE_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,0,0,lookback,GENERIC,LATEST,FALSE,Age categories
-SV_PREG_STATUS,PP_PREG_STATUS,D3,FALSE,FALSE,TRUE,BOOL,0,0,lookback,GENERIC,LATEST,TRUE,Pregnancy status 
+SV_PREG_STATUS,PP_PREG_STATUS,D3,FALSE,FALSE,TRUE,BOOL,0,0,lookback,GENERIC,LATEST,TRUE,Pregnancy status
 SV_PRIOR_COVID_DG,PP_HISTCOVID,pre-processed,FALSE,FALSE,TRUE,BOOL,-1825,0,lookback,GENERIC,LATEST,TRUE,COVID-19 History: Previous diagnosis of COVID-19
 SV_PRIOR_COVID_POSTEST,PP_COVID19_POSTEST,pre-processed,FALSE,FALSE,TRUE,BOOL,-1825,0,lookback,GENERIC,LATEST,FALSE,COVID-19: Previous positive test results for COVID-19
 SV_BRAND_COVID_VACC,PP_BRAND_COVID_VACC,dap_specific_concept,FALSE,FALSE,TRUE,CHAR,0,0,lookback,GENERIC,LATEST,TRUE,Brand of last COVID-19 vaccine received
@@ -16,13 +16,13 @@ CDC_RISK,PP_CDC_RISK,pre-processed,FALSE,FALSE,TRUE,FACTOR,-3652.5,0,lookback,GE
 SV_SMOKING_STATUS,PP_SMOKING_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,-1095.75,0,lookback,GENERIC,LATEST,FALSE,Personal Life characteristics: Smoking status
 SV_BMI_3YEARS,BMI_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,-1095.75,0,lookback,GENERIC,LATEST,FALSE,"""Personal Life characteristics: Body Mass Index"""
 SV_OBESITY,L_OBESITY_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-1095.75,0,lookback,GENERIC,LATEST,FALSE,Personal Life characteristics: Obesity diagnosis or obesity surgery
-COD_GBSYNDROME,N_GBS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History  of Guillain-Barre syndrome (Val) 
+COD_GBSYNDROME,N_GBS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History  of Guillain-Barre syndrome (Val)
 COD_ACUTE_ENCEPHALOMYELITIS,N_ADEM_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Acute disseminated encephalomyelitis
 COD_NARCOLEPSY,N_NARCOLEPSY_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Narcolepsy (Val)
 COD_ACUTE_ASEPTIC_ARTHRITIS,M_ARTASEPTIC_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Acute aseptic arthritis
 COD_DM1,E_DM1_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365000.25,0,lookback,GENERIC,LATEST,FALSE,History of Diabetes mellitus type I
 COD_ITC,B_ITP_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of (Idiopathic) thrombocytopenia (Val)
-COD_TTS,PP_TTS,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Thrombosis thrombocytopenia syndrome (Val) 
+COD_TTS,PP_TTS,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Thrombosis thrombocytopenia syndrome (Val)
 COD_MYOSITIS,M_MYOSITIS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Myositis
 COD_ACUTE_CV_INJURY,PP_ACI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Acute cardiovascular injury
 COD_ARRHYTHMIA,C_ARRH_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Arrhythmia
@@ -35,14 +35,14 @@ COD_COAGULATUIN,PP_COAGDIS,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,look
 COD_SINGLE_ORGAN_VASCULITIS,V_VASCULITISSINGLEORG_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Single organ cutaneous vasculitis
 COD_CVST,N_CVST_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Cerebral venous sinus thrombosis
 COD_ACUTE_LIVER_INJURY,D_LIVERACUTE_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Acute liver injury
-COD_ACUTE_KIDNEY_INJURY,G_KIACUTE_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Acute kidney injury 
+COD_ACUTE_KIDNEY_INJURY,G_KIACUTE_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Acute kidney injury
 COD_ACUTE_PANCREATITIS,D_PANCRACUTE_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Acute pancreatitis
 COD_RHABDOMYOLYSIS,M_RHABDOMYOLISIS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Rhabdomyolysis
 COD_GLOMERULONEPHRITIS,G_GLOMERULONEPHRITIS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Glomerulonephritis
 COD_CONVULSION,N_CONVULSION_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Generalised convulsion
 COD_MENINGOENCEPHALITIS,N_MENINGOENC_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Meningoencephalitis
 COD_TRANSVERSE_MYELITIS,N_MYELITISTRANSV_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Transverse myelitis (Val)
-COD_BELLS_PALSY,N_BELLP_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Bells palsy 
+COD_BELLS_PALSY,N_BELLP_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Bells palsy
 COD_ACUTE_RESP_DISS_SYNDROME,R_ARDS_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Acute respiratory distress syndrome
 COD_ERYTHEMA_MULTIFORME,SK_ERYTHMULTI_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Erythema multiforme
 COD_CHILBLAIN_LESIONS,V_CHILBLAIN_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365.25,0,lookback,GENERIC,LATEST,FALSE,History of Chilblain-like lesions
@@ -143,7 +143,7 @@ COD_CEREBRALPALSY,O_CEREBRALPALSY_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-36
 COD_DOWN,O_DOWN_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.25,0,lookback,GENERIC,LATEST,FALSE,Down Syndrome
 COD_NEURONMOTORDISEASE,N_NEURONMOTORDISEASE_COV,concept codelist,FALSE,FALSE,TRUE,BOOL,-3652.25,0,lookback,GENERIC,LATEST,FALSE,Neuron Motor Disease
 COD_SUDDEN_DEATH,O_DEATHSUDDEN_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365000.25,0,lookback,GENERIC,LATEST,FALSE,Suddent death
-COD_UTI_NCO,G_UTI_AESI,concept codelist,FALSE,TRUE,FALSE,BOOL,-365,0,lookback,GENERIC,LATEST,FALSE,Negative Control Outcome: Urinary tract infection 
+COD_UTI_NCO,G_UTI_AESI,concept codelist,FALSE,TRUE,FALSE,BOOL,-365,0,lookback,GENERIC,LATEST,FALSE,Negative Control Outcome: Urinary tract infection
 SV_HU_CONTACT,PP_HU_CONTACT,pre-processed,FALSE,FALSE,TRUE,BOOL,-7,0,lookback,GENERIC,LATEST,FALSE,Sensitivity variable: Contact with healthcare during the last 7 days
 SV_BMI_PREG,BMI_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,-1095.75,0,lookback,GENERIC,LATEST_PRIOR_ANCHOREDPREG,FALSE,Pregnacy: Body Mass Index
 SV_SMOKING_PREG,PP_SMOKING_CAT,pre-processed,FALSE,FALSE,TRUE,FACTOR,-1095.75,0,lookback,GENERIC,LATEST_PRIOR_ANCHOREDPREG,FALSE,Pregnancy: Smoking status

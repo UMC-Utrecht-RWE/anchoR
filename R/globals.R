@@ -27,9 +27,9 @@ if (getRversion() >= "2.15.1") {
       "value",
       "variable_id",
       "window_end",
-      "window_end_offset",
+      "end_offset",
       "window_start",
-      "window_start_offset",
+      "start_offset",
       "window_valid"
     )
   )

@@ -7,14 +7,14 @@ generic_window <- function(window_dt) {
   for (col in unique(window_dt$anchor_start_col)) {
     window_dt[
       anchor_start_col == col,
-      window_start := as.Date(get(col) + window_start_offset)
+      window_start := as.Date(get(col) + start_offset)
     ]
   }
 
   for (col in unique(window_dt$anchor_end_col)) {
     window_dt[
       anchor_end_col == col,
-      window_end := as.Date(get(col) + window_end_offset)
+      window_end := as.Date(get(col) + end_offset)
     ]
   }
 
@@ -116,9 +116,9 @@ define_window <- function(
   window_dt[, .window_row_id := .I]
 
 
-  for (window_fun in unique(window_dt[, window_definition])) {
+  for (window_fun in unique(window_dt[, constructor])) {
     fun_name <- tolower(paste0(window_fun, "_window"))
-    row_idx <- window_dt[, which(window_definition == window_fun)]
+    row_idx <- window_dt[, which(constructor == window_fun)]
 
     if (!exists(fun_name, mode = "function")) {
       msg <- sprintf("Window function does not exist: %s", fun_name)

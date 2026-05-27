@@ -15,7 +15,7 @@ testthat::test_that("define_window supports alternate anchor columns", {
     variable_id = "preg_cov",
     concept_id = "PREG_X",
     window_name = "lookback",
-    window_definition = "GENERIC",
+    constructor = "GENERIC",
     selector = "LATEST",
     start_look_back = 0L,
     end_look_back = 0L,
