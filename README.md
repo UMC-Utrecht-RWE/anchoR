@@ -22,7 +22,6 @@ From those inputs, `anchoR` builds one person-variable window, queries the conce
 
 ## Main functions
 
-- `derive_t0()`: derive an index date from concept records when it is not already in the population
 - `define_window()`: build one anchoring window per person and per variable
 - `anchor()`: run the selector SQL and return anchored values
 - `filter_supported_metadata()`: drop metadata rows whose selectors are not implemented in the simplified package
