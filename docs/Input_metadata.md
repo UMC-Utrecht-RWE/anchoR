@@ -13,8 +13,8 @@
 The current metadata object used in `trial_run.R` contains the following
 columns.
 
-| column | format | description |
-| ------ | ------ | ----------- ||
+| column                | format    | description                                                                                                                                                                                                                     |
+| --------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `variable_id`         | chr       | Name of the study variable. This becomes the output variable identifier. Repeat `variable_id` across rows to define multiple windows for the same variable.                                                                     |
 | `concept_id`          | chr       | Concept identifier queried in the concepts source. May be missing for variables that are handled upstream or are not directly anchorable from the concepts table.                                                               |
 | `data_type`           | chr       | Intended output type, for example `INT`, `BOOL`, `CHAR`, `FACTOR`. Useful for downstream interpretation; not currently enforced by core anchoring logic.                                                                        |
@@ -23,7 +23,6 @@ columns.
 | `window_name`         | chr       | Label of the window, for example `lookback`, `risk`, `induction`, `control`.                                                                                                                                                    |
 | `window_definition`   | chr       | Name of the window-construction function. In the current metadata this is typically `GENERIC`.                                                                                                                                  |
 | `selector`            | chr       | Rule used to collapse one or more matching concept rows inside the window, for example `LATEST`, `EARLIEST`, `COUNT`, `RANGE_COUNT`.                                                                                            |
-
 
 Optional columns supported by the package, even when absent from the current metadata object:
 
