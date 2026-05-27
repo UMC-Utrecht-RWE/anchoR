@@ -8,11 +8,17 @@ if (getRversion() >= "2.15.1") {
       ".",
       ".I",
       ":=",
+      "N",
+      ".N",
+      "T0",
+      "tmp",
+      "constructor",
       ".anchor_join_key",
       ".anchor_row_id",
       ".window_end",
       ".window_row_id",
       ".window_start",
+      "..required_narrow_cols",
       "anchor_end_col",
       "anchor_row_id",
       "anchor_start_col",
@@ -30,7 +36,8 @@ if (getRversion() >= "2.15.1") {
       "end_offset",
       "window_start",
       "start_offset",
-      "window_valid"
+      "window_valid",
+      "window_name"
     )
   )
 }

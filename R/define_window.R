@@ -98,7 +98,9 @@ define_window <- function(
   ## whether a concept matched in that window
   ## the final value for that variable for that person
   # Basically we match each person with each variable_id.
-  window_dt <- cross_join_population_metadata(population_dt, metadata_dt)
+  window_dt <- cross_join_population_metadata(
+    population_dt, metadata_dt
+  )
   # Preserve the pre-processing order so later operations can reorder safely
   # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]

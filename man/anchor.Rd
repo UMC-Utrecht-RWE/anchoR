@@ -33,10 +33,7 @@ directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
 }
 \value{
-Invisibly, the function writes parquet files to
-\code{save_parquet_hive_path}. When no valid windows exist and
-a \code{data.table} with missing anchored values
-is returned directly.
+Invisibly, function writes parquet files to save_parquet_hive_path
 }
 \description{
 Applies metadata-driven windowing and selector rules to a concept table,

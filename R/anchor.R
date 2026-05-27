@@ -162,10 +162,7 @@ move_anchor_partition <- function(
 #'   directory where selector query results are written as a partitioned parquet
 #'   hive. Must not be \code{NULL}.
 #'
-#' @return Invisibly, the function writes parquet files to
-#'   \code{save_parquet_hive_path}. When no valid windows exist and
-#'   a \code{data.table} with missing anchored values
-#'   is returned directly.
+#' @return Invisibly, function writes parquet files to save_parquet_hive_path
 #' @export
 anchor <- function(
   population,

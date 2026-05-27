@@ -7,21 +7,21 @@
 imputing_missing(wide_anchored, metadata)
 }
 \arguments{
-\item{wide_anchored}{A wide \\code{data.table} from \\code{get_anchor_result}
-with \\code{value_<variable_id>} columns.}
+\item{wide_anchored}{A wide data.table from get_anchor_result
+with value_<variable_id> columns.}
 
-\item{metadata}{A data frame that should include \\code{variable_id},
-\\code{is_expected_missing}, and \\code{variable_type}.}
+\item{metadata}{A data frame that should include variable_id,
+is_expected_missing, and variable_type.}
 }
 \value{
-The updated wide \\code{data.table}. Returns input unchanged when
+The updated wide data.table. Returns input unchanged when
 required metadata columns are missing.
 }
 \description{
-Imputes missing \\code{value_<variable_id>} cells in a wide anchored result
-using metadata rules for \\code{is_expected_missing} and
-\\code{variable_type}. For non-expected-missing variables, logical/TF types
-are imputed as \\code{FALSE} and categorical types as \\code{0}. If required
+Imputes missing value_<variable_id> cells in a wide anchored result
+using metadata rules for is_expected_missing and
+variable_type. For non-expected-missing variables, logical/TF types
+are imputed as FALSE and categorical types as 0. If required
 metadata columns are only partially available, a warning is raised and
 imputation is skipped.
 }
