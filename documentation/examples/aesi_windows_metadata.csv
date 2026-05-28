@@ -1,4 +1,4 @@
-variable_id;label;anchor;window;start;end;date_extraction_func
+variable_id;label;anchor;window;start_offset;end_offset;date_extraction_func
 COD_ACUTE_ASEPTIC_ARTHRITIS;Acute aseptic arthritis;T0;lookback;-365;-1;LATEST
 COD_ACUTE_CV_INJURY;Acute cardiovascular injury;T0;lookback;-365;-1;LATEST
 COD_ACUTE_ENCEPHALOMYELITIS;Acute disseminated encephalomyelitis;T0;lookback;-365;-1;LATEST
