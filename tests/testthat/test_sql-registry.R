@@ -96,8 +96,3 @@ testthat::test_that(" with invalid save_parquet_hive_path", {
     fixed = TRUE
   )
 })
-
-testthat::test_that("", {})
-testthat::test_that("", {})
-testthat::test_that("", {})
-testthat::test_that("", {})
