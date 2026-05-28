@@ -67,7 +67,35 @@ testthat::test_that(
   }
 )
 
-testthat::test_that("", {})
+testthat::test_that("read_selector_sql with invalid save_parquet_hive_path", {
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  testthat::expect_error(
+    run_selector_queries(
+      con = con(),
+      selectors = "GENERIC",
+      save_parquet_hive_path = "ciao"
+    ),
+    "`save_parquet_hive_path` must be a valid path!",
+    fixed = TRUE
+  )
+})
+
+testthat::test_that(" with invalid save_parquet_hive_path", {
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  testthat::expect_error(
+    run_selector_queries(
+      con = con(),
+      selectors = c("CIAO"),
+      save_parquet_hive_path = tempfile()
+    ),
+    "`save_parquet_hive_path` must be a valid path!",
+    fixed = TRUE
+  )
+})
 
 testthat::test_that("", {})
 testthat::test_that("", {})
