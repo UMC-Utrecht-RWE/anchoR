@@ -68,12 +68,14 @@ testthat::test_that(
 )
 
 testthat::test_that("read_selector_sql with invalid save_parquet_hive_path", {
-  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  old_appender <- logger::log_appender()
+  if (!is.function(old_appender)) old_appender <- logger::appender_console
+  withr::defer(logger::log_appender(old_appender))
+  logger::log_appender(logger::appender_void)
 
   testthat::expect_error(
     run_selector_queries(
-      con = con(),
+      con = NULL,
       selectors = "GENERIC",
       save_parquet_hive_path = "ciao"
     ),
@@ -82,17 +84,29 @@ testthat::test_that("read_selector_sql with invalid save_parquet_hive_path", {
   )
 })
 
-testthat::test_that(" with invalid save_parquet_hive_path", {
-  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+testthat::test_that("run_selector_queries reports selector context on error", {
+  query_fn <- run_selector_queries
+  environment(query_fn) <- list2env(
+    list(
+      run_selector_query = function(con, selector, save_parquet_hive_path) {
+        stop("boom", call. = FALSE)
+      }
+    ),
+    parent = environment(run_selector_queries)
+  )
+
+  old_appender <- logger::log_appender()
+  if (!is.function(old_appender)) old_appender <- logger::appender_console
+  withr::defer(logger::log_appender(old_appender))
+  logger::log_appender(logger::appender_void)
 
   testthat::expect_error(
-    run_selector_queries(
-      con = con(),
-      selectors = c("CIAO"),
-      save_parquet_hive_path = tempfile()
+    query_fn(
+      con = NULL,
+      selectors = "CIAO",
+      save_parquet_hive_path = withr::local_tempdir()
     ),
-    "`save_parquet_hive_path` must be a valid path!",
+    "Error while processing selector CIAO: boom",
     fixed = TRUE
   )
 })

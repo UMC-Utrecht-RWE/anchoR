@@ -178,21 +178,7 @@ run_selector_queries <- function(con, selectors, save_parquet_hive_path) {
 
     tryCatch(
       {
-        # Warnings are logged and muffled so one noisy backend message does not
-        # interrupt a full selector batch that still produced usable results.
-        withCallingHandlers(
-          run_selector_query(con, selector_name, save_parquet_hive_path),
-          warning = function(w) {
-            logger::log_warn(
-              sprintf(
-                "Warning while processing selector %s: %s",
-                selector_name,
-                conditionMessage(w)
-              )
-            )
-            invokeRestart("muffleWarning")
-          }
-        )
+        run_selector_query(con, selector_name, save_parquet_hive_path)
       },
       error = function(e) {
         # Errors are logged with selector context before being rethrown so the
