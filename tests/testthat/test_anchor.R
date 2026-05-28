@@ -36,7 +36,7 @@ testthat::test_that("anchor writes selector results to the parquet hive", {
     population = example_population(),
     metadata = example_metadata()[variable_id == "cov_latest"],
     concepts = example_concepts(),
-    save_parquet_hive_path = hive_path
+    anchor_hive_path = hive_path
   )
 
   anchored <- read_anchor_hive(hive_path)
@@ -62,7 +62,7 @@ testthat::test_that("anchor honors a non-default anchor column", {
     metadata = example_metadata()[variable_id == "lab_range"],
     concepts = example_concepts(),
     anchor_col = "anchor_date",
-    save_parquet_hive_path = hive_path
+    anchor_hive_path = hive_path
   )
 
   anchored <- read_anchor_hive(hive_path)
@@ -81,7 +81,7 @@ testthat::test_that("anchor accepts parquet concept sources", {
     population = example_population(),
     metadata = example_metadata()[variable_id == "lab_range"],
     concepts = example_concepts_parquet(),
-    save_parquet_hive_path = hive_path
+    anchor_hive_path = hive_path
   )
 
   anchored <- read_anchor_hive(hive_path)
@@ -103,7 +103,7 @@ testthat::test_that("it refreshes only requested variable partition", {
     population = example_population(),
     metadata = metadata,
     concepts = example_concepts(),
-    save_parquet_hive_path = hive_path
+    anchor_hive_path = hive_path
   )
 
   refreshed_concepts <- data.table::rbindlist(list(
@@ -120,7 +120,7 @@ testthat::test_that("it refreshes only requested variable partition", {
     population = example_population(),
     metadata = metadata[variable_id == "cov_latest"],
     concepts = refreshed_concepts,
-    save_parquet_hive_path = hive_path
+    anchor_hive_path = hive_path
   )
 
   anchored <- read_anchor_hive(hive_path)
@@ -146,7 +146,7 @@ testthat::test_that("reshapes variable-by-variable hive output", {
     population = example_population(),
     metadata = metadata,
     concepts = example_concepts(),
-    save_parquet_hive_path = hive_path
+    anchor_hive_path = hive_path
   )
   anchored <- get_anchor_result(
     metadata = metadata,
@@ -161,4 +161,21 @@ testthat::test_that("reshapes variable-by-variable hive output", {
   testthat::expect_equal(anchored$value_cov_latest, c("TRUE", "FALSE", NA))
   expect_true(is.na(anchored$value_lab_range[[1L]]))
   testthat::expect_equal(anchored$value_lab_range[[2L]], NA_character_)
+})
+
+
+testthat::test_that("with absent column window_name", {
+  metadata <- example_metadata()
+  metadata[, window_name := NULL]
+
+  hive_path <- tempfile(pattern = "anchor-hive-")
+  dir.create(hive_path)
+  on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+  anchor(
+    population = example_population(),
+    metadata = metadata,
+    concepts = example_concepts(),
+    anchor_hive_path = hive_path
+  )
 })

@@ -140,10 +140,10 @@ selector_sql_path <- function(selector) {
   sql_path
 }
 
-add_parquet_export <- function(sql_query, save_parquet_hive_path) {
+add_parquet_export <- function(sql_query, anchor_hive_path) {
   # This helper is for SQL templates that export concept subsets to Parquet
   # files instead of returning them as query results.
-  # The `save_parquet_hive_path` parameter is a path in the SQL environment's
+  # The `anchor_hive_path` parameter is a path in the SQL environment's
   # filesystem where the template can write Parquet files, and the caller is
   # responsible for making sure the path is accessible and writable by
   # the database backend.
@@ -153,31 +153,31 @@ add_parquet_export <- function(sql_query, save_parquet_hive_path) {
     PARTITION_BY (variable_id),
       APPEND TRUE);",
     sql_query,
-    save_parquet_hive_path
+    anchor_hive_path
   )
 
   export_query
 }
 
-read_selector_sql <- function(selector, save_parquet_hive_path) {
+read_selector_sql <- function(selector, anchor_hive_path) {
   # Keeping SQL in separate template files makes the selector logic inspectable
   # and editable without embedding large query strings inside R functions.
   query <- paste(
     readLines(selector_sql_path(selector), warn = FALSE),
     collapse = "\n"
   )
-  add_parquet_export(query, save_parquet_hive_path)
+  add_parquet_export(query, anchor_hive_path)
 }
 
-run_selector_query <- function(con, selector, save_parquet_hive_path) {
-  DBI::dbExecute(con, read_selector_sql(selector, save_parquet_hive_path))
+run_selector_query <- function(con, selector, anchor_hive_path) {
+  DBI::dbExecute(con, read_selector_sql(selector, anchor_hive_path))
 }
 
-run_selector_queries <- function(con, selectors, save_parquet_hive_path) {
+run_selector_queries <- function(con, selectors, anchor_hive_path) {
   result_list <- vector("list", length(selectors))
 
-  if (is.null(save_parquet_hive_path) || !dir.exists(save_parquet_hive_path)) {
-    msg <- "`save_parquet_hive_path` must be a valid path!"
+  if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
+    msg <- "`anchor_hive_path` must be a valid path!"
     logger::log_error(msg)
     base::stop(msg, call. = FALSE)
   }
@@ -195,7 +195,7 @@ run_selector_queries <- function(con, selectors, save_parquet_hive_path) {
         # Warnings are logged and muffled so one noisy backend message does not
         # interrupt a full selector batch that still produced usable results.
         withCallingHandlers(
-          run_selector_query(con, selector_name, save_parquet_hive_path),
+          run_selector_query(con, selector_name, anchor_hive_path),
           warning = function(w) {
             logger::log_warn(
               sprintf(

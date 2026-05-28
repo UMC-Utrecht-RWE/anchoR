@@ -3,31 +3,31 @@
 #' - it rejects NULL
 #' - it creates the hive directory if it does not exist
 #' - it returns a normalized absolute path
-#' @param save_parquet_hive_path Character scalar path to the hive root.
+#' @param anchor_hive_path Character scalar path to the hive root.
 #'
 #' @return A normalized absolute path.
 #' @keywords internal
 #' @noRd
-ensure_anchor_hive_path <- function(save_parquet_hive_path) {
-  logger::log_trace("Validating `save_parquet_hive_path` input.")
-  if (is.null(save_parquet_hive_path)) {
-    msg <- "`save_parquet_hive_path` must be a valid path!"
+ensure_anchor_hive_path <- function(anchor_hive_path) {
+  logger::log_trace("Validating `anchor_hive_path` input.")
+  if (is.null(anchor_hive_path)) {
+    msg <- "`anchor_hive_path` must be a valid path!"
     logger::log_error(msg)
     base::stop(msg, call. = FALSE)
   }
 
-  if (!dir.exists(save_parquet_hive_path)) {
+  if (!dir.exists(anchor_hive_path)) {
     logger::log_info(
       sprintf(
         "Creating parquet hive directory: %s",
-        save_parquet_hive_path
+        anchor_hive_path
       )
     )
-    dir.create(save_parquet_hive_path, recursive = TRUE)
+    dir.create(anchor_hive_path, recursive = TRUE)
   }
 
   normalized_path <- normalizePath(
-    save_parquet_hive_path,
+    anchor_hive_path,
     winslash = "/",
     mustWork = TRUE
   )
@@ -40,15 +40,15 @@ ensure_anchor_hive_path <- function(save_parquet_hive_path) {
 
 #' Build the Hive-style partition directory name for a given variable.
 #'
-#' @param save_parquet_hive_path Character scalar path to the hive root.
+#' @param anchor_hive_path Character scalar path to the hive root.
 #' @param variable_id Character scalar variable ID.
 #'
 #' @return A character scalar path to the partition directory.
 #' @keywords internal
 #' @noRd
-anchor_partition_path <- function(save_parquet_hive_path, variable_id) {
+anchor_partition_path <- function(anchor_hive_path, variable_id) {
   partition_path <- file.path(
-    save_parquet_hive_path,
+    anchor_hive_path,
     paste0("variable_id=", variable_id)
   )
   logger::log_trace(
@@ -158,18 +158,18 @@ move_anchor_partition <- function(
 #' @param anchor_col Character. Name of the column in \code{population} to use
 #'   as the index date when metadata does not specify an anchor column.
 #'   Defaults to \code{"T0"}.
-#' @param save_parquet_hive_path Character. Path to an existing (or creatable)
+#' @param anchor_hive_path Character. Path to an existing (or creatable)
 #'   directory where selector query results are written as a partitioned parquet
 #'   hive. Must not be \code{NULL}.
 #'
-#' @return Invisibly, function writes parquet files to save_parquet_hive_path
+#' @return Invisibly, function writes parquet files to anchor_hive_path
 #' @export
 anchor <- function(
   population,
   metadata,
   concepts,
   anchor_col = "T0",
-  save_parquet_hive_path = NULL
+  anchor_hive_path = NULL
 ) {
   # Normalize inputs at the beginning so the rest
   # of the workflow has stable input.
@@ -215,10 +215,10 @@ anchor <- function(
     )
   )
 
-  save_parquet_hive_path <- ensure_anchor_hive_path(save_parquet_hive_path)
+  anchor_hive_path <- ensure_anchor_hive_path(anchor_hive_path)
   logger::log_trace(
     sprintf(
-      "Writing anchored parquet output under `%s`.", save_parquet_hive_path
+      "Writing anchored parquet output under `%s`.", anchor_hive_path
     )
   )
   # Remove impossible anchors.
@@ -270,7 +270,7 @@ anchor <- function(
   run_selector_queries(
     con = con,
     selectors = selector_names,
-    save_parquet_hive_path = save_parquet_hive_path
+    anchor_hive_path = anchor_hive_path
   )
 }
 
@@ -290,7 +290,7 @@ anchor_by_variable <- function(
   metadata,
   concepts,
   anchor_col = "T0",
-  save_parquet_hive_path = NULL
+  anchor_hive_path = NULL
 ) {
   validated <- validate_anchor_inputs(
     population = population,
@@ -299,7 +299,7 @@ anchor_by_variable <- function(
     anchor_col = anchor_col
   )
 
-  save_parquet_hive_path <- ensure_anchor_hive_path(save_parquet_hive_path)
+  anchor_hive_path <- ensure_anchor_hive_path(anchor_hive_path)
   metadata_dt <- validated$metadata
   variable_ids <- unique(as.character(metadata_dt$variable_id))
   logger::log_debug(
@@ -332,7 +332,7 @@ anchor_by_variable <- function(
 
     staging_hive_path <- tempfile(
       pattern = "anchor-stage-",
-      tmpdir = dirname(save_parquet_hive_path)
+      tmpdir = dirname(anchor_hive_path)
     )
     dir.create(staging_hive_path, recursive = TRUE)
     logger::log_trace(
@@ -350,11 +350,11 @@ anchor_by_variable <- function(
           metadata = variable_metadata,
           concepts = validated$concepts,
           anchor_col = anchor_col,
-          save_parquet_hive_path = staging_hive_path
+          anchor_hive_path = staging_hive_path
         )
 
         target_partition_path <- anchor_partition_path(
-          save_parquet_hive_path,
+          anchor_hive_path,
           current_variable_id
         )
         staging_partition_path <- anchor_partition_path(
