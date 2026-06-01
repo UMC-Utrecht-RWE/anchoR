@@ -94,7 +94,7 @@ get_anchor_result <- function(
     DBI::dbGetQuery(
       con,
       paste(
-        "SELECT DISTINCT * FROM anchored_variables WHERE variable_id IN (",
+        "SELECT * FROM anchored_variables WHERE variable_id IN (",
         paste(quoted_variable_ids, collapse = ", "),
         ");"
       )
@@ -175,7 +175,9 @@ get_anchor_result <- function(
       msg <- sprintf(
         paste(
           "Anchored results contain duplicate rows for the same",
-          "`person_id`, `T0`, and `variable_id`, so wide output is ambiguous."
+          "`person_id`, `T0`, and `variable_id`, so wide output is ambiguous.",
+          "This can happen with selectors that return multiple events,",
+          "such as `ALL`; use `result_shape = \"narrow\"`."
         )
       )
       logger::log_error(msg)
