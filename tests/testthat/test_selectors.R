@@ -2,7 +2,7 @@ testthat::test_that("available_selectors lists bundled SQL templates", {
   selectors <- available_selectors()
 
   testthat::expect_true(
-    all(c("LATEST", "EARLIEST", "COUNT", "RANGE_COUNT") %in% selectors)
+    all(c("LATEST", "EARLIEST", "COUNT", "RANGE_COUNT", "ALL") %in% selectors)
   )
   testthat::expect_true("COUNT_MORE_THAN_1" %in% selectors)
 })

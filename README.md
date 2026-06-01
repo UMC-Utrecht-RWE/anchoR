@@ -8,7 +8,7 @@ It is built for a common epidemiology workflow:
 - find matching concept records for each person inside that window
 - reduce those matches to one anchored value using a selector such as `LATEST`, `EARLIEST`, `COUNT`, or `RANGE_COUNT`
 
-The package is intentionally narrow. It focuses on reusable anchoring logic and leaves study-specific preprocessing to the calling pipeline.
+The package is intentionally long. It focuses on reusable anchoring logic and leaves study-specific preprocessing to the calling pipeline.
 
 ## Core idea
 

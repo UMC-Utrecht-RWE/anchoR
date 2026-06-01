@@ -18,7 +18,7 @@ if (getRversion() >= "2.15.1") {
       ".window_end",
       ".window_row_id",
       ".window_start",
-      "..required_narrow_cols",
+      "..required_long_cols",
       "anchor_end_col",
       "anchor_row_id",
       "anchor_start_col",

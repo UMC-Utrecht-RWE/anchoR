@@ -70,7 +70,7 @@ load_concepts_table <- function(con, concepts) {
 write_population_windows <- function(
   con, population_windows, anchor_col = "T0"
 ) {
-  # The selector SQL only needs these columns, so writing a narrow table keeps
+  # The selector SQL only needs these columns, so writing a long table keeps
   # the temporary database smaller and the SQL templates easier to reason about.
   if (!anchor_col %in% names(population_windows)) {
     stop(

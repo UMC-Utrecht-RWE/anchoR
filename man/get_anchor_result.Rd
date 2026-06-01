@@ -27,7 +27,7 @@ in wide output. When provided, it must contain person_id and
 T0 columns.}
 
 \item{result_shape}{A character string specifying the desired shape of the
-output. Must be either "wide" or "narrow".}
+output. Must be either "wide" or "long".}
 
 \item{impute_missing}{Logical; when TRUE and
 result_shape = "wide", missing value_<variable_id> cells are

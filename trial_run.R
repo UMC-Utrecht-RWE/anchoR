@@ -87,7 +87,7 @@ result7 <- get_anchor_result(
 result8 <- get_anchor_result(
   metadata = new_metadata[19, ],
   anchor_hive_path = anchor_hive_path,
-  result_shape = "narrow"
+  result_shape = "long"
 )
 
 # Run the anchoring one study variable at a time.
@@ -101,5 +101,5 @@ anchor_by_variable(
 result9 <- get_anchor_result(
   metadata = new_metadata[37, ],
   anchor_hive_path = anchor_hive_path,
-  result_shape = "narrow"
+  result_shape = "long"
 )
