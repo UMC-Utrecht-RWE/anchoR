@@ -165,6 +165,11 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   # offsets, and anchor columns without special cases.
   metadata_dt <- as_data_table(metadata, "metadata")
 
+  # If metadata is missing required columns add them with NA values
+  # For now only window_name needs to be added if missing,
+  # Because in targe that is possible
+  add_column_if_missing(metadata_dt, "window_name", NA_character_)
+
   rename_first_matching_column(
     metadata_dt,
     target = "selector",

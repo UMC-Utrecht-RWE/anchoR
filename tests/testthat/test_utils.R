@@ -179,3 +179,32 @@ testthat::test_that("errors when required columns are missing", {
     regexp = "`population` is missing required columns: date\\."
   )
 })
+
+testthat::test_that("adds column when missing", {
+  dt <- data.table::data.table(person_id = c("1", "2"))
+
+  add_column_if_missing(dt, "new_col", 5)
+
+  testthat::expect_true("new_col" %in% names(dt))
+  testthat::expect_equal(dt$new_col, rep(5, nrow(dt)))
+})
+
+testthat::test_that("does not overwrite existing column", {
+  dt <- data.table::data.table(a = c(1L, 2L))
+  original <- data.table::copy(dt)
+
+  add_column_if_missing(dt, "a", 99L)
+
+  testthat::expect_identical(dt, original)
+})
+
+testthat::test_that("returns invisibly and returns the data.table", {
+  dt <- data.table::data.table(x = 1:3)
+
+  result <- add_column_if_missing(dt, "y", 0)
+
+  testthat::expect_true(
+    inherits(result, "data.table") || inherits(result, "data.frame")
+  )
+  testthat::expect_identical(result, dt)
+})
