@@ -67,7 +67,7 @@ testthat::test_that(
   }
 )
 
-testthat::test_that("read_selector_sql with invalid save_parquet_hive_path", {
+testthat::test_that("run_selector_queries errors on invalid anchor_hive_path", {
   old_appender <- logger::log_appender()
   if (!is.function(old_appender)) old_appender <- logger::appender_console
   withr::defer(logger::log_appender(old_appender))
@@ -77,9 +77,9 @@ testthat::test_that("read_selector_sql with invalid save_parquet_hive_path", {
     run_selector_queries(
       con = NULL,
       selectors = "GENERIC",
-      save_parquet_hive_path = "ciao"
+      anchor_hive_path = "ciao"
     ),
-    "`save_parquet_hive_path` must be a valid path!",
+    "`anchor_hive_path` must be a valid path!",
     fixed = TRUE
   )
 })
@@ -88,7 +88,7 @@ testthat::test_that("run_selector_queries reports selector context on error", {
   query_fn <- run_selector_queries
   environment(query_fn) <- list2env(
     list(
-      run_selector_query = function(con, selector, save_parquet_hive_path) {
+      run_selector_query = function(con, selector, anchor_hive_path) {
         stop("boom", call. = FALSE)
       }
     ),
@@ -104,7 +104,7 @@ testthat::test_that("run_selector_queries reports selector context on error", {
     query_fn(
       con = NULL,
       selectors = "CIAO",
-      save_parquet_hive_path = withr::local_tempdir()
+      anchor_hive_path = withr::local_tempdir()
     ),
     "Error while processing selector CIAO: boom",
     fixed = TRUE
