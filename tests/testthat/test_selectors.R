@@ -1,13 +1,13 @@
 testthat::test_that("available_selectors lists bundled SQL templates", {
   selectors <- available_selectors()
 
-  expect_true(
-    all(c("LATEST", "EARLIEST", "COUNT", "RANGE_COUNT") %in% selectors)
+  testthat::expect_true(
+    all(c("LATEST", "EARLIEST", "COUNT", "RANGE_COUNT", "ALL") %in% selectors)
   )
-  expect_true("COUNT_MORE_THAN_1" %in% selectors)
+  testthat::expect_true("COUNT_MORE_THAN_1" %in% selectors)
 })
 
-test_that(
+testthat::test_that(
   "filter_supported_metadata keeps supported when unsupported rows are dropped",
   {
     metadata <- data.table::data.table(
@@ -20,13 +20,13 @@ test_that(
 
     filtered <- filter_supported_metadata(metadata)
 
-    expect_s3_class(filtered, "data.table")
+    testthat::expect_s3_class(filtered, "data.table")
     testthat::expect_equal(filtered$variable_id, "a")
     testthat::expect_equal(names(filtered), names(metadata))
   }
 )
 
-test_that(
+testthat::test_that(
   "filter_supported_metadata keeps all rows when selectors are supported",
   {
     metadata <- data.table::data.table(
