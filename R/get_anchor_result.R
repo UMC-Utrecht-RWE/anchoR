@@ -14,7 +14,7 @@
 #'   in wide output. When provided, it must contain person_id and
 #'   T0 columns.
 #' @param result_shape A character string specifying the desired shape of the
-#'   output. Must be either "wide" or "narrow".
+#'   output. Must be either "wide" or "long".
 #' @param impute_missing Logical; when TRUE and
 #'   result_shape = "wide", missing value_<variable_id> cells are
 #'   imputed using metadata columns is_expected_missing and
@@ -110,8 +110,8 @@ get_anchor_result <- function(
   }
 
   data.table::setorder(anchored_dt, anchor_row_id)
-  if (result_shape == "narrow") {
-    required_narrow_cols <- c(
+  if (result_shape == "long") {
+    required_long_cols <- c(
       "person_id",
       "T0",
       "variable_id",
@@ -119,11 +119,11 @@ get_anchor_result <- function(
       "date",
       "value"
     )
-    missing_cols <- setdiff(required_narrow_cols, names(anchored_dt))
+    missing_cols <- setdiff(required_long_cols, names(anchored_dt))
     if (length(missing_cols) > 0L) {
       msg <- sprintf(
         paste(
-          "Anchored results are missing required narrow-output columns:",
+          "Anchored results are missing required long-output columns:",
           "%s."
         ),
         paste(missing_cols, collapse = ", ")
@@ -134,7 +134,7 @@ get_anchor_result <- function(
 
     anchored_dt[
       ,
-      ..required_narrow_cols
+      ..required_long_cols
     ]
   } else if (result_shape == "wide") {
     required_wide_id_cols <- c("person_id", "T0", "variable_id")
@@ -239,7 +239,7 @@ get_anchor_result <- function(
 
     wide_anchored
   } else {
-    msg <- sprintf("`result_shape` must be either 'wide' or 'narrow'!")
+    msg <- sprintf("`result_shape` must be either 'wide' or 'long'!")
     logger::log_error(msg)
     base::stop(msg, call. = FALSE)
   }
