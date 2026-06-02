@@ -4,10 +4,12 @@
 \alias{filter_supported_metadata}
 \title{Filter Metadata to Selectors Supported by the Package}
 \usage{
-filter_supported_metadata(metadata)
+filter_supported_metadata(metadata, selector_col = "selector")
 }
 \arguments{
 \item{metadata}{A data frame containing study-variable metadata.}
+
+\item{selector_col}{Column in \code{metadata} that contains selector}
 }
 \value{
 A filtered \code{data.table} with the same columns as the input.

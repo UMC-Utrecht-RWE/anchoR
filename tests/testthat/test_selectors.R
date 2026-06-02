@@ -18,7 +18,10 @@ testthat::test_that(
       )
     )
 
-    filtered <- filter_supported_metadata(metadata)
+    filtered <- filter_supported_metadata(
+      metadata,
+      selector_col = "date_extraction_func"
+    )
 
     testthat::expect_s3_class(filtered, "data.table")
     testthat::expect_equal(filtered$variable_id, "a")

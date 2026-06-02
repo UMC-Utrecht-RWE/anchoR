@@ -1,8 +1,9 @@
+rm(list = ls())
 library(data.table)
 # wrangling different metadatas into the same format
-metadata <- picard::load("docs/examples/study_variables.csv")
+metadata <- picard::load("documentation/examples/study_variables.csv")
 aesi_metadata <- picard::load(
-  "docs/examples/aesi_windows_metadata.csv",
+  "documentation/examples/aesi_windows_metadata.csv",
   sep = ";"
 )
 
@@ -19,8 +20,8 @@ names(metadata)[
 
 # make explicit any information which is typically implicit in study_variables;
 # lookback, anchor
-if (!"window" %in% names(metadata)) {
-  metadata$window <- "covariate"
+if (!"window_name" %in% names(metadata)) {
+  metadata$window_name <- "covariate"
 }
 if (!"anchor" %in% names(metadata)) {
   metadata$anchor <- "T0"
@@ -46,7 +47,7 @@ data.table::setDT(aesi_metadata)
 data.table::setDT(metadata)
 
 # fix type mismatches
-for (col in c("start", "end")) {
+for (col in c("start_offset", "end_offset")) {
   metadata[, (col) := as.numeric(get(col))]
   aesi_metadata[, (col) := as.numeric(get(col))]
 }
@@ -60,7 +61,7 @@ tmp <- metadata[
 
 # tidy up merged object
 delete_cols <- c(
-  "start", "end", "date_extraction_func", "label", "anchor", "window"
+  "start_offset", "end_offset", "date_extraction_func", "label", "anchor"
 )
 tmp[, (delete_cols) := NULL]
 setnames(tmp, paste0("i.", delete_cols), delete_cols, skip_absent = TRUE)
@@ -76,5 +77,5 @@ metadata <- rbindlist(
 
 picard::save(
   metadata,
-  "docs/examples/study_variables_multiwindow.csv"
+  "documentation/examples/study_variables_multiwindow.csv"
 )
