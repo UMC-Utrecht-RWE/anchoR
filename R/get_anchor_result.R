@@ -12,7 +12,8 @@
 #'   directory.
 #' @param population Optional data frame with population rows to be represented
 #'   in wide output. When provided, it must contain person_id and
-#'   T0 columns.
+#'   T0 columns. Additional population columns are carried into the
+#'   wide result and therefore must be unique per person_id/T0 key.
 #' @param result_shape A character string specifying the desired shape of the
 #'   output. Must be either "wide" or "long".
 #' @param impute_missing Logical; when TRUE and
@@ -73,11 +74,26 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
+    population_dt <- unique(population_dt)
+    duplicate_population_keys <- population_dt[
+      ,
+      .N,
+      by = .(person_id, T0)
+    ][N > 1L]
+    if (nrow(duplicate_population_keys) > 0L) {
+      msg <- paste(
+        "`population` contains multiple rows for the same `person_id` and `T0`.",
+        "Wide output can only carry through additional population columns",
+        "when those keys are unique."
+      )
+      logger::log_error(msg)
+      base::stop(msg, call. = FALSE)
+    }
+
     population_dt[, T0 := as.Date(T0)]
     # Wide output cardinality is defined by the anchor key, but callers may
     # need the rest of the population columns carried into the final result.
     population_keys_dt <- unique(population_dt[, .(person_id, T0)])
-    population_dt <- unique(population_dt, by = c("person_id", "T0"))
   }
 
   if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
@@ -102,18 +118,26 @@ get_anchor_result <- function(
     )
   )
 
-  variable_id_list <- unique(metadata_dt$variable_id)
-  quoted_variable_ids <- vapply(
-    variable_id_list,
-    function(id) as.character(DBI::dbQuoteString(con, id)),
-    character(1)
+  requested_results_dt <- unique(metadata_dt[, .(variable_id, window_name)])
+  requested_results_dt[
+    is.na(window_name) | trimws(window_name) == "",
+    window_name := NA_character_
+  ]
+  DBI::dbWriteTable(
+    con,
+    name = "requested_results",
+    value = requested_results_dt,
+    overwrite = TRUE
   )
   anchored_dt <- data.table::as.data.table(
     DBI::dbGetQuery(
       con,
       paste(
-        "SELECT * FROM anchored_variables WHERE variable_id IN (",
-        paste(quoted_variable_ids, collapse = ", "),
+        "SELECT a.* FROM anchored_variables AS a",
+        "WHERE EXISTS (",
+        "  SELECT 1 FROM requested_results AS r",
+        "  WHERE a.variable_id = r.variable_id",
+        "    AND (r.window_name IS NULL OR a.window_name = r.window_name)",
         ");"
       )
     )
@@ -179,21 +203,6 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
-    if (anyDuplicated(metadata_dt$variable_id) > 0L) {
-      duplicated_variable_ids <- unique(
-        metadata_dt$variable_id[duplicated(metadata_dt$variable_id)]
-      )
-      msg <- sprintf(
-        paste(
-          "`metadata` contains duplicate `variable_id` values,",
-          "which makes wide output ambiguous: %s."
-        ),
-        paste(duplicated_variable_ids, collapse = ", ")
-      )
-      logger::log_error(msg)
-      base::stop(msg, call. = FALSE)
-    }
-
     duplicate_rows <- anchored_dt[
       ,
       .N,
@@ -228,16 +237,59 @@ get_anchor_result <- function(
       fill = list(value = NA_character_, date = as.Date(NA))
     )
 
-    # Generating all missing variable columns
-    missing_variables <- setdiff(
-      unique(metadata_dt$variable_id),
-      unique(anchored_dt$variable_id)
-    )
+    wildcard_variable_ids <- requested_results_dt[
+      is.na(window_name),
+      unique(variable_id)
+    ]
+    expected_window_pairs <- if (cast_window) {
+      explicit_window_pairs <- requested_results_dt[!is.na(window_name)]
+      wildcard_window_pairs <- anchored_dt[
+        variable_id %in% wildcard_variable_ids,
+        unique(.(
+          variable_id,
+          window_name
+        ))
+      ]
+      unique(data.table::rbindlist(
+        list(explicit_window_pairs, wildcard_window_pairs),
+        use.names = TRUE,
+        fill = TRUE
+      ))
+    } else {
+      NULL
+    }
 
-    lapply(missing_variables, function(x) {
-      wide_anchored[, eval(paste0("value_", x)) := NA]
-      wide_anchored[, eval(paste0("date_", x)) := NA]
+    expected_date_cols <- unique(if (cast_window) {
+      paste0(
+        "date_",
+        expected_window_pairs$window_name,
+        "_",
+        expected_window_pairs$variable_id
+      )
+    } else {
+      paste0("date_", metadata_dt$variable_id)
     })
+    missing_date_cols <- setdiff(expected_date_cols, names(wide_anchored))
+    for (col_name in missing_date_cols) {
+      wide_anchored[, (col_name) := as.Date(NA)]
+    }
+
+    if (only_date == FALSE) {
+      expected_value_cols <- unique(if (cast_window) {
+        paste0(
+          "value_",
+          expected_window_pairs$window_name,
+          "_",
+          expected_window_pairs$variable_id
+        )
+      } else {
+        paste0("value_", metadata_dt$variable_id)
+      })
+      missing_value_cols <- setdiff(expected_value_cols, names(wide_anchored))
+      for (col_name in missing_value_cols) {
+        wide_anchored[, (col_name) := NA_character_]
+      }
+    }
 
     if (!is.null(population_keys_dt)) {
       result_key_cols <- if (cast_window) {
@@ -249,11 +301,29 @@ get_anchor_result <- function(
       expected_keys <- if (cast_window) {
         population_keys_dt
       } else {
-        window_keys <- unique(metadata_dt[, .(window_name)])
-        population_keys_dt[, .anchor_join_key := 1L]
+        explicit_window_keys <- requested_results_dt[
+          !is.na(window_name),
+          .(window_name)
+        ]
+        wildcard_window_keys <- anchored_dt[
+          variable_id %in% wildcard_variable_ids,
+          unique(.(
+            window_name
+          ))
+        ]
+        window_keys <- unique(data.table::rbindlist(
+          list(explicit_window_keys, wildcard_window_keys),
+          use.names = TRUE,
+          fill = TRUE
+        ))
+        if (nrow(window_keys) == 0L) {
+          window_keys <- data.table::data.table(window_name = character())
+        }
+        population_window_keys <- data.table::copy(population_keys_dt)
+        population_window_keys[, .anchor_join_key := 1L]
         window_keys[, .anchor_join_key := 1L]
         data.table::merge.data.table(
-          population_keys_dt,
+          population_window_keys,
           window_keys,
           by = ".anchor_join_key",
           allow.cartesian = TRUE,
@@ -263,6 +333,7 @@ get_anchor_result <- function(
           .anchor_join_key := NULL
         ]
       }
+      expected_keys <- unique(expected_keys[, ..result_key_cols])
 
       missing_anchored <- data.table::fsetdiff(
         expected_keys,
