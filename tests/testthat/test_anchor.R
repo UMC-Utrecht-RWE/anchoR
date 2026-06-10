@@ -27,6 +27,30 @@ read_anchor_hive <- function(anchor_hive_path) {
   anchored_dt[]
 }
 
+write_anchor_hive_fixture <- function(anchor_hive_path, variable_id, rows) {
+  partition_path <- file.path(
+    anchor_hive_path,
+    paste0("variable_id=", variable_id)
+  )
+  dir.create(partition_path, recursive = TRUE, showWarnings = FALSE)
+
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  DBI::dbWriteTable(con, "fixture_rows", rows, overwrite = TRUE)
+  DBI::dbExecute(
+    con,
+    sprintf(
+      "COPY fixture_rows TO '%s' (FORMAT PARQUET)",
+      normalizePath(
+        file.path(partition_path, "part-0.parquet"),
+        winslash = "/",
+        mustWork = FALSE
+      )
+    )
+  )
+}
+
 testthat::test_that("anchor writes selector results to the parquet hive", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
@@ -163,19 +187,155 @@ testthat::test_that("reshapes variable-by-variable hive output", {
   testthat::expect_equal(anchored$value_lab_range[[2L]], NA_character_)
 })
 
+testthat::test_that(
+  "wide output is limited to the population for single-window metadata",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-testthat::test_that("with absent column window_name", {
-  metadata <- example_metadata()
-  metadata[, window_name := NULL]
+    metadata <- example_metadata()[variable_id == "cov_latest"]
+    anchor_by_variable(
+      population = example_population(),
+      metadata = metadata,
+      concepts = example_concepts(),
+      anchor_hive_path = hive_path
+    )
 
-  hive_path <- tempfile(pattern = "anchor-hive-")
-  dir.create(hive_path)
-  on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+    anchored <- get_anchor_result(
+      metadata = metadata,
+      anchor_hive_path = hive_path,
+      population = example_population()[1, .(person_id, T0)],
+      result_shape = "wide"
+    )
 
-  anchor(
-    population = example_population(),
-    metadata = metadata,
-    concepts = example_concepts(),
-    anchor_hive_path = hive_path
-  )
-})
+    testthat::expect_equal(nrow(anchored), 1L)
+    testthat::expect_equal(anchored$person_id, "1")
+    testthat::expect_equal(anchored$T0, as.Date("2024-01-01"))
+    testthat::expect_equal(anchored$window_name, "lookback")
+  }
+)
+
+testthat::test_that(
+  "wide output does not leak rows outside a single-window population",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    write_anchor_hive_fixture(
+      anchor_hive_path = hive_path,
+      variable_id = "cov_latest",
+      rows = data.table::data.table(
+        anchor_row_id = c(1L, 2L),
+        person_id = c("1", "2"),
+        T0 = as.Date(c("2024-01-01", "2024-01-15")),
+        window_name = c("fup", "fup"),
+        value = c("TRUE", "FALSE"),
+        date = as.Date(c("2024-01-10", "2024-01-20")),
+        n = c(1L, 1L)
+      )
+    )
+
+    anchored <- get_anchor_result(
+      metadata = data.table::data.table(
+        variable_id = "cov_latest",
+        window_name = "fup"
+      ),
+      anchor_hive_path = hive_path,
+      population = data.table::data.table(
+        person_id = "1",
+        T0 = as.Date("2024-01-01"),
+        match_id = "m1",
+        group = "treated"
+      ),
+      result_shape = "wide"
+    )
+
+    # Before the fix this returned 2 rows because existing hive rows were not
+    # constrained to the requested population before the backfill step.
+    testthat::expect_equal(nrow(anchored), 1L)
+    testthat::expect_equal(anchored$person_id, "1")
+    testthat::expect_equal(anchored$T0, as.Date("2024-01-01"))
+    testthat::expect_equal(anchored$match_id, "m1")
+    testthat::expect_equal(anchored$group, "treated")
+    testthat::expect_equal(anchored$window_name, "fup")
+    testthat::expect_equal(anchored$value_cov_latest, "TRUE")
+  }
+)
+
+testthat::test_that(
+  "wide output one row per population-window key when cast_window is FALSE",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    metadata <- example_metadata()[
+      variable_id %in% c("cov_latest", "lab_range")
+    ]
+    anchor_by_variable(
+      population = example_population(),
+      metadata = metadata,
+      concepts = example_concepts(),
+      anchor_hive_path = hive_path
+    )
+
+    anchored <- get_anchor_result(
+      metadata = metadata,
+      anchor_hive_path = hive_path,
+      population = example_population()[, .(person_id, T0)],
+      result_shape = "wide"
+    )
+
+    data.table::setorder(anchored, person_id, T0, window_name)
+    testthat::expect_equal(nrow(anchored), 4L)
+    testthat::expect_equal(
+      anchored[, .(person_id, T0, window_name)],
+      data.table::data.table(
+        person_id = c("1", "1", "2", "2"),
+        T0 = as.Date(c("2024-01-01", "2024-01-01", "2024-01-15", "2024-01-15")),
+        window_name = c("lookback", "lookforward", "lookback", "lookforward")
+      )
+    )
+    testthat::expect_true(
+      all(is.na(
+        anchored[
+          person_id == "1" & window_name == "lookforward",
+          .(value_cov_latest, date_cov_latest, value_lab_range, date_lab_range)
+        ]
+      ))
+    )
+  }
+)
+
+testthat::test_that(
+  "wide output backfills one row per population key when cast_window is TRUE",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    metadata <- example_metadata()[
+      variable_id %in% c("cov_latest", "lab_range")
+    ]
+    anchor_by_variable(
+      population = example_population(),
+      metadata = metadata,
+      concepts = example_concepts(),
+      anchor_hive_path = hive_path
+    )
+
+    anchored <- get_anchor_result(
+      metadata = metadata,
+      anchor_hive_path = hive_path,
+      population = example_population()[1, .(person_id, T0)],
+      result_shape = "wide",
+      cast_window = TRUE
+    )
+
+    testthat::expect_equal(nrow(anchored), 1L)
+    testthat::expect_equal(anchored$person_id, "1")
+    testthat::expect_equal(anchored$T0, as.Date("2024-01-01"))
+  }
+)
