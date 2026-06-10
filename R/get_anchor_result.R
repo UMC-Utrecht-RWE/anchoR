@@ -82,7 +82,7 @@ get_anchor_result <- function(
     ][N > 1L]
     if (nrow(duplicate_population_keys) > 0L) {
       msg <- paste(
-        "`population` contains multiple rows for the same `person_id` and `T0`.",
+        "`population` contains multiple rows for the same `person_id` and `T0`.", # nolint
         "Wide output can only carry through additional population columns",
         "when those keys are unique."
       )
