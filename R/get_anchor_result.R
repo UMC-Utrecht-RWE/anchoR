@@ -53,6 +53,7 @@ get_anchor_result <- function(
   add_column_if_missing(metadata_dt, "window_name", NA_character_)
 
   population_dt <- NULL
+  population_keys_dt <- NULL
 
   if (!is.null(population)) {
     population_dt <- as_data_table(population, "population")
@@ -72,8 +73,11 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
-    population_dt <- unique(population_dt[, .(person_id, T0)])
     population_dt[, T0 := as.Date(T0)]
+    # Wide output cardinality is defined by the anchor key, but callers may
+    # need the rest of the population columns carried into the final result.
+    population_keys_dt <- unique(population_dt[, .(person_id, T0)])
+    population_dt <- unique(population_dt, by = c("person_id", "T0"))
   }
 
   if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
@@ -151,11 +155,11 @@ get_anchor_result <- function(
       ..required_long_cols
     ]
   } else if (result_shape == "wide") {
-    if (!is.null(population_dt)) {
+    if (!is.null(population_keys_dt)) {
       # Restricting to the requested population keeps wide output cardinality
       # anchored to the caller's keys even if the hive contains extra rows.
       anchored_dt <- anchored_dt[
-        population_dt,
+        population_keys_dt,
         on = .(person_id, T0),
         nomatch = 0L
       ]
@@ -235,7 +239,7 @@ get_anchor_result <- function(
       wide_anchored[, eval(paste0("date_", x)) := NA]
     })
 
-    if (!is.null(population_dt)) {
+    if (!is.null(population_keys_dt)) {
       result_key_cols <- if (cast_window) {
         c("person_id", "T0")
       } else {
@@ -243,13 +247,13 @@ get_anchor_result <- function(
       }
 
       expected_keys <- if (cast_window) {
-        population_dt
+        population_keys_dt
       } else {
         window_keys <- unique(metadata_dt[, .(window_name)])
-        population_dt[, .anchor_join_key := 1L]
+        population_keys_dt[, .anchor_join_key := 1L]
         window_keys[, .anchor_join_key := 1L]
         data.table::merge.data.table(
-          population_dt,
+          population_keys_dt,
           window_keys,
           by = ".anchor_join_key",
           allow.cartesian = TRUE,
@@ -278,6 +282,15 @@ get_anchor_result <- function(
 
     if (impute_missing == TRUE) {
       wide_anchored <- imputing_missing(wide_anchored, metadata_dt)
+    }
+
+    if (!is.null(population_dt)) {
+      # Reattach the remaining population columns once the wide result shape is
+      # stable, so they do not interfere with filtering, casting, or imputation.
+      wide_anchored <- population_dt[
+        wide_anchored,
+        on = .(person_id, T0)
+      ]
     }
 
     wide_anchored
