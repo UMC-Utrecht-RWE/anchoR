@@ -90,6 +90,51 @@ testthat::test_that("anchor accepts parquet concept sources", {
   testthat::expect_equal(anchored$date, as.Date("2024-01-10"))
 })
 
+testthat::test_that(
+  "anchor collapses pregnancy-expanded windows into one selector result",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    metadata <- data.table::data.table(
+      variable_id = "preg_any",
+      concept_id = "PREG_X",
+      window_name = "preg_history",
+      constructor = "PREG2",
+      selector = "LATEST",
+      start_look_back = 0L,
+      end_look_back = 0L,
+      anchor_date_start = "lmp_date",
+      anchor_date_end = "pregnancy_end_date"
+    )
+    concepts <- data.table::rbindlist(list(
+      example_concepts(),
+      data.table::data.table(
+        person_id = c("1", "1"),
+        concept_id = c("PREG_X", "PREG_X"),
+        date = as.Date(c("2022-08-15", "2023-12-25")),
+        value = c("OLD", "NEW")
+      )
+    ))
+
+    anchor(
+      population = example_population()[person_id == "1"],
+      metadata = metadata,
+      concepts = concepts,
+      multiple_episodes = example_pregnancy_episodes(),
+      anchor_hive_path = hive_path
+    )
+
+    anchored <- read_anchor_hive(hive_path)
+
+    testthat::expect_equal(nrow(anchored), 1L)
+    testthat::expect_equal(anchored$anchor_row_id, 1L)
+    testthat::expect_equal(anchored$value, "NEW")
+    testthat::expect_equal(anchored$date, as.Date("2023-12-25"))
+  }
+)
+
 testthat::test_that("it refreshes only requested variable partition", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)

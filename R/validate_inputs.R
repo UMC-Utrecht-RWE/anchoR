@@ -84,16 +84,21 @@ normalize_concepts_input <- function(concepts) {
 #' @param concepts A concept table as a data frame, a DuckDB file path whose
 #'   `concept_table` contains `person_id`, `concept_id`, and `date`, or parquet
 #'   file location(s).
+#' @param multiple_episodes Optional episode table used by constructors that
+#'   need to expand one anchor row into multiple separate episodes. It must
+#'   contain `person_id`, `episode_id`, `episode_start`, and `episode_end`.
+#'   Legacy pregnancy column names are also accepted and normalized.
 #' @param anchor_col Column to use when metadata does not specify
 #'   the anchor column.
 #'
 #' @return Invisibly returns a list with normalized `population`, `metadata`,
-#'   and `concepts`.
+#'   `concepts`, and `multiple_episodes`.
 #' @export
 validate_anchor_inputs <- function(
   population,
   metadata,
   concepts = NULL,
+  multiple_episodes = NULL,
   anchor_col = "T0"
 ) {
   # Normalization is centralized here so exported functions can stay short and
@@ -150,12 +155,14 @@ validate_anchor_inputs <- function(
     # execution path knows if it is dealing with a table, DuckDB, or parquet.
     concepts_obj <- normalize_concepts_input(concepts)
   }
+  multiple_episodes_dt <- normalize_multiple_episodes(multiple_episodes)
 
   invisible(
     list(
       population = population_dt,
       metadata = metadata_dt,
-      concepts = concepts_obj
+      concepts = concepts_obj,
+      multiple_episodes = multiple_episodes_dt
     )
   )
 }

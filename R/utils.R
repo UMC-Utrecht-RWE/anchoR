@@ -16,6 +16,43 @@ as_data_table <- function(x, arg) {
   data.table::as.data.table(data.table::copy(x))
 }
 
+normalize_multiple_episodes <- function(multiple_episodes) {
+  if (is.null(multiple_episodes)) {
+    return(NULL)
+  }
+
+  episodes_dt <- as_data_table(multiple_episodes, "multiple_episodes")
+  rename_first_matching_column(
+    episodes_dt,
+    target = "episode_id",
+    aliases = "pregnancy_id"
+  )
+  rename_first_matching_column(
+    episodes_dt,
+    target = "episode_start",
+    aliases = "lmp_date"
+  )
+  rename_first_matching_column(
+    episodes_dt,
+    target = "episode_end",
+    aliases = "pregnancy_end_date"
+  )
+  assert_has_columns(
+    episodes_dt,
+    required = c("person_id", "episode_id", "episode_start", "episode_end"),
+    arg = "multiple_episodes"
+  )
+
+  episodes_dt[, `:=`(
+    person_id = as.character(person_id),
+    episode_id = as.character(episode_id),
+    episode_start = as.Date(episode_start),
+    episode_end = as.Date(episode_end)
+  )]
+
+  episodes_dt[]
+}
+
 assert_has_columns <- function(x, required, arg) {
   missing_cols <- setdiff(required, names(x))
 
@@ -169,6 +206,7 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   # For now only window_name needs to be added if missing,
   # Because in targe that is possible
   add_column_if_missing(metadata_dt, "window_name", NA_character_)
+  add_column_if_missing(metadata_dt, "constructor", "GENERIC")
 
   rename_first_matching_column(
     metadata_dt,
@@ -197,11 +235,16 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   )
 
   metadata_dt[, `:=`(
+    constructor = toupper(trimws(as.character(constructor))),
     selector = normalize_selector_name(selector),
     start_offset = as.integer(start_offset),
     end_offset = as.integer(end_offset),
     concept_id = as.character(concept_id)
   )]
+  metadata_dt[
+    is.na(constructor) | constructor == "",
+    constructor := "GENERIC"
+  ]
 
   # These defaults keep the minimal metadata shape small while still giving the
   # windowing and selector code every column it expects.

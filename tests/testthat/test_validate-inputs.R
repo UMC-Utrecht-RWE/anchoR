@@ -23,6 +23,27 @@ testthat::test_that("validate_anchor_inputs standardizes metadata names", {
   testthat::expect_equal(validated$metadata$range_max[3], 5)
 })
 
+testthat::test_that("validate_anchor_inputs defaults missing constructor", {
+  metadata <- data.table::data.table(
+    variable_id = "x",
+    concept_id = "Y",
+    window_name = "lookback",
+    selector = "LATEST",
+    start_look_back = -1L,
+    end_look_back = 0L,
+    anchor_date_start = "T0",
+    anchor_date_end = "T0"
+  )
+
+  validated <- validate_anchor_inputs(
+    population = example_population(),
+    metadata = metadata,
+    concepts = example_concepts()
+  )
+
+  testthat::expect_identical(validated$metadata$constructor, "GENERIC")
+})
+
 testthat::test_that("validate_anchor_inputs fails on missing anchor columns", {
   metadata <- data.table::data.table(
     variable_id = "x",

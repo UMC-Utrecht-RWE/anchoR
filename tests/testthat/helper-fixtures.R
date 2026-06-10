@@ -14,7 +14,7 @@ example_metadata <- function() {
     variable_id = c("cov_latest", "cov_count", "lab_range"),
     concept_id = c("COV_A", "COV_B", "LAB_X"),
     window_name = c("lookback", "risk", "lookforward"),
-    constructor = c("GENERIC", "PREG1", "PREG1"),
+    constructor = c("GENERIC", "GENERIC", "GENERIC"),
     selector = c("LATEST", "COUNT", "RANGE_COUNT"),
     start_look_back = c(-30L, -90L, -30L),
     end_look_back = c(0L, 0L, 30L),
@@ -70,4 +70,13 @@ example_concepts_parquet <- function() {
   )
 
   parquet_path
+}
+
+example_pregnancy_episodes <- function() {
+  data.table::data.table(
+    person_id = c("1", "1", "2"),
+    pregnancy_id = c("prior_1", "current_1", "current_2"),
+    lmp_date = as.Date(c("2022-01-01", "2023-10-01", "2023-10-15")),
+    pregnancy_end_date = as.Date(c("2022-09-01", "2024-03-01", "2024-02-28"))
+  )
 }

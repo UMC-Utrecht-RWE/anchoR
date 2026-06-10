@@ -67,6 +67,28 @@ load_concepts_table <- function(con, concepts) {
   }
 }
 
+prepare_selector_context <- function(
+  con,
+  valid_windows,
+  selectors,
+  multiple_episodes,
+  anchor_col = "T0"
+) {
+  write_population_windows(
+    con,
+    valid_windows,
+    anchor_col = anchor_col
+  )
+
+  if ("LATEST_EXCL_PRIOR_PREG" %in% selectors) {
+    write_prior_pregnancy_episodes(
+      con = con,
+      population_windows = valid_windows,
+      multiple_episodes = multiple_episodes
+    )
+  }
+}
+
 write_population_windows <- function(
   con, population_windows, anchor_col = "T0"
 ) {
@@ -103,4 +125,64 @@ write_population_windows <- function(
     ],
     overwrite = TRUE
   )
+}
+
+write_prior_pregnancy_episodes <- function(
+  con, population_windows, multiple_episodes
+) {
+  empty_dt <- data.table::data.table(
+    anchor_row_id = integer(),
+    person_id = character(),
+    lmp_date = as.Date(character()),
+    pregnancy_end_date = as.Date(character())
+  )
+
+  if (is.null(multiple_episodes)) {
+    DBI::dbWriteTable(
+      con,
+      name = "prior_pregnancy_episodes",
+      value = empty_dt,
+      overwrite = TRUE
+    )
+    return(invisible(empty_dt))
+  }
+
+  latest_excl_windows <- unique(
+    population_windows[
+      selector == "LATEST_EXCL_PRIOR_PREG",
+      .(anchor_row_id, person_id, lmp_date)
+    ]
+  )
+
+  if (nrow(latest_excl_windows) == 0L) {
+    DBI::dbWriteTable(
+      con,
+      name = "prior_pregnancy_episodes",
+      value = empty_dt,
+      overwrite = TRUE
+    )
+    return(invisible(empty_dt))
+  }
+
+  prior_dt <- multiple_episodes[
+    latest_excl_windows,
+    on = .(person_id, episode_end < lmp_date),
+    nomatch = 0L,
+    .(
+      anchor_row_id,
+      person_id = x.person_id,
+      lmp_date = x.episode_start,
+      pregnancy_end_date = x.episode_end
+    )
+  ]
+  prior_dt <- unique(prior_dt)
+
+  DBI::dbWriteTable(
+    con,
+    name = "prior_pregnancy_episodes",
+    value = prior_dt,
+    overwrite = TRUE
+  )
+
+  invisible(prior_dt)
 }

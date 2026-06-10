@@ -155,6 +155,8 @@ move_anchor_partition <- function(
 #' @param concepts A concept table as a data frame, a DuckDB file path whose
 #'   \code{concept_table} contains \code{person_id}, \code{concept_id}, and
 #'   \code{date}, or parquet file location(s).
+#' @param multiple_episodes Optional episode table used by constructors that
+#'   expand one anchor row into multiple separate episodes.
 #' @param anchor_col Character. Name of the column in \code{population} to use
 #'   as the index date when metadata does not specify an anchor column.
 #'   Defaults to \code{"T0"}.
@@ -168,6 +170,7 @@ anchor <- function(
   population,
   metadata,
   concepts,
+  multiple_episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL
 ) {
@@ -177,6 +180,7 @@ anchor <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
+    multiple_episodes = multiple_episodes,
     anchor_col = anchor_col
   )
   concepts_type <- if (is.null(validated$concepts)) {
@@ -202,6 +206,7 @@ anchor <- function(
   window_dt <- define_window(
     population = validated$population,
     metadata = validated$metadata,
+    multiple_episodes = validated$multiple_episodes,
     anchor_col = anchor_col
   )
   logger::log_debug(
@@ -260,9 +265,11 @@ anchor <- function(
       nrow(valid_windows)
     )
   )
-  write_population_windows(
-    con,
-    valid_windows,
+  prepare_selector_context(
+    con = con,
+    valid_windows = valid_windows,
+    selectors = unique(valid_windows$selector),
+    multiple_episodes = validated$multiple_episodes,
     anchor_col = anchor_col
   )
 
@@ -289,6 +296,7 @@ anchor_by_variable <- function(
   population,
   metadata,
   concepts,
+  multiple_episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL
 ) {
@@ -296,6 +304,7 @@ anchor_by_variable <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
+    multiple_episodes = multiple_episodes,
     anchor_col = anchor_col
   )
 
@@ -349,6 +358,7 @@ anchor_by_variable <- function(
           population = validated$population,
           metadata = variable_metadata,
           concepts = validated$concepts,
+          multiple_episodes = validated$multiple_episodes,
           anchor_col = anchor_col,
           anchor_hive_path = staging_hive_path
         )

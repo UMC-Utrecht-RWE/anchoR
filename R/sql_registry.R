@@ -17,6 +17,21 @@ selector_sql_root <- function() {
   sql_root
 }
 
+metadata_selector_column <- function(metadata_dt) {
+  if ("selector" %in% names(metadata_dt)) {
+    return("selector")
+  }
+
+  if ("date_extraction_func" %in% names(metadata_dt)) {
+    return("date_extraction_func")
+  }
+
+  stop(
+    "`metadata` must contain either `selector` or `date_extraction_func`.",
+    call. = FALSE
+  )
+}
+
 #' List Available Selector SQL Templates
 #'
 #' @return A character vector of selector names.
@@ -38,15 +53,23 @@ available_selectors <- function() {
 #' warning.
 #'
 #' @param metadata A data frame containing study-variable metadata.
-#' @param selector_col Column in `metadata` that contains selector
+#' @param selector_col Optional column in `metadata` that contains selectors.
+#'   When omitted, the helper uses `selector` and falls back to
+#'   `date_extraction_func`.
 #'
 #' @return A filtered `data.table` with the same columns as the input.
 #' @export
 filter_supported_metadata <- function(
-  metadata, selector_col = "selector"
+  metadata, selector_col = NULL
 ) {
   metadata_dt <- as_data_table(metadata, "metadata")
-
+  selector_col <- selector_col %||% metadata_selector_column(metadata_dt)
+  if (!selector_col %in% names(metadata_dt)) {
+    stop(
+      sprintf("`metadata` does not contain selector column `%s`.", selector_col),
+      call. = FALSE
+    )
+  }
 
   # This helper is intentionally permissive: it is meant for exploratory or
   # mixed metadata files where dropping unsupported rows is more useful than
