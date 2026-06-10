@@ -44,10 +44,21 @@ get_anchor_result <- function(
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
+  metadata_dt <- as_data_table(metadata, "metadata")
+  assert_has_columns(
+    metadata_dt,
+    required = "variable_id",
+    arg = "metadata"
+  )
+  add_column_if_missing(metadata_dt, "window_name", NA_character_)
+
+  population_dt <- NULL
+
   if (!is.null(population)) {
+    population_dt <- as_data_table(population, "population")
     required_population_cols <- c("person_id", "T0")
     missing_population_cols <- setdiff(
-      required_population_cols, names(population)
+      required_population_cols, names(population_dt)
     )
     if (length(missing_population_cols) > 0L) {
       msg <- sprintf(
@@ -60,6 +71,9 @@ get_anchor_result <- function(
       logger::log_error(msg)
       base::stop(msg, call. = FALSE)
     }
+
+    population_dt <- unique(population_dt[, .(person_id, T0)])
+    population_dt[, T0 := as.Date(T0)]
   }
 
   if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
@@ -84,7 +98,7 @@ get_anchor_result <- function(
     )
   )
 
-  variable_id_list <- unique(metadata$variable_id)
+  variable_id_list <- unique(metadata_dt$variable_id)
   quoted_variable_ids <- vapply(
     variable_id_list,
     function(id) as.character(DBI::dbQuoteString(con, id)),
@@ -137,6 +151,16 @@ get_anchor_result <- function(
       ..required_long_cols
     ]
   } else if (result_shape == "wide") {
+    if (!is.null(population_dt)) {
+      # Restricting to the requested population keeps wide output cardinality
+      # anchored to the caller's keys even if the hive contains extra rows.
+      anchored_dt <- anchored_dt[
+        population_dt,
+        on = .(person_id, T0),
+        nomatch = 0L
+      ]
+    }
+
     required_wide_id_cols <- c("person_id", "T0", "variable_id")
     missing_cols <- setdiff(required_wide_id_cols, names(anchored_dt))
     if (length(missing_cols) > 0L) {
@@ -151,9 +175,9 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
-    if (anyDuplicated(metadata$variable_id) > 0L) {
+    if (anyDuplicated(metadata_dt$variable_id) > 0L) {
       duplicated_variable_ids <- unique(
-        metadata$variable_id[duplicated(metadata$variable_id)]
+        metadata_dt$variable_id[duplicated(metadata_dt$variable_id)]
       )
       msg <- sprintf(
         paste(
@@ -169,15 +193,16 @@ get_anchor_result <- function(
     duplicate_rows <- anchored_dt[
       ,
       .N,
-      by = .(person_id, T0, variable_id)
+      by = .(person_id, T0, window_name, variable_id)
     ][N > 1L]
     if (nrow(duplicate_rows) > 0L) {
       msg <- sprintf(
         paste(
           "Anchored results contain duplicate rows for the same",
-          "`person_id`, `T0`, and `variable_id`, so wide output is ambiguous.",
-          "This can happen with selectors that return multiple events,",
-          "such as `ALL`; use `result_shape = \"narrow\"`."
+          "`person_id`, `T0`, `window_name`, and `variable_id`,",
+          "so wide output is ambiguous. This can happen with selectors that",
+          "return multiple events, such as `ALL`; use",
+          "`result_shape = \"long\"`."
         )
       )
       logger::log_error(msg)
@@ -201,7 +226,7 @@ get_anchor_result <- function(
 
     # Generating all missing variable columns
     missing_variables <- setdiff(
-      unique(metadata$variable_id),
+      unique(metadata_dt$variable_id),
       unique(anchored_dt$variable_id)
     )
 
@@ -210,33 +235,49 @@ get_anchor_result <- function(
       wide_anchored[, eval(paste0("date_", x)) := NA]
     })
 
-    if (!is.null(population)) {
-      # Identifying persons that do not have ANY variable
-      population <- data.table::fsetdiff(
-        population[, .(person_id, T0)],
-        unique(wide_anchored[, .(person_id, T0)])
-      )[, tmp := 1]
-      metadata[, tmp := 1]
+    if (!is.null(population_dt)) {
+      result_key_cols <- if (cast_window) {
+        c("person_id", "T0")
+      } else {
+        c("person_id", "T0", "window_name")
+      }
 
-      # We will generate a row per missing person per window
-      missing_anchored <- data.table::merge.data.table(population,
-        unique(metadata[, .(window_name, tmp)]),
-        by = "tmp",
-        allow.cartesian = TRUE
-      )[
-        , tmp := NULL
-      ]
-      # Doing the rbindlist between wide_anchored and missing_anchored we will
-      # populated the missing column of the dt missing_anchored automatically
-      wide_anchored <- data.table::rbindlist(
-        list(wide_anchored, missing_anchored),
-        use.names = TRUE,
-        fill = TRUE
+      expected_keys <- if (cast_window) {
+        population_dt
+      } else {
+        window_keys <- unique(metadata_dt[, .(window_name)])
+        population_dt[, .anchor_join_key := 1L]
+        window_keys[, .anchor_join_key := 1L]
+        data.table::merge.data.table(
+          population_dt,
+          window_keys,
+          by = ".anchor_join_key",
+          allow.cartesian = TRUE,
+          sort = FALSE
+        )[
+          ,
+          .anchor_join_key := NULL
+        ]
+      }
+
+      missing_anchored <- data.table::fsetdiff(
+        expected_keys,
+        unique(wide_anchored[, ..result_key_cols])
       )
+
+      if (nrow(missing_anchored) > 0L) {
+        # Filling at the cast key guarantees a deterministic number of rows
+        # for the requested population regardless of which variables matched.
+        wide_anchored <- data.table::rbindlist(
+          list(wide_anchored, missing_anchored),
+          use.names = TRUE,
+          fill = TRUE
+        )
+      }
     }
 
     if (impute_missing == TRUE) {
-      wide_anchored <- imputing_missing(wide_anchored, metadata)
+      wide_anchored <- imputing_missing(wide_anchored, metadata_dt)
     }
 
     wide_anchored
