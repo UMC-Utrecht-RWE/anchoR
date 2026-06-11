@@ -24,7 +24,8 @@ directory.}
 
 \item{population}{Optional data frame with population rows to be represented
 in wide output. When provided, it must contain person_id and
-T0 columns.}
+T0 columns. Additional population columns are carried into the
+wide result and therefore must be unique per person_id/T0 key.}
 
 \item{result_shape}{A character string specifying the desired shape of the
 output. Must be either "wide" or "long".}
