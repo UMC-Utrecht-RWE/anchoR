@@ -23,6 +23,43 @@ testthat::test_that("validate_anchor_inputs standardizes metadata names", {
   testthat::expect_equal(validated$metadata$range_max[3], 5)
 })
 
+testthat::test_that(
+  "validate_anchor_inputs accepts character anchor dates in YYYY-mm-dd format",
+  {
+    population <- example_population()
+    population[, T0 := as.character(T0)]
+
+    validated <- validate_anchor_inputs(
+      population = population,
+      metadata = example_metadata(),
+      concepts = example_concepts()
+    )
+
+    testthat::expect_s3_class(validated$population$T0, "Date")
+    testthat::expect_identical(
+      as.character(validated$population$T0),
+      c("2024-01-01", "2024-01-15")
+    )
+  }
+)
+
+testthat::test_that(
+  "validate_anchor_inputs fails on population anchor dates outside YYYY-mm-dd",
+  {
+    population <- example_population()
+    population[, T0 := c("01-01-2024", "2024-01-15")]
+
+    testthat::expect_error(
+      validate_anchor_inputs(
+        population = population,
+        metadata = example_metadata(),
+        concepts = example_concepts()
+      ),
+      "must use the date format YYYY-mm-dd"
+    )
+  }
+)
+
 testthat::test_that("validate_anchor_inputs fails on missing anchor columns", {
   metadata <- data.table::data.table(
     variable_id = "x",
