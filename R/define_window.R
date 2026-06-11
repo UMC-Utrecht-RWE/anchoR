@@ -1,10 +1,10 @@
 generic_window_check <- function(window_dt) {
   if (!data.table::is.data.table(window_dt)) {
-    stop("window_dt must be a data.table", call. = FALSE)
+    stop_error_message("window_dt must be a data.table")
   }
 
   if (!all(c("constructor") %in% names(window_dt))) {
-    stop("window_dt is missing mandatory metadata columns", call. = FALSE)
+    stop_error_message("window_dt is missing mandatory metadata columns")
   }
 
   invisible(TRUE)
@@ -16,15 +16,15 @@ make_constructor <- function(
   check_fn = NULL
 ) {
   if (!is.function(transform_fn)) {
-    stop("transform_fn must be a function", call. = FALSE)
+    stop_error_message("transform_fn must be a function")
   }
 
   if (!is.character(required_cols)) {
-    stop("required_cols must be a character vector", call. = FALSE)
+    stop_error_message("required_cols must be a character vector")
   }
 
   if (!is.null(check_fn) && !is.function(check_fn)) {
-    stop("check_fn must be NULL or a function", call. = FALSE)
+    stop_error_message("check_fn must be NULL or a function")
   }
 
   force(transform_fn)
@@ -39,10 +39,11 @@ make_constructor <- function(
     missing_cols <- setdiff(required_cols, names(window_dt))
 
     if (length(missing_cols)) {
-      stop(
-        "Missing required column(s): ",
-        paste(missing_cols, collapse = ", "),
-        call. = FALSE
+      stop_error_message(
+        sprintf(
+          "window_dt is missing required column(s): %s",
+          paste(missing_cols, collapse = ", ")
+        )
       )
     }
 
@@ -180,9 +181,9 @@ define_window <- function(
     row_idx <- window_dt[, which(constructor == window_fun)]
 
     if (!exists(fun_name, mode = "function")) {
-      msg <- sprintf("Window function does not exist: %s", fun_name)
-      logger::log_error(msg)
-      base::stop(msg, call. = FALSE)
+      stop_error_message(
+        sprintf("Window function does not exist: %s", fun_name)
+      )
     }
 
     tryCatch(
@@ -201,13 +202,13 @@ define_window <- function(
         ]
       },
       error = function(e) {
-        msg <- sprintf(
-          "Error while applying window function '%s': %s",
-          fun_name,
-          conditionMessage(e)
+        stop_error_message(
+          sprintf(
+            "Error while applying window function '%s': %s",
+            fun_name,
+            conditionMessage(e)
+          )
         )
-        logger::log_error(msg)
-        base::stop(msg, call. = FALSE)
       }
     )
   }
