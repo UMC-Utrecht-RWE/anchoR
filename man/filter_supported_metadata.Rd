@@ -4,12 +4,14 @@
 \alias{filter_supported_metadata}
 \title{Filter Metadata to Selectors Supported by the Package}
 \usage{
-filter_supported_metadata(metadata, selector_col = "selector")
+filter_supported_metadata(metadata, selector_col = NULL)
 }
 \arguments{
 \item{metadata}{A data frame containing study-variable metadata.}
 
-\item{selector_col}{Column in \code{metadata} that contains selector}
+\item{selector_col}{Optional column in \code{metadata} that contains selectors.
+When omitted, the helper uses \code{selector} and falls back to
+\code{date_extraction_func}.}
 }
 \value{
 A filtered \code{data.table} with the same columns as the input.

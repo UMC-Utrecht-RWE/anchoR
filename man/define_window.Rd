@@ -4,12 +4,20 @@
 \alias{define_window}
 \title{Define Anchoring Windows}
 \usage{
-define_window(population, metadata, anchor_col = "T0")
+define_window(
+  population,
+  metadata,
+  multiple_episodes = NULL,
+  anchor_col = "T0"
+)
 }
 \arguments{
 \item{population}{A data frame containing the study population.}
 
 \item{metadata}{A data frame describing the variables to anchor.}
+
+\item{multiple_episodes}{Optional episode table used by constructors that
+expand one anchor row into multiple separate episodes.}
 
 \item{anchor_col}{Column to use when metadata does not specify
 \code{anchor_start_col} or \code{anchor_end_col}.}

@@ -8,6 +8,7 @@ anchor_by_variable(
   population,
   metadata,
   concepts,
+  multiple_episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL
 )
@@ -23,6 +24,9 @@ the columns required by \code{validate_anchor_inputs()}.}
 \item{concepts}{A concept table as a data frame, a DuckDB file path whose
 \code{concept_table} contains \code{person_id}, \code{concept_id}, and
 \code{date}, or parquet file location(s).}
+
+\item{multiple_episodes}{Optional episode table used by constructors that
+expand one anchor row into multiple separate episodes.}
 
 \item{anchor_col}{Character. Name of the column in \code{population} to use
 as the index date when metadata does not specify an anchor column.

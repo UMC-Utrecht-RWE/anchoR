@@ -8,6 +8,7 @@ validate_anchor_inputs(
   population,
   metadata,
   concepts = NULL,
+  multiple_episodes = NULL,
   anchor_col = "T0"
 )
 }
@@ -21,12 +22,17 @@ anchor column used for windowing.}
 \code{concept_table} contains \code{person_id}, \code{concept_id}, and \code{date}, or parquet
 file location(s).}
 
+\item{multiple_episodes}{Optional episode table used by constructors that
+need to expand one anchor row into multiple separate episodes. It must
+contain \code{person_id}, \code{episode_id}, \code{episode_start}, and \code{episode_end}.
+Legacy pregnancy column names are also accepted and normalized.}
+
 \item{anchor_col}{Column to use when metadata does not specify
 the anchor column.}
 }
 \value{
 Invisibly returns a list with normalized \code{population}, \code{metadata},
-and \code{concepts}.
+\code{concepts}, and \code{multiple_episodes}.
 }
 \description{
 Standardizes the study-variable metadata shape and checks the minimum
