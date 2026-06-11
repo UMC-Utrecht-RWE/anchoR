@@ -73,3 +73,80 @@ testthat::test_that("define_window reports window function failures", {
     define_window(population, example_metadata())
   )
 })
+
+# testthat::test_that("define_window reports missing custom constructor columns", {
+#   missing_col_window <- make_constructor(
+#     transform_fn = function(window_dt) window_dt[],
+#     required_cols = "index_date"
+#   )
+
+#   define_window_with_missing_col_check <- define_window
+#   environment(define_window_with_missing_col_check) <- list2env(
+#     list(missing_col_window = missing_col_window),
+#     parent = environment(define_window)
+#   )
+
+#   population <- data.table::data.table(
+#     person_id = c("1", "2"),
+#     T0 = as.Date(c("2024-01-01", "2024-01-15"))
+#   )
+
+#   metadata <- data.table::data.table(
+#     variable_id = "missing_col_window",
+#     concept_id = "CUSTOM",
+#     constructor = "MISSING_COL",
+#     selector = "LATEST",
+#     start_look_back = 0L,
+#     end_look_back = 0L
+#   )
+
+#   testthat::expect_error(
+#     define_window_with_missing_col_check(population, metadata),
+#     "Error while applying window function 'missing_col_window': Missing required column\\(s\\): index_date"
+#   )
+# })
+
+# testthat::test_that("define_window applies a custom constructor", {
+#   my_window <- make_constructor(
+#     transform_fn = function(window_dt) {
+#       # custom logic
+#       window_dt[, window_start := index_date - 30]
+#       window_dt[, window_end := index_date + 30]
+#       window_dt[]
+#     },
+#     required_cols = "index_date"
+#   )
+
+#   define_window_with_custom <- define_window
+#   environment(define_window_with_custom) <- list2env(
+#     list(custom_window = my_window),
+#     parent = environment(define_window)
+#   )
+
+#   population <- data.table::data.table(
+#     person_id = c("1", "2"),
+#     T0 = as.Date(c("2024-01-01", "2024-01-15")),
+#     index_date = as.Date(c("2024-02-01", "2024-02-15"))
+#   )
+
+#   metadata <- data.table::data.table(
+#     variable_id = "custom_window",
+#     concept_id = "CUSTOM",
+#     constructor = "CUSTOM",
+#     selector = "LATEST",
+#     start_look_back = 0L,
+#     end_look_back = 0L
+#   )
+
+#   windows <- define_window_with_custom(population, metadata)
+
+#   testthat::expect_equal(
+#     windows$window_start,
+#     as.Date(c("2024-01-02", "2024-01-16"))
+#   )
+#   testthat::expect_equal(
+#     windows$window_end,
+#     as.Date(c("2024-03-02", "2024-03-16"))
+#   )
+#   testthat::expect_true(all(windows$window_valid))
+# })
