@@ -73,6 +73,48 @@ normalize_concepts_input <- function(concepts) {
   concepts
 }
 
+validate_population_anchor_col <- function(population_dt, anchor_col) {
+  anchor_values <- population_dt[[anchor_col]]
+
+  if (inherits(anchor_values, "Date")) {
+    return(invisible(population_dt))
+  }
+  # TODO: Extend this approach to all the time we do this. why didn't I do this
+  # earlier?
+  stop_invalid_population <- function(message) {
+    msg <- sprintf(message, anchor_col)
+    logger::log_error(msg)
+    base::stop(msg, call. = FALSE)
+  }
+
+  if (!is.character(anchor_values)) {
+    stop_invalid_population(
+      "`population$%s` must be a Date column or character in YYYY-mm-dd format."
+    )
+  }
+
+  non_missing <- !is.na(anchor_values)
+  invalid_format <- non_missing & !grepl(
+    "^\\d{4}-\\d{2}-\\d{2}$", anchor_values
+  )
+  if (any(invalid_format)) {
+    stop_invalid_population(
+      "`population$%s` must use the date format YYYY-mm-dd."
+    )
+  }
+
+  parsed_values <- as.Date(anchor_values, format = "%Y-%m-%d")
+  invalid_dates <- non_missing & is.na(parsed_values)
+  if (any(invalid_dates)) {
+    stop_invalid_population(
+      "`population$%s` contains invalid dates; use the format YYYY-mm-dd."
+    )
+  }
+
+  population_dt[, (anchor_col) := parsed_values]
+  invisible(population_dt)
+}
+
 #' Validate Anchoring Inputs
 #'
 #' Standardizes the study-variable metadata shape and checks the minimum
@@ -104,6 +146,10 @@ validate_anchor_inputs <- function(
   # Normalization is centralized here so exported functions can stay short and
   # still rely on a consistent metadata schema.
   population_dt <- as_data_table(population, "population")
+  # We want to be really sure that anchor_col is a date otherwise it will create
+  # a lot of downstream problems.
+  validate_population_anchor_col(population_dt, anchor_col)
+
   metadata_dt <- normalize_metadata(
     metadata,
     anchor_col = anchor_col
@@ -114,6 +160,7 @@ validate_anchor_inputs <- function(
     required = "person_id",
     arg = "population"
   )
+
 
   assert_has_columns(
     metadata_dt,

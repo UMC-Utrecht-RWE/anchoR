@@ -46,7 +46,8 @@ if (getRversion() >= "2.15.1") {
       "window_start",
       "start_offset",
       "window_valid",
-      "window_name"
+      "window_name",
+      "..result_key_cols"
     )
   )
 }
