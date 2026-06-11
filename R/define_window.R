@@ -12,7 +12,8 @@ make_constructor <- function(transform_fn, required_cols = character()) {
 
   function(window_dt) {
     check_generic_window_input(window_dt)
-
+    # To ensure that the function has what it needs, we check for the required
+    # columns before any transformation.
     missing_cols <- setdiff(required_cols, names(window_dt))
     if (length(missing_cols)) {
       stop(
@@ -58,13 +59,21 @@ generic_window <- make_constructor(
   )
 )
 
-preg1_window <- function(window_dt) {
+preg1_window <- make_constructor(
   # This is a placeholder for a more complex window definition that might be
   # needed for pregnancy-related variables. For now, it just calls the generic
   # definition, but in the future it could add additional logic specific to
   # pregnancy episodes.
-  generic_window(window_dt)
-}
+  transform_fn = function(window_dt) {
+    generic_window(window_dt)
+  },
+  required_cols = c(
+    "anchor_start_col",
+    "anchor_end_col",
+    "start_offset",
+    "end_offset"
+  )
+)
 
 #' Cross-join population and metadata for window definition.
 #' This helper function performs a cross join between the population and
