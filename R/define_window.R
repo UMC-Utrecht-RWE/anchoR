@@ -1,3 +1,7 @@
+#' @description a helper function to perform common checks
+#' @param window_dt A data.table
+#' @return TRUE if the checks pass, otherwise an error is raised.
+#' @keywords internal
 generic_window_check <- function(window_dt) {
   if (!data.table::is.data.table(window_dt)) {
     stop_error_message("window_dt must be a data.table")
@@ -10,6 +14,15 @@ generic_window_check <- function(window_dt) {
   invisible(TRUE)
 }
 
+#' @description a function factory to create window definition functions
+#' with built-in checks for required columns and custom validation logic.
+#' @param transform_fn A function
+#' @param required_cols A character vector of column names used as input
+#' to the transform_fn. The presence of these columns will be validated
+#' @param check_fn An optional function that takes the input data.table and
+#' performs additional checks.
+#' @return A data.table
+#' @export
 make_constructor <- function(
   transform_fn,
   required_cols = character(),
