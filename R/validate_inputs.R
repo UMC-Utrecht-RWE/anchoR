@@ -73,6 +73,48 @@ normalize_concepts_input <- function(concepts) {
   concepts
 }
 
+validate_population_anchor_column <- function(population_dt, anchor_col) {
+  anchor_values <- population_dt[[anchor_col]]
+
+  if (inherits(anchor_values, "Date")) {
+    return(invisible(population_dt))
+  }
+
+  if (!is.character(anchor_values)) {
+    stop(
+      sprintf(
+        "`population$%s` must be a Date column or character values in YYYY-mm-dd format.",
+        anchor_col
+      ),
+      call. = FALSE
+    )
+  }
+
+  if (any(!is.na(anchor_values) & !grepl("^\\d{4}-\\d{2}-\\d{2}$", anchor_values))) {
+    stop(
+      sprintf(
+        "`population$%s` must use the date format YYYY-mm-dd.",
+        anchor_col
+      ),
+      call. = FALSE
+    )
+  }
+
+  parsed_values <- as.Date(anchor_values, format = "%Y-%m-%d")
+  if (any(!is.na(anchor_values) & is.na(parsed_values))) {
+    stop(
+      sprintf(
+        "`population$%s` contains invalid dates; use the format YYYY-mm-dd.",
+        anchor_col
+      ),
+      call. = FALSE
+    )
+  }
+
+  population_dt[, (anchor_col) := parsed_values]
+  invisible(population_dt)
+}
+
 #' Validate Anchoring Inputs
 #'
 #' Standardizes the study-variable metadata shape and checks the minimum
@@ -109,6 +151,8 @@ validate_anchor_inputs <- function(
     required = "person_id",
     arg = "population"
   )
+
+  validate_population_anchor_column(population_dt, anchor_col)
 
   assert_has_columns(
     metadata_dt,
