@@ -1,4 +1,20 @@
-make_constructor <- function(transform_fn, required_cols = character()) {
+generic_window_check <- function(window_dt) {
+  if (!data.table::is.data.table(window_dt)) {
+    stop("window_dt must be a data.table", call. = FALSE)
+  }
+
+  if (!all(c("constructor") %in% names(window_dt))) {
+    stop("window_dt is missing mandatory metadata columns", call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
+make_constructor <- function(
+  transform_fn,
+  required_cols = character(),
+  check_fn = NULL
+) {
   if (!is.function(transform_fn)) {
     stop("transform_fn must be a function", call. = FALSE)
   }
@@ -7,14 +23,21 @@ make_constructor <- function(transform_fn, required_cols = character()) {
     stop("required_cols must be a character vector", call. = FALSE)
   }
 
+  if (!is.null(check_fn) && !is.function(check_fn)) {
+    stop("check_fn must be NULL or a function", call. = FALSE)
+  }
+
   force(transform_fn)
   force(required_cols)
+  force(check_fn)
 
   function(window_dt) {
-    check_generic_window_input(window_dt)
-    # To ensure that the function has what it needs, we check for the required
-    # columns before any transformation.
+    if (!is.null(check_fn)) {
+      check_fn(window_dt)
+    }
+
     missing_cols <- setdiff(required_cols, names(window_dt))
+
     if (length(missing_cols)) {
       stop(
         "Missing required column(s): ",
@@ -56,7 +79,8 @@ generic_window <- make_constructor(
     "anchor_end_col",
     "start_offset",
     "end_offset"
-  )
+  ),
+  check_fn = generic_window_check
 )
 
 preg1_window <- make_constructor(
@@ -72,7 +96,8 @@ preg1_window <- make_constructor(
     "anchor_end_col",
     "start_offset",
     "end_offset"
-  )
+  ),
+  check_fn = generic_window_check
 )
 
 #' Cross-join population and metadata for window definition.
