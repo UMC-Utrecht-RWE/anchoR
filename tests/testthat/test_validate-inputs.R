@@ -60,6 +60,23 @@ testthat::test_that(
   }
 )
 
+testthat::test_that(
+  "validate_anchor_inputs fails on invalid population anchor dates",
+  {
+    population <- example_population()
+    population[, T0 := c("2024-02-30", "2024-01-15")]
+
+    testthat::expect_error(
+      validate_anchor_inputs(
+        population = population,
+        metadata = example_metadata(),
+        concepts = example_concepts()
+      ),
+      "contains invalid dates; use the format YYYY-mm-dd"
+    )
+  }
+)
+
 testthat::test_that("validate_anchor_inputs fails on missing anchor columns", {
   metadata <- data.table::data.table(
     variable_id = "x",
