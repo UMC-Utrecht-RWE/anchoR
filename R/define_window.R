@@ -1,27 +1,62 @@
-generic_window <- function(window_dt) {
-  window_dt[, window_start := as.Date(NA)]
-  window_dt[, window_end := as.Date(NA)]
-
-  # We loop by anchor column name so one metadata table can mix different
-  # anchors, such as T0 and pregnancy dates, without falling back to row-wise R.
-  for (col in unique(window_dt$anchor_start_col)) {
-    window_dt[
-      anchor_start_col == col,
-      window_start := as.Date(get(col) + start_offset)
-    ]
+make_constructor <- function(transform_fn, required_cols = character()) {
+  if (!is.function(transform_fn)) {
+    stop("transform_fn must be a function", call. = FALSE)
   }
 
-  for (col in unique(window_dt$anchor_end_col)) {
-    window_dt[
-      anchor_end_col == col,
-      window_end := as.Date(get(col) + end_offset)
-    ]
+  if (!is.character(required_cols)) {
+    stop("required_cols must be a character vector", call. = FALSE)
   }
 
-  # The helper returns the same table so `define_window()` can keep its flow
-  # linear and avoid carrying multiple temporary objects.
-  window_dt[]
+  force(transform_fn)
+  force(required_cols)
+
+  function(window_dt) {
+    check_generic_window_input(window_dt)
+
+    missing_cols <- setdiff(required_cols, names(window_dt))
+    if (length(missing_cols)) {
+      stop(
+        "Missing required column(s): ",
+        paste(missing_cols, collapse = ", "),
+        call. = FALSE
+      )
+    }
+
+    transform_fn(window_dt)
+  }
 }
+
+generic_window <- make_constructor(
+  transform_fn = function(window_dt) {
+    window_dt[, window_start := as.Date(NA)]
+    window_dt[, window_end := as.Date(NA)]
+
+    # We loop by anchor column name so one metadata table can mix different
+    # anchors, such as T0 and pregnancy dates, without falling back to row-wise
+    for (col in unique(window_dt$anchor_start_col)) {
+      window_dt[
+        anchor_start_col == col,
+        window_start := as.Date(get(col) + start_offset)
+      ]
+    }
+
+    for (col in unique(window_dt$anchor_end_col)) {
+      window_dt[
+        anchor_end_col == col,
+        window_end := as.Date(get(col) + end_offset)
+      ]
+    }
+    # The helper returns the same table so `define_window()` can keep its flow
+    # linear and avoid carrying multiple temporary objects.
+    window_dt[]
+  },
+  required_cols = c(
+    "anchor_start_col",
+    "anchor_end_col",
+    "start_offset",
+    "end_offset"
+  )
+)
 
 preg1_window <- function(window_dt) {
   # This is a placeholder for a more complex window definition that might be
