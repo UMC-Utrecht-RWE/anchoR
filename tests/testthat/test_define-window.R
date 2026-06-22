@@ -73,7 +73,7 @@ testthat::test_that("define_window reports window function failures", {
     define_window(population, example_metadata())
   )
 })
-
+# nolint start
 # testthat::test_that("define_window reports missing custom constructor columns", {
 #   missing_col_window <- make_constructor(
 #     transform_fn = function(window_dt) window_dt[],
@@ -150,3 +150,4 @@ testthat::test_that("define_window reports window function failures", {
 #   )
 #   testthat::expect_true(all(windows$window_valid))
 # })
+# nolint end
