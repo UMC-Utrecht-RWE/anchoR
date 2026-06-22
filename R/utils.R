@@ -6,7 +6,7 @@
   lhs
 }
 
-stop_error_message <- function(message) {
+stop_log <- function(message) {
   msg <- sprintf(message)
   logger::log_error(msg)
   base::stop(msg, call. = FALSE)
