@@ -1,4 +1,126 @@
-generic_window <- function(window_dt) {
+#' Generic checks for window constructors
+#'
+#' @description a helper function to perform common checks
+#'
+#' @param window_dt A data.table
+#' @return TRUE if the checks pass, otherwise an error is raised.
+#' @keywords internal
+generic_window_check <- function(window_dt) {
+  if (!data.table::is.data.table(window_dt)) {
+    stop_log("window_dt must be a data.table")
+  }
+
+  if (!all(c("constructor") %in% names(window_dt))) {
+    stop_log("window_dt is missing mandatory metadata columns")
+  }
+
+  invisible(TRUE)
+}
+
+#' Make a window constructor
+#'
+#' Create a window-definition function with required-column checks and
+#' optional custom validation.
+#'
+#' @param transform_fn A function applied to `window_dt`.
+#' @param required_cols Character vector of required input columns.
+#' @param check_fn Optional validation function.
+#' @return A `data.table`.
+#' @export
+make_constructor <- function(
+  transform_fn,
+  required_cols = character(),
+  check_fn = NULL
+) {
+  if (!is.function(transform_fn)) {
+    stop_log("transform_fn must be a function")
+  }
+
+  if (!is.character(required_cols)) {
+    stop_log("required_cols must be a character vector")
+  }
+
+  if (!is.null(check_fn) && !is.function(check_fn)) {
+    stop_log("check_fn must be NULL or a function")
+  }
+
+  force(transform_fn)
+  force(required_cols)
+  force(check_fn)
+
+  function(window_dt) {
+    if (!is.null(check_fn)) {
+      check_fn(window_dt)
+    }
+
+    missing_cols <- setdiff(required_cols, names(window_dt))
+
+    if (length(missing_cols)) {
+      stop_log(
+        sprintf(
+          "window_dt is missing required column(s): %s",
+          paste(missing_cols, collapse = ", ")
+        )
+      )
+    }
+
+    transform_fn(window_dt)
+  }
+}
+
+generic_window <- make_constructor(
+  transform_fn = function(window_dt) {
+    window_dt[, window_start := as.Date(NA)]
+    window_dt[, window_end := as.Date(NA)]
+
+    # We loop by anchor column name so one metadata table can mix different
+    # anchors, such as T0 and pregnancy dates, without falling back to row-wise
+    for (col in unique(window_dt$anchor_start_col)) {
+      window_dt[
+        anchor_start_col == col,
+        window_start := as.Date(get(col) + start_offset)
+      ]
+    }
+
+    for (col in unique(window_dt$anchor_end_col)) {
+      window_dt[
+        anchor_end_col == col,
+        window_end := as.Date(get(col) + end_offset)
+      ]
+    }
+    # The helper returns the same table so `define_window()` can keep its flow
+    # linear and avoid carrying multiple temporary objects.
+    window_dt[]
+  },
+  required_cols = c(
+    "anchor_start_col",
+    "anchor_end_col",
+    "start_offset",
+    "end_offset"
+  ),
+  check_fn = generic_window_check
+)
+
+preg1_window <- make_constructor(
+  # This is a placeholder for a more complex window definition that might be
+  # needed for pregnancy-related variables. For now, it just calls the generic
+  # definition, but in the future it could add additional logic specific to
+  # pregnancy episodes.
+  transform_fn = function(window_dt) {
+    generic_window(window_dt)
+  },
+  required_cols = c(
+    "anchor_start_col",
+    "anchor_end_col",
+    "start_offset",
+    "end_offset"
+  ),
+  check_fn = generic_window_check
+)
+
+
+
+generic_window <- function(window_dt, multiple_episodes = NULL) {
   window_dt[, window_start := as.Date(NA)]
   window_dt[, window_end := as.Date(NA)]
 
@@ -23,24 +145,6 @@ generic_window <- function(window_dt) {
   window_dt[]
 }
 
-#' Generic checks for window constructors
-#'
-#' @description a helper function to perform common checks
-#'
-#' @param window_dt A data.table
-#' @return TRUE if the checks pass, otherwise an error is raised.
-#' @keywords internal
-generic_window_check <- function(window_dt) {
-  if (!data.table::is.data.table(window_dt)) {
-    stop_log("window_dt must be a data.table")
-  }
-
-  if (!all(c("constructor") %in% names(window_dt))) {
-    stop_log("window_dt is missing mandatory metadata columns")
-  }
-
-  invisible(TRUE)
-}
 
 require_multiple_episodes <- function(multiple_episodes, constructor) {
   if (is.null(multiple_episodes)) {
