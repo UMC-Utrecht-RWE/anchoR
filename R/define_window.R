@@ -120,32 +120,6 @@ preg1_window <- make_constructor(
 
 
 
-generic_window <- function(window_dt, multiple_episodes = NULL) {
-  window_dt[, window_start := as.Date(NA)]
-  window_dt[, window_end := as.Date(NA)]
-
-  # We loop by anchor column name so one metadata table can mix different
-  # anchors, such as T0 and pregnancy dates, without falling back to row-wise R.
-  for (col in unique(window_dt$anchor_start_col)) {
-    window_dt[
-      anchor_start_col == col,
-      window_start := as.Date(get(col) + start_offset)
-    ]
-  }
-
-  for (col in unique(window_dt$anchor_end_col)) {
-    window_dt[
-      anchor_end_col == col,
-      window_end := as.Date(get(col) + end_offset)
-    ]
-  }
-
-  # The helper returns the same table so `define_window()` can keep its flow
-  # linear and avoid carrying multiple temporary objects.
-  window_dt[]
-}
-
-
 require_multiple_episodes <- function(multiple_episodes, constructor) {
   if (is.null(multiple_episodes)) {
     stop(
@@ -164,12 +138,9 @@ require_multiple_episodes <- function(multiple_episodes, constructor) {
   multiple_episodes
 }
 
-expand_multiple_episode_windows <- function(
-  window_dt,
-  multiple_episodes,
-  constructor,
-  keep_episode
-) {
+pregnancy_window_check <- function(window_dt) {
+  generic_window_check(window_dt)
+
   if (!all(c("lmp_date", "pregnancy_end_date") %in% names(window_dt))) {
     stop(
       paste(
@@ -180,6 +151,15 @@ expand_multiple_episode_windows <- function(
     )
   }
 
+  invisible(TRUE)
+}
+
+expand_multiple_episode_windows <- function(
+  window_dt,
+  multiple_episodes,
+  constructor,
+  keep_episode
+) {
   multiple_episodes <- require_multiple_episodes(
     multiple_episodes,
     constructor = constructor
@@ -233,38 +213,51 @@ expand_multiple_episode_windows <- function(
   expanded_dt[]
 }
 
-preg1_window <- function(window_dt, multiple_episodes = NULL) {
-  # Expand each request into one window per prior pregnancy episode.
-  expand_multiple_episode_windows(
-    window_dt = window_dt,
-    multiple_episodes = multiple_episodes,
-    constructor = "PREG1",
-    keep_episode = function(expanded_dt) {
-      expanded_dt[
-        !is.na(matched_episode_end) &
-          !is.na(lmp_date) &
-          matched_episode_end < lmp_date
-      ]
-    }
-  )
+make_multiple_episode_window <- function(constructor, keep_episode) {
+  function(window_dt, multiple_episodes = NULL) {
+    transform_window <- make_constructor(
+      transform_fn = function(window_dt) {
+        expand_multiple_episode_windows(
+          window_dt = window_dt,
+          multiple_episodes = multiple_episodes,
+          constructor = constructor,
+          keep_episode = keep_episode
+        )
+      },
+      required_cols = c(
+        "anchor_start_col",
+        "anchor_end_col",
+        "start_offset",
+        "end_offset"
+      ),
+      check_fn = pregnancy_window_check
+    )
+
+    transform_window(window_dt)
+  }
 }
 
-preg2_window <- function(window_dt, multiple_episodes = NULL) {
-  # Expand each request into one window per pregnancy episode up to and
-  # including the anchored pregnancy.
-  expand_multiple_episode_windows(
-    window_dt = window_dt,
-    multiple_episodes = multiple_episodes,
-    constructor = "PREG2",
-    keep_episode = function(expanded_dt) {
-      expanded_dt[
-        !is.na(matched_episode_end) &
-          !is.na(pregnancy_end_date) &
-          matched_episode_end <= pregnancy_end_date
-      ]
-    }
-  )
-}
+preg1_window <- make_multiple_episode_window(
+  constructor = "PREG1",
+  keep_episode = function(expanded_dt) {
+    expanded_dt[
+      !is.na(matched_episode_end) &
+        !is.na(lmp_date) &
+        matched_episode_end < lmp_date
+    ]
+  }
+)
+
+preg2_window <- make_multiple_episode_window(
+  constructor = "PREG2",
+  keep_episode = function(expanded_dt) {
+    expanded_dt[
+      !is.na(matched_episode_end) &
+        !is.na(pregnancy_end_date) &
+        matched_episode_end <= pregnancy_end_date
+    ]
+  }
+)
 
 #' Cross-join population and metadata for window definition.
 #' This helper function performs a cross join between the population and
@@ -371,12 +364,21 @@ define_window <- function(
 
     tryCatch(
       {
+        constructor_fn <- get(fun_name, mode = "function")
+        constructor_args <- list(
+          window_dt = window_dt[row_idx]
+        )
+        constructor_formals <- names(formals(constructor_fn))
+        if (
+          "multiple_episodes" %in% constructor_formals ||
+            "..." %in% constructor_formals
+        ) {
+          constructor_args$multiple_episodes <- multiple_episodes_dt
+        }
+
         window_subset <- base::do.call(
-          what = get(fun_name, mode = "function"),
-          args = list(
-            window_dt = window_dt[row_idx],
-            multiple_episodes = multiple_episodes_dt
-          )
+          what = constructor_fn,
+          args = constructor_args
         )
         if (!all(c("window_start", "window_end") %in% names(window_subset))) {
           stop(
