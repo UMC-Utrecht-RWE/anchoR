@@ -272,6 +272,30 @@ testthat::test_that("make_constructor fails with messages", {
   )
 })
 
+testthat::test_that("make_constructor forwards supported extra arguments", {
+  window_fn <- make_constructor(
+    transform_fn = function(window_dt, suffix = "") {
+      window_dt[, label := paste0(constructor, suffix)]
+      window_dt[]
+    },
+    check_fn = function(window_dt, suffix = "") {
+      if (!identical(suffix, "_ok")) {
+        stop("suffix mismatch", call. = FALSE)
+      }
+
+      invisible(TRUE)
+    }
+  )
+
+  out <- window_fn(
+    data.table::data.table(constructor = "GENERIC"),
+    suffix = "_ok",
+    ignored = "extra"
+  )
+
+  testthat::expect_equal(out$label, "GENERIC_ok")
+})
+
 testthat::test_that("define_window applies a custom constructor", {
   case <- custom_define_window()
 

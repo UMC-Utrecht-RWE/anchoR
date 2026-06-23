@@ -7,11 +7,13 @@
 make_constructor(transform_fn, required_cols = character(), check_fn = NULL)
 }
 \arguments{
-\item{transform_fn}{A function applied to \code{window_dt}.}
+\item{transform_fn}{A function applied to \code{window_dt}. It may optionally
+declare additional named arguments.}
 
 \item{required_cols}{Character vector of required input columns.}
 
-\item{check_fn}{Optional validation function.}
+\item{check_fn}{Optional validation function. It may optionally declare
+additional named arguments.}
 }
 \value{
 A \code{data.table}.

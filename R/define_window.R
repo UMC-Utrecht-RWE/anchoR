@@ -17,14 +17,27 @@ generic_window_check <- function(window_dt) {
   invisible(TRUE)
 }
 
+call_constructor_callback <- function(fn, args) {
+  callback_formals <- names(formals(fn))
+
+  if ("..." %in% callback_formals) {
+    return(base::do.call(fn, args))
+  }
+
+  supported_args <- callback_formals[callback_formals %in% names(args)]
+  base::do.call(fn, args[supported_args])
+}
+
 #' Make a window constructor
 #'
 #' Create a window-definition function with required-column checks and
 #' optional custom validation.
 #'
-#' @param transform_fn A function applied to `window_dt`.
+#' @param transform_fn A function applied to `window_dt`. It may optionally
+#'   declare additional named arguments.
 #' @param required_cols Character vector of required input columns.
-#' @param check_fn Optional validation function.
+#' @param check_fn Optional validation function. It may optionally declare
+#'   additional named arguments.
 #' @return A `data.table`.
 #' @export
 make_constructor <- function(
@@ -48,9 +61,11 @@ make_constructor <- function(
   force(required_cols)
   force(check_fn)
 
-  function(window_dt) {
+  function(window_dt, ...) {
+    constructor_args <- c(list(window_dt = window_dt), list(...))
+
     if (!is.null(check_fn)) {
-      check_fn(window_dt)
+      call_constructor_callback(check_fn, constructor_args)
     }
 
     missing_cols <- setdiff(required_cols, names(window_dt))
@@ -64,7 +79,7 @@ make_constructor <- function(
       )
     }
 
-    transform_fn(window_dt)
+    call_constructor_callback(transform_fn, constructor_args)
   }
 }
 
@@ -91,23 +106,6 @@ generic_window <- make_constructor(
     # The helper returns the same table so `define_window()` can keep its flow
     # linear and avoid carrying multiple temporary objects.
     window_dt[]
-  },
-  required_cols = c(
-    "anchor_start_col",
-    "anchor_end_col",
-    "start_offset",
-    "end_offset"
-  ),
-  check_fn = generic_window_check
-)
-
-preg1_window <- make_constructor(
-  # This is a placeholder for a more complex window definition that might be
-  # needed for pregnancy-related variables. For now, it just calls the generic
-  # definition, but in the future it could add additional logic specific to
-  # pregnancy episodes.
-  transform_fn = function(window_dt) {
-    generic_window(window_dt)
   },
   required_cols = c(
     "anchor_start_col",
@@ -154,7 +152,7 @@ pregnancy_window_check <- function(window_dt) {
   invisible(TRUE)
 }
 
-expand_multiple_episode_windows <- function(
+expand_multiple_episode_win <- function(
   window_dt,
   multiple_episodes,
   constructor,
@@ -213,50 +211,52 @@ expand_multiple_episode_windows <- function(
   expanded_dt[]
 }
 
-make_multiple_episode_window <- function(constructor, keep_episode) {
-  function(window_dt, multiple_episodes = NULL) {
-    transform_window <- make_constructor(
-      transform_fn = function(window_dt) {
-        expand_multiple_episode_windows(
-          window_dt = window_dt,
-          multiple_episodes = multiple_episodes,
-          constructor = constructor,
-          keep_episode = keep_episode
-        )
-      },
-      required_cols = c(
-        "anchor_start_col",
-        "anchor_end_col",
-        "start_offset",
-        "end_offset"
-      ),
-      check_fn = pregnancy_window_check
+preg1_window <- make_constructor(
+  transform_fn = function(window_dt, multiple_episodes = NULL) {
+    expand_multiple_episode_win(
+      window_dt = window_dt,
+      multiple_episodes = multiple_episodes,
+      constructor = "PREG1",
+      keep_episode = function(expanded_dt) {
+        expanded_dt[
+          !is.na(matched_episode_end) &
+            !is.na(lmp_date) &
+            matched_episode_end < lmp_date
+        ]
+      }
     )
-
-    transform_window(window_dt)
-  }
-}
-
-preg1_window <- make_multiple_episode_window(
-  constructor = "PREG1",
-  keep_episode = function(expanded_dt) {
-    expanded_dt[
-      !is.na(matched_episode_end) &
-        !is.na(lmp_date) &
-        matched_episode_end < lmp_date
-    ]
-  }
+  },
+  required_cols = c(
+    "anchor_start_col",
+    "anchor_end_col",
+    "start_offset",
+    "end_offset"
+  ),
+  check_fn = pregnancy_window_check
 )
 
-preg2_window <- make_multiple_episode_window(
-  constructor = "PREG2",
-  keep_episode = function(expanded_dt) {
-    expanded_dt[
-      !is.na(matched_episode_end) &
-        !is.na(pregnancy_end_date) &
-        matched_episode_end <= pregnancy_end_date
-    ]
-  }
+preg2_window <- make_constructor(
+  transform_fn = function(window_dt, multiple_episodes = NULL) {
+    expand_multiple_episode_win(
+      window_dt = window_dt,
+      multiple_episodes = multiple_episodes,
+      constructor = "PREG2",
+      keep_episode = function(expanded_dt) {
+        expanded_dt[
+          !is.na(matched_episode_end) &
+            !is.na(pregnancy_end_date) &
+            matched_episode_end <= pregnancy_end_date
+        ]
+      }
+    )
+  },
+  required_cols = c(
+    "anchor_start_col",
+    "anchor_end_col",
+    "start_offset",
+    "end_offset"
+  ),
+  check_fn = pregnancy_window_check
 )
 
 #' Cross-join population and metadata for window definition.
