@@ -1,3 +1,41 @@
+custom_define_window <- function(required_cols = "index_date") {
+  my_window <- make_constructor(
+    transform_fn = function(window_dt) {
+      window_dt[, window_start := index_date - 30]
+      window_dt[, window_end := index_date + 30]
+      window_dt[]
+    },
+    required_cols = required_cols
+  )
+
+  define_window_with_custom <- define_window
+  environment(define_window_with_custom) <- list2env(
+    list(custom_window = my_window),
+    parent = environment(define_window)
+  )
+
+  population <- data.table::data.table(
+    person_id = c("1", "2"),
+    T0 = as.Date(c("2024-01-01", "2024-01-15")),
+    index_date = as.Date(c("2024-02-01", "2024-02-15"))
+  )
+
+  metadata <- data.table::data.table(
+    variable_id = "custom_window",
+    concept_id = "CUSTOM",
+    constructor = "CUSTOM",
+    selector = "LATEST",
+    start_look_back = 0L,
+    end_look_back = 0L
+  )
+
+  list(
+    define_window = define_window_with_custom,
+    population = population,
+    metadata = metadata
+  )
+}
+
 testthat::test_that("define_window computes relative windows", {
   windows <- define_window(example_population(), example_metadata())
 
@@ -168,5 +206,106 @@ testthat::test_that("define_window reports window function failures", {
 
   testthat::expect_no_error(
     define_window(population, example_metadata())
+  )
+})
+
+testthat::test_that("generic_window_check works correctly", {
+  # Test with invalid window type
+  invalid_window <- data.frame(
+    anchor_start_col = "T0",
+    anchor_end_col = "T0",
+    start_offset = 0,
+    end_offset = 0
+  )
+
+  testthat::expect_error(
+    generic_window_check(invalid_window),
+    "window_dt must be a data.table"
+  )
+
+  # Test with invalid window data
+  invalid_window <- data.table::data.table(
+    anchor_start_col = "T0",
+    anchor_end_col = "T0",
+    start_offset = 0,
+    end_offset = 0
+  )
+
+  testthat::expect_error(
+    generic_window_check(invalid_window),
+    "window_dt is missing mandatory metadata columns"
+  )
+
+  # Test with valid window data
+  valid_window <- data.table::data.table(
+    constructor = "T0"
+  )
+  testthat::expect_no_error(
+    generic_window_check(valid_window)
+  )
+})
+
+testthat::test_that("make_constructor fails with messages", {
+  testthat::expect_error(
+    make_constructor(transform_fn = "not_a_function"),
+    "transform_fn must be a function"
+  )
+
+  testthat::expect_error(
+    make_constructor(transform_fn = function(x) x, required_cols = 123),
+    "required_cols must be a character vector"
+  )
+
+  testthat::expect_error(
+    make_constructor(
+      transform_fn = function(x) x,
+      check_fn = "not_a_function"
+    ),
+    "check_fn must be NULL or a function"
+  )
+
+  case <- custom_define_window(required_cols = "wrong_column")
+
+  testthat::expect_error(
+    case$define_window(case$population, case$metadata),
+    "missing required column\\(s\\): wrong_column"
+  )
+})
+
+testthat::test_that("define_window applies a custom constructor", {
+  case <- custom_define_window()
+
+  windows <- case$define_window(case$population, case$metadata)
+
+  testthat::expect_equal(
+    windows$window_start,
+    as.Date(c("2024-01-02", "2024-01-16"))
+  )
+  testthat::expect_equal(
+    windows$window_end,
+    as.Date(c("2024-03-02", "2024-03-16"))
+  )
+  testthat::expect_true(all(windows$window_valid))
+})
+
+testthat::test_that("generic_window computes start and end dates", {
+  window_dt <- data.table::data.table(
+    constructor = "GENERIC",
+    anchor_start_col = "T0",
+    anchor_end_col = "T0",
+    start_offset = c(-30L, 0L),
+    end_offset = c(0L, 30L),
+    T0 = as.Date(c("2024-02-01", "2024-02-15"))
+  )
+
+  out <- generic_window(window_dt)
+
+  testthat::expect_equal(
+    out$window_start,
+    as.Date(c("2024-01-02", "2024-02-15"))
+  )
+  testthat::expect_equal(
+    out$window_end,
+    as.Date(c("2024-02-01", "2024-03-16"))
   )
 })

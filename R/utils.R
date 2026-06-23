@@ -6,6 +6,13 @@
   lhs
 }
 
+stop_log <- function(message) {
+  msg <- sprintf(message)
+  logger::log_error(msg)
+  base::stop(msg, call. = FALSE)
+}
+
+
 as_data_table <- function(x, arg) {
   if (!is.data.frame(x)) {
     stop(sprintf("`%s` must be a data frame.", arg), call. = FALSE)

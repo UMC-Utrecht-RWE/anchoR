@@ -1,4 +1,4 @@
-generic_window <- function(window_dt, multiple_episodes = NULL) {
+generic_window <- function(window_dt) {
   window_dt[, window_start := as.Date(NA)]
   window_dt[, window_end := as.Date(NA)]
 
@@ -21,6 +21,25 @@ generic_window <- function(window_dt, multiple_episodes = NULL) {
   # The helper returns the same table so `define_window()` can keep its flow
   # linear and avoid carrying multiple temporary objects.
   window_dt[]
+}
+
+#' Generic checks for window constructors
+#'
+#' @description a helper function to perform common checks
+#'
+#' @param window_dt A data.table
+#' @return TRUE if the checks pass, otherwise an error is raised.
+#' @keywords internal
+generic_window_check <- function(window_dt) {
+  if (!data.table::is.data.table(window_dt)) {
+    stop_log("window_dt must be a data.table")
+  }
+
+  if (!all(c("constructor") %in% names(window_dt))) {
+    stop_log("window_dt is missing mandatory metadata columns")
+  }
+
+  invisible(TRUE)
 }
 
 require_multiple_episodes <- function(multiple_episodes, constructor) {
@@ -241,9 +260,9 @@ define_window <- function(
     row_idx <- window_dt[, which(constructor == window_fun)]
 
     if (!exists(fun_name, mode = "function")) {
-      msg <- sprintf("Window function does not exist: %s", fun_name)
-      logger::log_error(msg)
-      base::stop(msg, call. = FALSE)
+      stop_log(
+        sprintf("Window function does not exist: %s", fun_name)
+      )
     }
 
     tryCatch(
@@ -273,13 +292,13 @@ define_window <- function(
         part_index <- part_index + 1L
       },
       error = function(e) {
-        msg <- sprintf(
-          "Error while applying window function '%s': %s",
-          fun_name,
-          conditionMessage(e)
+        stop_log(
+          sprintf(
+            "Error while applying window function '%s': %s",
+            fun_name,
+            conditionMessage(e)
+          )
         )
-        logger::log_error(msg)
-        base::stop(msg, call. = FALSE)
       }
     )
   }
