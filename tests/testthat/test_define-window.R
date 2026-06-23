@@ -110,38 +110,61 @@ testthat::test_that("generic_window_check works correctly", {
   )
 })
 
-# nolint start
-# testthat::test_that("define_window reports missing custom constructor columns", {
-#   missing_col_window <- make_constructor(
-#     transform_fn = function(window_dt) window_dt[],
-#     required_cols = "index_date"
-#   )
+testthat::test_that("make_constructor fails with messages", {
+  testthat::expect_error(
+    make_constructor(transform_fn = "not_a_function"),
+    "transform_fn must be a function"
+  )
 
-#   define_window_with_missing_col_check <- define_window
-#   environment(define_window_with_missing_col_check) <- list2env(
-#     list(missing_col_window = missing_col_window),
-#     parent = environment(define_window)
-#   )
+  testthat::expect_error(
+    make_constructor(transform_fn = function(x) x, required_cols = 123),
+    "required_cols must be a character vector"
+  )
 
-#   population <- data.table::data.table(
-#     person_id = c("1", "2"),
-#     T0 = as.Date(c("2024-01-01", "2024-01-15"))
-#   )
+  testthat::expect_error(
+    make_constructor(
+      transform_fn = function(x) x,
+      check_fn = "not_a_function"
+    ),
+    "check_fn must be NULL or a function"
+  )
 
-#   metadata <- data.table::data.table(
-#     variable_id = "missing_col_window",
-#     concept_id = "CUSTOM",
-#     constructor = "MISSING_COL",
-#     selector = "LATEST",
-#     start_look_back = 0L,
-#     end_look_back = 0L
-#   )
+  my_window <- make_constructor(
+    transform_fn = function(window_dt) {
+      # custom logic
+      window_dt[, window_start := index_date - 30]
+      window_dt[, window_end := index_date + 30]
+      window_dt[]
+    },
+    required_cols = "wrong_column"
+  )
 
-#   testthat::expect_error(
-#     define_window_with_missing_col_check(population, metadata),
-#     "Error while applying window function 'missing_col_window': Missing required column\\(s\\): index_date"
-#   )
-# })
+  define_window_with_custom <- define_window
+  environment(define_window_with_custom) <- list2env(
+    list(custom_window = my_window),
+    parent = environment(define_window)
+  )
+
+  population <- data.table::data.table(
+    person_id = c("1", "2"),
+    T0 = as.Date(c("2024-01-01", "2024-01-15")),
+    index_date = as.Date(c("2024-02-01", "2024-02-15"))
+  )
+
+  metadata <- data.table::data.table(
+    variable_id = "custom_window",
+    concept_id = "CUSTOM",
+    constructor = "CUSTOM",
+    selector = "LATEST",
+    start_look_back = 0L,
+    end_look_back = 0L
+  )
+
+  testthat::expect_error(
+    define_window_with_custom(population, metadata),
+    "missing required column\\(s\\): wrong_column"
+  )
+})
 
 testthat::test_that("define_window applies a custom constructor", {
   my_window <- make_constructor(
