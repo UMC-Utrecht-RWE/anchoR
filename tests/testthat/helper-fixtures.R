@@ -1,11 +1,26 @@
 example_population <- function() {
   data.table::data.table(
-    person_id = c("1", "2"),
-    T0 = as.Date(c("2024-01-01", "2024-01-15")),
-    lmp_date = as.Date(c("2023-10-01", "2023-10-15")),
-    pregnancy_end_date = as.Date(c("2024-03-01", "2024-02-28")),
-    candidate_start = as.Date(c("2023-12-01", "2024-01-01")),
-    candidate_end = as.Date(c("2024-01-31", "2024-01-31"))
+    person_id = c("1", "2", "3"),
+    T0 = as.Date(c("2024-01-01", "2024-01-15", "2024-01-15")),
+    lmp_date = as.Date(c("2023-10-01", "2023-10-15", "2023-10-15")),
+    pregnancy_end_date = as.Date(c("2024-03-01", "2024-02-28", "2024-02-28")),
+    candidate_start = as.Date(c("2023-12-01", "2024-01-01", "2024-01-01")),
+    candidate_end = as.Date(c("2024-01-31", "2024-01-31", "2024-01-31"))
+  )
+}
+
+example_pregnancy_episodes <- function() {
+  data.table::data.table(
+    person_id = c("1", "1", "2", "2", "3"),
+    pregnancy_id = c(
+      "prior_1", "current_1", "current_2", "prior_2", "current_3"
+    ),
+    lmp_date = as.Date(
+      c("2022-01-01", "2023-10-01", "2023-10-15", "2023-11-01", "2024-01-01")
+    ),
+    pregnancy_end_date = as.Date(
+      c("2022-09-01", "2024-03-01", "2024-02-28", "2024-01-31", "2024-03-31")
+    )
   )
 }
 
@@ -27,7 +42,7 @@ example_metadata <- function() {
 
 example_concepts <- function() {
   data.table::data.table(
-    person_id = c("1", "1", "1", "1", "2", "2", "2", "2"),
+    person_id = c("1", "1", "1", "1", "2", "2", "2", "2", "3", "3", "3", "3"),
     concept_id = c(
       "COV_A",
       "COV_B",
@@ -70,13 +85,4 @@ example_concepts_parquet <- function() {
   )
 
   parquet_path
-}
-
-example_pregnancy_episodes <- function() {
-  data.table::data.table(
-    person_id = c("1", "1", "2"),
-    pregnancy_id = c("prior_1", "current_1", "current_2"),
-    lmp_date = as.Date(c("2022-01-01", "2023-10-01", "2023-10-15")),
-    pregnancy_end_date = as.Date(c("2022-09-01", "2024-03-01", "2024-02-28"))
-  )
 }

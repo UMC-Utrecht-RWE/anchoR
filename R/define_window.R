@@ -17,6 +17,29 @@ generic_window_check <- function(window_dt) {
   invisible(TRUE)
 }
 
+#' Pregnancy window checks
+#'
+#' @description a helper function to checks for pregnancy window constructors
+#'
+#' @param window_dt A data.table
+#' @return TRUE if the checks pass, otherwise an error is raised.
+#' @keywords internal
+pregnancy_window_check <- function(window_dt) {
+  generic_window_check(window_dt)
+
+  if (!all(c("lmp_date", "pregnancy_end_date") %in% names(window_dt))) {
+    stop(
+      paste(
+        "Pregnancy window constructors require `population` to contain",
+        "`lmp_date` and `pregnancy_end_date`."
+      ),
+      call. = FALSE
+    )
+  }
+
+  invisible(TRUE)
+}
+
 call_constructor_callback <- function(fn, args) {
   callback_formals <- names(formals(fn))
 
@@ -136,21 +159,6 @@ require_multiple_episodes <- function(multiple_episodes, constructor) {
   multiple_episodes
 }
 
-pregnancy_window_check <- function(window_dt) {
-  generic_window_check(window_dt)
-
-  if (!all(c("lmp_date", "pregnancy_end_date") %in% names(window_dt))) {
-    stop(
-      paste(
-        "Pregnancy window constructors require `population` to contain",
-        "`lmp_date` and `pregnancy_end_date`."
-      ),
-      call. = FALSE
-    )
-  }
-
-  invisible(TRUE)
-}
 
 expand_multiple_episode_win <- function(
   window_dt,
