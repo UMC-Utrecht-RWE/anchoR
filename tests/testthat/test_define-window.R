@@ -1,3 +1,41 @@
+custom_define_window <- function(required_cols = "index_date") {
+  my_window <- make_constructor(
+    transform_fn = function(window_dt) {
+      window_dt[, window_start := index_date - 30]
+      window_dt[, window_end := index_date + 30]
+      window_dt[]
+    },
+    required_cols = required_cols
+  )
+
+  define_window_with_custom <- define_window
+  environment(define_window_with_custom) <- list2env(
+    list(custom_window = my_window),
+    parent = environment(define_window)
+  )
+
+  population <- data.table::data.table(
+    person_id = c("1", "2"),
+    T0 = as.Date(c("2024-01-01", "2024-01-15")),
+    index_date = as.Date(c("2024-02-01", "2024-02-15"))
+  )
+
+  metadata <- data.table::data.table(
+    variable_id = "custom_window",
+    concept_id = "CUSTOM",
+    constructor = "CUSTOM",
+    selector = "LATEST",
+    start_look_back = 0L,
+    end_look_back = 0L
+  )
+
+  list(
+    define_window = define_window_with_custom,
+    population = population,
+    metadata = metadata
+  )
+}
+
 testthat::test_that("define_window computes relative windows", {
   windows <- define_window(example_population(), example_metadata())
 
@@ -129,76 +167,18 @@ testthat::test_that("make_constructor fails with messages", {
     "check_fn must be NULL or a function"
   )
 
-  my_window <- make_constructor(
-    transform_fn = function(window_dt) {
-      # custom logic
-      window_dt[, window_start := index_date - 30]
-      window_dt[, window_end := index_date + 30]
-      window_dt[]
-    },
-    required_cols = "wrong_column"
-  )
-
-  define_window_with_custom <- define_window
-  environment(define_window_with_custom) <- list2env(
-    list(custom_window = my_window),
-    parent = environment(define_window)
-  )
-
-  population <- data.table::data.table(
-    person_id = c("1", "2"),
-    T0 = as.Date(c("2024-01-01", "2024-01-15")),
-    index_date = as.Date(c("2024-02-01", "2024-02-15"))
-  )
-
-  metadata <- data.table::data.table(
-    variable_id = "custom_window",
-    concept_id = "CUSTOM",
-    constructor = "CUSTOM",
-    selector = "LATEST",
-    start_look_back = 0L,
-    end_look_back = 0L
-  )
+  case <- custom_define_window(required_cols = "wrong_column")
 
   testthat::expect_error(
-    define_window_with_custom(population, metadata),
+    case$define_window(case$population, case$metadata),
     "missing required column\\(s\\): wrong_column"
   )
 })
 
 testthat::test_that("define_window applies a custom constructor", {
-  my_window <- make_constructor(
-    transform_fn = function(window_dt) {
-      # custom logic
-      window_dt[, window_start := index_date - 30]
-      window_dt[, window_end := index_date + 30]
-      window_dt[]
-    },
-    required_cols = "index_date"
-  )
+  case <- custom_define_window()
 
-  define_window_with_custom <- define_window
-  environment(define_window_with_custom) <- list2env(
-    list(custom_window = my_window),
-    parent = environment(define_window)
-  )
-
-  population <- data.table::data.table(
-    person_id = c("1", "2"),
-    T0 = as.Date(c("2024-01-01", "2024-01-15")),
-    index_date = as.Date(c("2024-02-01", "2024-02-15"))
-  )
-
-  metadata <- data.table::data.table(
-    variable_id = "custom_window",
-    concept_id = "CUSTOM",
-    constructor = "CUSTOM",
-    selector = "LATEST",
-    start_look_back = 0L,
-    end_look_back = 0L
-  )
-
-  windows <- define_window_with_custom(population, metadata)
+  windows <- case$define_window(case$population, case$metadata)
 
   testthat::expect_equal(
     windows$window_start,
@@ -210,4 +190,25 @@ testthat::test_that("define_window applies a custom constructor", {
   )
   testthat::expect_true(all(windows$window_valid))
 })
-# nolint end
+
+testthat::test_that("generic_window computes start and end dates", {
+  window_dt <- data.table::data.table(
+    constructor = "GENERIC",
+    anchor_start_col = "T0",
+    anchor_end_col = "T0",
+    start_offset = c(-30L, 0L),
+    end_offset = c(0L, 30L),
+    T0 = as.Date(c("2024-02-01", "2024-02-15"))
+  )
+
+  out <- generic_window(window_dt)
+
+  testthat::expect_equal(
+    out$window_start,
+    as.Date(c("2024-01-02", "2024-02-15"))
+  )
+  testthat::expect_equal(
+    out$window_end,
+    as.Date(c("2024-02-01", "2024-03-16"))
+  )
+})
