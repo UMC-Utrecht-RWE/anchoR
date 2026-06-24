@@ -1,11 +1,21 @@
-example_population <- function() {
+example_preg_population <- function() {
   data.table::data.table(
-    person_id = c("1", "2", "3"),
-    T0 = as.Date(c("2024-01-01", "2024-01-15", "2024-01-15")),
-    lmp_date = as.Date(c("2023-10-01", "2023-10-15", "2023-10-15")),
-    pregnancy_end_date = as.Date(c("2024-03-01", "2024-02-28", "2024-02-28")),
-    candidate_start = as.Date(c("2023-12-01", "2024-01-01", "2024-01-01")),
-    candidate_end = as.Date(c("2024-01-31", "2024-01-31", "2024-01-31"))
+    person_id = c("1", "1", "2", "2", "3"),
+    T0 = as.Date(
+      c("2024-01-01", "2024-01-15", "2024-01-01", "2024-01-15", "2024-01-15")
+    ),
+    lmp_date = as.Date(
+      c("2022-01-01", "2023-10-01", "2023-10-15", "2025-11-01", "2024-01-01")
+    ),
+    pregnancy_end_date = as.Date(
+      c("2022-09-01", "2024-03-01", "2024-07-28", "2025-04-31", "2024-08-31")
+    ),
+    candidate_start = as.Date(
+      c("2024-01-01", "2024-01-01", "2024-01-01", "2024-01-01", "2024-01-01")
+    ),
+    candidate_end = as.Date(
+      c("2024-01-31", "2024-01-31", "2024-01-31", "2024-01-31", "2024-01-31")
+    )
   )
 }
 
@@ -13,14 +23,42 @@ example_pregnancy_episodes <- function() {
   data.table::data.table(
     person_id = c("1", "1", "2", "2", "3"),
     pregnancy_id = c(
-      "prior_1", "current_1", "current_2", "prior_2", "current_3"
+      "prior_1", "current_1", "prior_2", "current_2", "current_3"
     ),
     lmp_date = as.Date(
-      c("2022-01-01", "2023-10-01", "2023-10-15", "2023-11-01", "2024-01-01")
+      c("2022-01-01", "2023-10-01", "2023-10-15", "2025-11-01", "2024-01-01")
     ),
     pregnancy_end_date = as.Date(
-      c("2022-09-01", "2024-03-01", "2024-02-28", "2024-01-31", "2024-03-31")
+      c("2022-09-01", "2024-03-01", "2024-07-28", "2025-04-31", "2024-08-31")
     )
+  )
+}
+
+exemple_metadata_preg1 <- function() {
+  metadata <- data.table::data.table(
+    variable_id = "preg_prior",
+    concept_id = "PREG_X",
+    window_name = "preg_history",
+    constructor = "PREG1",
+    selector = "LATEST",
+    start_look_back = 0L,
+    end_look_back = 0L,
+    anchor_date_start = "lmp_date",
+    anchor_date_end = "pregnancy_end_date"
+  )
+}
+
+exemple_metadata_preg2 <- function() {
+  metadata <- data.table::data.table(
+    variable_id = "preg_any",
+    concept_id = "PREG_X",
+    window_name = "preg_history",
+    constructor = "PREG2",
+    selector = "LATEST",
+    start_look_back = 0L,
+    end_look_back = 0L,
+    anchor_date_start = "lmp_date",
+    anchor_date_end = "pregnancy_end_date"
   )
 }
 
