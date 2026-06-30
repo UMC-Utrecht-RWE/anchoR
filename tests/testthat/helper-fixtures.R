@@ -17,7 +17,7 @@ minimal_metadata <- function() {
   data.table::data.table(
     variable_id = c("cov_latest", "cov_count", "lab_range"),
     concept_id = c("COV_A", "COV_B", "LAB_X"),
-    constructor = c("GENERIC", "PREG1", "PREG1"),
+    constructor = c("GENERIC", "GENERIC", "GENERIC"),
     selector = c("LATEST", "COUNT", "RANGE_COUNT"),
     start_look_back = c(-30L, -90L, -30L),
     end_look_back = c(0L, 0L, 30L)
@@ -46,7 +46,7 @@ minimal_concepts <- function() {
 }
 
 # example with pregnancy
-example_population <- function() {
+pregnancy_population <- function() {
   data.table::data.table(
     person_id = c("1", "2"),
     T0 = as.Date(c("2024-01-01", "2024-01-15")),
@@ -57,7 +57,7 @@ example_population <- function() {
   )
 }
 
-example_metadata <- function() {
+pregnancy__metadata <- function() {
   data.table::data.table(
     variable_id = c("cov_latest", "cov_count", "lab_range"),
     concept_id = c("COV_A", "COV_B", "LAB_X"),
@@ -73,7 +73,7 @@ example_metadata <- function() {
   )
 }
 
-example_concepts <- function() {
+pregnancy_concepts <- function() {
   data.table::data.table(
     person_id = c("1", "1", "1", "1", "2", "2", "2", "2"),
     concept_id = c(
@@ -100,6 +100,10 @@ example_concepts <- function() {
   )
 }
 
+
+
+
+## Functions
 example_concepts_parquet <- function(data = NULL) {
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
