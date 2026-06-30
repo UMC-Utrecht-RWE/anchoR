@@ -72,62 +72,210 @@ minimal_output<- function() {
 }
 
 # example with pregnancy
+pregnancy_periods <- function() {
+  data.table::data.table(
+    person_id = c("1", "1", "1", "2", "2", "3"),
+    start_pregnancy = as.Date(c(
+      "2020-01-01",
+      "2021-02-15",
+      "2022-03-01",
+      "2021-02-15",
+      "2022-03-01",
+      "2021-02-15"
+    )),
+    end_pregnancy = as.Date(c(
+      "2020-09-01",
+      "2021-05-20",
+      "2022-12-01",
+      "2021-08-01",
+      "2022-12-01",
+      "2021-09-14"
+    ))
+  )
+}
+
 pregnancy_population <- function() {
   data.table::data.table(
-    person_id = c("1", "2"),
-    T0 = as.Date(c("2024-01-01", "2024-01-15")),
-    lmp_date = as.Date(c("2023-10-01", "2023-10-15")),
-    pregnancy_end_date = as.Date(c("2024-03-01", "2024-02-28")),
-    candidate_start = as.Date(c("2023-12-01", "2024-01-01")),
-    candidate_end = as.Date(c("2024-01-31", "2024-01-31"))
+    person_id = c("1", "1", "2", "3"),
+    T0 = as.Date(c(
+      "2021-04-02",
+      "2022-08-16",
+      "2022-08-16",
+      "2021-04-02"
+    ))
   )
 }
 
-pregnancy__metadata <- function() {
+pregnancy_metadata <- function() {
   data.table::data.table(
-    variable_id = c("cov_latest", "cov_count", "lab_range"),
-    concept_id = c("COV_A", "COV_B", "LAB_X"),
-    window_name = c("lookback", "risk", "lookforward"),
-    constructor = c("GENERIC", "PREG1", "PREG1"),
-    selector = c("LATEST", "COUNT", "RANGE_COUNT"),
-    start_look_back = c(-30L, -90L, -30L),
-    end_look_back = c(0L, 0L, 30L),
-    anchor_date_start = c("T0", "T0", "T0"),
-    anchor_date_end = c("T0", "T0", "T0"),
-    range_min = c(NA_real_, NA_real_, 1),
-    range_max = c(NA_real_, NA_real_, 5)
+    variable_id = c(
+      "preg_example_1",
+      "preg_example_2",
+      "preg_example_3",
+      "preg_example_4",
+      "preg_example_5"
+    ),
+    concept_id = c(
+      "gest_diabetes",
+      "gest_diabetes",
+      "multi_foetal",
+      "obesity",
+      "abortion"
+    ),
+    constructor = c(
+      "IN_PRIOR_PREG",
+      "SINCE_START_CURRENT_PREG",
+      "ANYTIME_CURRENT_PREG",
+      "OUTSIDE_ALL_PREG",
+      "IN_PRIOR_PREG"
+    ),
+    selector = c(
+      "LATEST",
+      "LATEST",
+      "EARLIEST",
+      "LATEST",
+      "LATEST"
+    ),
+    start_offset = c(0, 0, 0, 0, 0),
+    end_offset = c(-3652.5, -3652.5, -3652.5, -3652.5, -3652.5),
+    other_arguments = c(
+      "start_pregnancy_offset = 0, end_pregnancy_offset = 0, start_preg_window = 'start_pregnancy + start_pregnancy_offset', end_preg_window = 'end_pregnancy + end_pregnancy_offset'",
+      "start_preg_offset = 0, anchor_offset = 0",
+      "start_preg_offset = 0, end_preg_offset = 30",
+      "start_preg_offset = 0, end_preg_offset = 0",
+      "start_preg_offset = 90, end_offset = 166, start_preg_window = 'start_pregnancy + start_preg_offset', end_preg_window = 'min(end_pregnancy, start_pregnancy + end_offset)'"
+    ),
+    description_constructor = c(
+      "Look for records during (parts) of prior pregnancies, defined here only by start and end pregnancy",
+      "Look for records between start pregnancy and the anchor date (T0)",
+      "Look for records between start_pregnancy and end_pregnancy + 30",
+      "Look for records outside of start_pregnancy and end_pregnancy dates, i.e., between consecutive end_pregnancy + 1 and start_pregnancy - 1",
+      "Look for records during (parts) of prior pregnancy, here defined by start_pregnancy + 90 days and the earliest of end_pregnancy and start_pregnancy + 166"
+    )
   )
 }
-
 pregnancy_concepts <- function() {
   data.table::data.table(
-    person_id = c("1", "1", "1", "1", "2", "2", "2", "2"),
+    person_id = c("1", "1", "1", "1", "2"),
     concept_id = c(
-      "COV_A",
-      "COV_B",
-      "COV_B",
-      "T0_EVENT",
-      "COV_A",
-      "LAB_X",
-      "LAB_X",
-      "T0_EVENT"
+      "gest_diabetes",
+      "multi_foetal",
+      "obesity",
+      "abortion",
+      "abortion"
     ),
     date = as.Date(c(
-      "2023-12-20",
-      "2023-11-01",
-      "2023-12-15",
-      "2024-01-05",
-      "2024-01-14",
-      "2024-01-10",
-      "2024-01-25",
-      "2024-01-10"
+      "2021-05-01",
+      "2022-12-30",
+      "2020-06-15",
+      "2021-07-01",
+      "2021-07-01"
     )),
-    value = c("TRUE", "1", "1", "TRUE", "FALSE", "3.2", "6.1", "TRUE")
+    value = c(TRUE, TRUE, TRUE, TRUE, TRUE)
   )
 }
 
 
+intermediate_windows_pregnancy <- function() {
+  data.table::data.table(
+    person_id = c(
+      "1", "1", "1",
+      "1", "1",
+      "1", "1",
+      "1", "1",
+      "1", "1", "1",
+      "1", "1", "1",
+      "2", "2", "2", "2", "2", "2",
+      "3", "3", "3", "3", "3"
+    ),
+    T0 = as.Date(c(
+      "2021-04-02", "2022-08-16", "2022-08-16",
+      "2021-04-02", "2022-08-16",
+      "2021-04-02", "2022-08-16",
+      "2021-04-02", "2021-04-02",
+      "2022-08-16", "2022-08-16", "2022-08-16",
+      "2021-04-02", "2022-08-16", "2022-08-16",
+      "2022-08-16", "2022-08-16", "2022-08-16", "2022-08-16", "2022-08-16", "2022-08-16",
+      "2021-04-02", "2021-04-02", "2021-04-02", "2021-04-02", "2021-04-02"
+    )),
+    variable_id = c(
+      "preg_example_1", "preg_example_1", "preg_example_1",
+      "preg_example_2", "preg_example_2",
+      "preg_example_3", "preg_example_3",
+      "preg_example_4", "preg_example_4",
+      "preg_example_4", "preg_example_4", "preg_example_4",
+      "preg_example_5", "preg_example_5", "preg_example_5",
+      "preg_example_1", "preg_example_2", "preg_example_3",
+      "preg_example_4", "preg_example_4", "preg_example_5",
+      "preg_example_1", "preg_example_2", "preg_example_3",
+      "preg_example_4", "preg_example_5"
+    ),
+    start = as.Date(c(
+      "2020-01-01", "2020-01-01", "2021-02-15",
+      "2021-02-15", "2022-03-01",
+      "2021-02-15", "2022-03-01",
+      "2011-04-02", "2020-09-02",
+      "2011-04-02", "2020-09-02", "2021-05-21",
+      "2020-03-31", "2020-03-31", "2021-05-16",
+      "2021-02-15", "2022-03-01", "2022-03-01",
+      "2012-08-15", "2021-08-02", "2021-05-16",
+      NA, "2021-02-15", "2021-02-15",
+      "2011-04-02", NA
+    )),
+    end = as.Date(c(
+      "2020-09-01", "2020-09-01", "2021-05-20",
+      "2021-04-02", "2022-08-16",
+      "2021-06-19", "2022-12-31",
+      "2019-12-31", "2021-02-14",
+      "2019-12-31", "2021-02-14", "2022-08-15",
+      "2020-06-15", "2020-06-15", "2021-05-20",
+      "2021-08-01", "2022-08-16", "2022-12-31",
+      "2021-02-14", "2022-08-15", "2021-07-31",
+      NA, "2021-04-02", "2021-08-31",
+      "2021-02-14", NA
+    ))
+  )
+}
 
+pregnancy_output <- function() {
+  data.table::data.table(
+    person_id = c(
+      "1", "1", "2", "3",
+      "1", "1", "2", "3",
+      "1", "1", "2", "3",
+      "1", "1", "2", "3",
+      "1", "1", "2", "3"
+    ),
+    T0 = as.Date(c(
+      "2021-04-02", "2022-08-16", "2022-08-16", "2021-04-02",
+      "2021-04-02", "2022-08-16", "2022-08-16", "2021-04-02",
+      "2021-04-02", "2022-08-16", "2022-08-16", "2021-04-02",
+      "2021-04-02", "2022-08-16", "2022-08-16", "2021-04-02",
+      "2021-04-02", "2022-08-16", "2022-08-16", "2021-04-02"
+    )),
+    variable_id = c(
+      rep("preg_example_1", 4),
+      rep("preg_example_2", 4),
+      rep("preg_example_3", 4),
+      rep("preg_example_4", 4),
+      rep("preg_example_5", 4)
+    ),
+    date = as.Date(c(
+      NA, "2021-05-01", NA, NA,
+      "2021-05-01", NA, NA, NA,
+      NA, "2022-12-30", NA, NA,
+      NA, NA, NA, NA,
+      NA, NA, "2021-07-01", NA
+    )),
+    value = c(
+      NA, TRUE, NA, NA,
+      TRUE, NA, NA, NA,
+      NA, TRUE, NA, NA,
+      NA, NA, NA, NA,
+      NA, NA, TRUE, NA
+    )
+  )
+}
 
 ## Functions
 example_concepts_parquet <- function(data = NULL) {
