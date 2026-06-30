@@ -231,6 +231,7 @@ define_window <- function(
   }
 
   data.table::setorder(window_dt, .window_row_id)
+  # Remove the temporary row ID column before returning the result
   window_dt[, .window_row_id := NULL]
 
   # Mark invalid windows instead of dropping them here so callers can decide

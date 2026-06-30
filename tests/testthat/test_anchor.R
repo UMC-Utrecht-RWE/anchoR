@@ -1,56 +1,19 @@
-read_anchor_hive <- function(anchor_hive_path) {
-  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
-
-  anchor_hive_path_sql <- as.character(
-    DBI::dbQuoteString(
-      con,
-      normalizePath(anchor_hive_path, winslash = "/", mustWork = TRUE)
-    )
-  )
-  anchored_dt <- data.table::as.data.table(
-    DBI::dbGetQuery(
-      con,
-      paste(
-        "SELECT * FROM read_parquet(",
-        anchor_hive_path_sql,
-        ", hive_partitioning = true, union_by_name = true)",
-        "ORDER BY variable_id, anchor_row_id;"
-      )
-    )
+# Test with minimal examples.
+testthat::test_that("",{
+  hive_path <- tempfile(pattern = "anchor-hive-")
+  dir.create(hive_path)
+  on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+  anchor(
+    population = minimal_population(),
+    metadata = minimal_metadata(),
+    concepts = example_concepts_parquet(minimal_concepts()),
+    anchor_hive_path = hive_path
   )
 
-  if ("date" %in% names(anchored_dt)) {
-    anchored_dt[, date := as.Date(date)]
-  }
-
-  anchored_dt[]
+  anchored <- read_anchor_hive(hive_path)
 }
 
-write_anchor_hive_fixture <- function(anchor_hive_path, variable_id, rows) {
-  partition_path <- file.path(
-    anchor_hive_path,
-    paste0("variable_id=", variable_id)
-  )
-  dir.create(partition_path, recursive = TRUE, showWarnings = FALSE)
-
-  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
-
-  DBI::dbWriteTable(con, "fixture_rows", rows, overwrite = TRUE)
-  DBI::dbExecute(
-    con,
-    sprintf(
-      "COPY fixture_rows TO '%s' (FORMAT PARQUET)",
-      normalizePath(
-        file.path(partition_path, "part-0.parquet"),
-        winslash = "/",
-        mustWork = FALSE
-      )
-    )
-  )
-}
-
+# Test with more realistic examples.
 testthat::test_that("anchor writes selector results to the parquet hive", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
@@ -104,7 +67,7 @@ testthat::test_that("anchor accepts parquet concept sources", {
   anchor(
     population = example_population(),
     metadata = example_metadata()[variable_id == "lab_range"],
-    concepts = example_concepts_parquet(),
+    concepts = example_concepts_parquet(example_concepts()),
     anchor_hive_path = hive_path
   )
 

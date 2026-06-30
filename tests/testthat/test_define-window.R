@@ -212,3 +212,17 @@ testthat::test_that("generic_window computes start and end dates", {
     as.Date(c("2024-02-01", "2024-03-16"))
   )
 })
+
+
+testthat::test_that("cross_join_population_metadata works as expected", {
+    population <- minimal_population()
+    metadata <- minimal_metadata()
+    res <- cross_join_population_metadata(population, metadata)
+
+    testthat::expect_equal(nrow(res), nrow(population) * nrow(metadata))
+    testthat::expect_equal(
+      names(res),
+      c("person_id", "T0", "variable_id", "concept_id", "constructor",
+        "selector", "start_look_back", "end_look_back")
+    )
+})
