@@ -1,3 +1,34 @@
+testthat::test_that("cross_join_population_metadata works as expected", {
+    res <- cross_join_population_metadata(
+      minimal_population(),
+      minimal_metadata()
+    )
+
+    testthat::expect_equal(nrow(res), nrow(population) * nrow(metadata))
+    testthat::expect_equal(
+      names(res),
+      c("person_id", "T0", "variable_id", "concept_id", "constructor",
+        "selector", "start_look_back", "end_look_back")
+    )
+})
+
+testthat::test_that("define_window computes relative windows", {
+  windows <- define_window(minimal_population(), minimal_metadata())
+
+  expect_s3_class(windows, "data.table")
+  testthat::expect_equal(nrow(windows), 15L)
+
+  cov_latest_1 <- windows[person_id == "1" & variable_id == "cov_latest"]
+  testthat::expect_equal(cov_latest_1$window_start, as.Date("2023-12-02"))
+  testthat::expect_equal(cov_latest_1$window_end, as.Date("2024-01-01"))
+  expect_true(cov_latest_1$window_valid)
+
+  verified_output <- minimal_output()
+
+
+})
+
+
 custom_define_window <- function(required_cols = "index_date") {
   my_window <- make_constructor(
     transform_fn = function(window_dt) {
@@ -36,17 +67,6 @@ custom_define_window <- function(required_cols = "index_date") {
   )
 }
 
-testthat::test_that("define_window computes relative windows", {
-  windows <- define_window(example_population(), example_metadata())
-
-  expect_s3_class(windows, "data.table")
-  testthat::expect_equal(nrow(windows), 6L)
-
-  cov_latest_1 <- windows[person_id == "1" & variable_id == "cov_latest"]
-  testthat::expect_equal(cov_latest_1$window_start, as.Date("2023-12-02"))
-  testthat::expect_equal(cov_latest_1$window_end, as.Date("2024-01-01"))
-  expect_true(cov_latest_1$window_valid)
-})
 
 testthat::test_that("define_window supports alternate anchor columns", {
   metadata <- data.table::data.table(
@@ -75,7 +95,7 @@ testthat::test_that("uses the supplied anchor column for T0 metadata", {
 
   windows <- define_window(
     population = population,
-    metadata = example_metadata(),
+    metadata = minimal_metadata(),
     anchor_col = "anchor_date"
   )
 
@@ -108,7 +128,7 @@ testthat::test_that("define_window reports window function failures", {
   population[, T0 := as.character(T0)]
 
   testthat::expect_no_error(
-    define_window(population, example_metadata())
+    define_window(population, minimal_metadata())
   )
 })
 
@@ -211,18 +231,4 @@ testthat::test_that("generic_window computes start and end dates", {
     out$window_end,
     as.Date(c("2024-02-01", "2024-03-16"))
   )
-})
-
-
-testthat::test_that("cross_join_population_metadata works as expected", {
-    population <- minimal_population()
-    metadata <- minimal_metadata()
-    res <- cross_join_population_metadata(population, metadata)
-
-    testthat::expect_equal(nrow(res), nrow(population) * nrow(metadata))
-    testthat::expect_equal(
-      names(res),
-      c("person_id", "T0", "variable_id", "concept_id", "constructor",
-        "selector", "start_look_back", "end_look_back")
-    )
 })

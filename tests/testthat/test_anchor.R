@@ -1,17 +1,26 @@
 # Test with minimal examples.
-testthat::test_that("",{
+testthat::test_that("COUNT stores the matched event date in minimal output", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
   anchor(
     population = minimal_population(),
     metadata = minimal_metadata(),
-    concepts = example_concepts_parquet(minimal_concepts()),
+    concepts = minimal_concepts_parquet(minimal_concepts()),
     anchor_hive_path = hive_path
   )
 
   anchored <- read_anchor_hive(hive_path)
-}
+
+  cov_count <- anchored[variable_id == "cov_count"]
+
+  testthat::expect_equal(cov_count$person_id, c("2", "3"))
+  testthat::expect_equal(cov_count$value, c("1", "1"))
+  testthat::expect_equal(
+    cov_count$date,
+    as.Date(c("2023-11-01", "2023-12-15"))
+  )
+})
 
 # Test with more realistic examples.
 testthat::test_that("anchor writes selector results to the parquet hive", {
@@ -20,9 +29,9 @@ testthat::test_that("anchor writes selector results to the parquet hive", {
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
   anchor(
-    population = example_population(),
-    metadata = example_metadata()[variable_id == "cov_latest"],
-    concepts = example_concepts(),
+    population = minimal_population(),
+    metadata = minimal_metadata()[variable_id == "cov_latest"],
+    concepts = minimal_concepts(),
     anchor_hive_path = hive_path
   )
 
@@ -46,8 +55,8 @@ testthat::test_that("anchor honors a non-default anchor column", {
 
   anchor(
     population = population,
-    metadata = example_metadata()[variable_id == "lab_range"],
-    concepts = example_concepts(),
+    metadata = minimal_metadata()[variable_id == "lab_range"],
+    concepts = minimal_concepts(),
     anchor_col = "anchor_date",
     anchor_hive_path = hive_path
   )
@@ -66,8 +75,8 @@ testthat::test_that("anchor accepts parquet concept sources", {
 
   anchor(
     population = example_population(),
-    metadata = example_metadata()[variable_id == "lab_range"],
-    concepts = example_concepts_parquet(example_concepts()),
+    metadata = minimal_metadata()[variable_id == "lab_range"],
+    concepts = example_concepts_parquet(minimal_concepts()),
     anchor_hive_path = hive_path
   )
 
@@ -82,19 +91,19 @@ testthat::test_that("it refreshes only requested variable partition", {
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-  metadata <- example_metadata()[
+  metadata <- minimal_metadata()[
     variable_id %in% c("cov_latest", "cov_count")
   ]
 
   anchor_by_variable(
     population = example_population(),
     metadata = metadata,
-    concepts = example_concepts(),
+    concepts = minimal_concepts(),
     anchor_hive_path = hive_path
   )
 
   refreshed_concepts <- data.table::rbindlist(list(
-    example_concepts(),
+    minimal_concepts(),
     data.table::data.table(
       person_id = "1",
       concept_id = "COV_A",
@@ -126,13 +135,13 @@ testthat::test_that("reshapes variable-by-variable hive output", {
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-  metadata <- example_metadata()[
+  metadata <- minimal_metadata()[
     variable_id %in% c("cov_latest", "lab_range")
   ]
   anchor_by_variable(
     population = example_population(),
     metadata = metadata,
-    concepts = example_concepts(),
+    concepts = minimal_concepts(),
     anchor_hive_path = hive_path
   )
   anchored <- get_anchor_result(
@@ -157,11 +166,11 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    metadata <- example_metadata()[variable_id == "cov_latest"]
+    metadata <- minimal_metadata()[variable_id == "cov_latest"]
     anchor_by_variable(
       population = example_population(),
       metadata = metadata,
-      concepts = example_concepts(),
+      concepts = minimal_concepts(),
       anchor_hive_path = hive_path
     )
 
@@ -234,13 +243,13 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    metadata <- example_metadata()[
+    metadata <- minimal_metadata()[
       variable_id %in% c("cov_latest", "lab_range")
     ]
     anchor_by_variable(
       population = example_population(),
       metadata = metadata,
-      concepts = example_concepts(),
+      concepts = minimal_concepts(),
       anchor_hive_path = hive_path
     )
 
@@ -279,13 +288,13 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    metadata <- example_metadata()[
+    metadata <- minimal_metadata()[
       variable_id %in% c("cov_latest", "lab_range")
     ]
     anchor_by_variable(
       population = example_population(),
       metadata = metadata,
-      concepts = example_concepts(),
+      concepts = minimal_concepts(),
       anchor_hive_path = hive_path
     )
 
