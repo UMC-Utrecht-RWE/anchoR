@@ -46,27 +46,28 @@ minimal_concepts <- function() {
 }
 
 # minimal output, including person_id, T0, variabled_id, date and value
-minimal_output<- function() {
+minimal_output <- function() {
   data.table::data.table(
-    person_id = rep(c("1", "2", "3", "4", "5"),3),
+    person_id = rep(c("1", "2", "3", "4", "5"), 3),
     T0 = rep(as.Date(c(
       "2024-01-01",
       "2024-01-15",
       "2024-02-01",
       "2024-02-15",
       "2024-03-01"
-    )),3),
-    variable_id = c(rep("cov_latest",5),
-                    rep("cov_count",5),
-                    rep("lab_range",5)
+    )), 3),
+    variable_id = c(rep("cov_latest", 5),
+                    rep("cov_count", 5),
+                    rep("lab_range", 5)
     ),
-    date = c(c("2023-12-20",NA, NA, NA, NA),
-             c(NA,"2023-11-01","2023-11-03", NA, NA),
-             c(NA,NA,NA,NA,NA)
-    ),
+    date = as.Date(c(
+      "2023-12-20", NA, NA, NA, NA,
+      NA, "2023-11-01", "2023-12-15", NA, NA,
+      NA, NA, NA, NA, NA
+    )),
     value = c(c("TRUE", NA, NA, NA, NA) ,
               c(NA, "1", "1", NA, NA),
-              c(0,0,0,0,0)
+              c(0, 0, 0, 0, 0)
     )
   )
 }
