@@ -60,11 +60,10 @@ minimal_output <- function() {
                     rep("cov_count", 5),
                     rep("lab_range", 5)
     ),
-    date = as.Date(c(
-      "2023-12-20", NA, NA, NA, NA,
-      NA, "2023-11-01", "2023-12-15", NA, NA,
-      NA, NA, NA, NA, NA
-    )),
+    date = c(c("2023-12-20", NA, NA, NA, NA),
+             c(NA, "2023-11-01", "2023-11-03", NA, NA),
+             c(NA, NA, NA, NA, NA)
+    ),
     value = c(c("TRUE", NA, NA, NA, NA) ,
               c(NA, "1", "1", NA, NA),
               c(0, 0, 0, 0, 0)
