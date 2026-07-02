@@ -4,7 +4,12 @@
 \alias{define_window}
 \title{Define Anchoring Windows}
 \usage{
-define_window(population, metadata, anchor_col = "T0")
+define_window(
+  population,
+  metadata,
+  anchor_col = "T0",
+  constructor_env = globalenv()
+)
 }
 \arguments{
 \item{population}{A data frame containing the study population.}
@@ -13,6 +18,13 @@ define_window(population, metadata, anchor_col = "T0")
 
 \item{anchor_col}{Column to use when metadata does not specify
 \code{anchor_start_col} or \code{anchor_end_col}.}
+
+\item{constructor_env}{Environment to search for user-defined window
+constructors that are not built into anchoR. Defaults to the global
+environment, so a constructor made with \code{make_constructor()} and
+assigned at the top level (e.g. \code{my_window <- make_constructor(...)})
+is found automatically. Pass a different environment (or a small one
+built just for the purpose) to use a constructor defined elsewhere.}
 }
 \value{
 A \code{data.table} with one row per population row and metadata row.
