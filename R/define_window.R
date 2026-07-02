@@ -142,7 +142,8 @@ resolve_window_constructor <- function(constructor_name, constructor_env) {
 
   if (
     exists(
-      fun_name, envir = constructor_env, mode = "function", inherits = TRUE
+      fun_name,
+      envir = constructor_env, mode = "function", inherits = TRUE
     )
   ) {
     return(get(fun_name, envir = constructor_env, mode = "function"))
@@ -330,5 +331,6 @@ define_window <- function(
 
   # Finalize the windows by restoring the original order, marking valid windows,
   # and assigning a stable row ID for downstream processing.
+  # In short, a window valid only when start <= end and neither is missing
   finalize_windows(window_dt)
 }

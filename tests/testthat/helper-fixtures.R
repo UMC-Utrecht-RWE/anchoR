@@ -12,7 +12,8 @@ minimal_population <- function() {
     ))
   )
 }
-# for metadata it contains columns: variable_id, concept_id, constructor, selector, start_offset, end_offset
+# for metadata it contains columns:
+# variable_id, concept_id, constructor, selector, start_offset, end_offset
 minimal_metadata <- function() {
   data.table::data.table(
     variable_id = c("cov_latest", "cov_count", "lab_range"),
@@ -23,7 +24,8 @@ minimal_metadata <- function() {
     end_look_back = c(0L, 0L, 30L)
   )
 }
-# minimal concepts data.table contains columns: person_id, concept_id, date, value
+# minimal concepts data.table contains columns:
+# person_id, concept_id, date, value
 minimal_concepts <- function() {
   data.table::data.table(
     person_id = c("1", "2", "3", "4", "5"),
@@ -56,17 +58,20 @@ minimal_output <- function() {
       "2024-02-15",
       "2024-03-01"
     )), 3),
-    variable_id = c(rep("cov_latest", 5),
-                    rep("cov_count", 5),
-                    rep("lab_range", 5)
+    variable_id = c(
+      rep("cov_latest", 5),
+      rep("cov_count", 5),
+      rep("lab_range", 5)
     ),
-    date = c(c("2023-12-20", NA, NA, NA, NA),
-             c(NA, "2023-11-01", "2023-11-03", NA, NA),
-             c(NA, NA, NA, NA, NA)
+    date = c(
+      c("2023-12-20", NA, NA, NA, NA),
+      c(NA, "2023-11-01", "2023-11-03", NA, NA),
+      c(NA, NA, NA, NA, NA)
     ),
-    value = c(c("TRUE", NA, NA, NA, NA) ,
-              c(NA, "1", "1", NA, NA),
-              c(0, 0, 0, 0, 0)
+    value = c(
+      c("TRUE", NA, NA, NA, NA),
+      c(NA, "1", "1", NA, NA),
+      c(0, 0, 0, 0, 0)
     )
   )
 }
@@ -139,18 +144,26 @@ pregnancy_metadata <- function() {
     start_offset = c(0, 0, 0, 0, 0),
     end_offset = c(-3652.5, -3652.5, -3652.5, -3652.5, -3652.5),
     other_arguments = c(
-      "start_pregnancy_offset = 0, end_pregnancy_offset = 0, start_preg_window = 'start_pregnancy + start_pregnancy_offset', end_preg_window = 'end_pregnancy + end_pregnancy_offset'",
+      "start_pregnancy_offset = 0, end_pregnancy_offset = 0,
+      start_preg_window = 'start_pregnancy + start_pregnancy_offset',
+      end_preg_window = 'end_pregnancy + end_pregnancy_offset'",
       "start_preg_offset = 0, anchor_offset = 0",
       "start_preg_offset = 0, end_preg_offset = 30",
       "start_preg_offset = 0, end_preg_offset = 0",
-      "start_preg_offset = 90, end_offset = 166, start_preg_window = 'start_pregnancy + start_preg_offset', end_preg_window = 'min(end_pregnancy, start_pregnancy + end_offset)'"
+      "start_preg_offset = 90, end_offset = 166,
+      start_preg_window = 'start_pregnancy + start_preg_offset',
+      end_preg_window = 'min(end_pregnancy, start_pregnancy + end_offset)'"
     ),
     description_constructor = c(
-      "Look for records during (parts) of prior pregnancies, defined here only by start and end pregnancy",
+      "Look for records during (parts) of prior pregnancies,
+      defined here only by start and end pregnancy",
       "Look for records between start pregnancy and the anchor date (T0)",
       "Look for records between start_pregnancy and end_pregnancy + 30",
-      "Look for records outside of start_pregnancy and end_pregnancy dates, i.e., between consecutive end_pregnancy + 1 and start_pregnancy - 1",
-      "Look for records during (parts) of prior pregnancy, here defined by start_pregnancy + 90 days and the earliest of end_pregnancy and start_pregnancy + 166"
+      "Look for records outside of start_pregnancy and end_pregnancy dates,
+      i.e., between consecutive end_pregnancy + 1 and start_pregnancy - 1",
+      "Look for records during (parts) of prior pregnancy,
+      here defined by start_pregnancy + 90 days and the earliest of
+      end_pregnancy and start_pregnancy + 166"
     )
   )
 }
@@ -195,7 +208,8 @@ intermediate_windows_pregnancy <- function() {
       "2021-04-02", "2021-04-02",
       "2022-08-16", "2022-08-16", "2022-08-16",
       "2021-04-02", "2022-08-16", "2022-08-16",
-      "2022-08-16", "2022-08-16", "2022-08-16", "2022-08-16", "2022-08-16", "2022-08-16",
+      "2022-08-16", "2022-08-16", "2022-08-16", "2022-08-16",
+      "2022-08-16", "2022-08-16",
       "2021-04-02", "2021-04-02", "2021-04-02", "2021-04-02", "2021-04-02"
     )),
     variable_id = c(
