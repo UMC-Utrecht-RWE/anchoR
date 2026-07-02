@@ -118,6 +118,133 @@ preg1_window <- make_constructor(
   check_fn = generic_window_check
 )
 
+#' Resolve a Window Constructor by Name
+#'
+#' Looks up the function that computes windows for a given `constructor`
+#' value. Built-in constructors (e.g. `generic_window`) are always resolved
+#' from the anchoR package itself. A user-defined constructor is found by
+#' name (`<constructor>_window`, lower-cased) in `constructor_env`, so anyone
+#' can add one with `make_constructor()` without editing this package.
+#'
+#' @param constructor_name Value of the metadata `constructor` column.
+#' @param constructor_env Environment searched for user-defined constructors.
+#' @return The constructor function.
+#' @keywords internal
+resolve_window_constructor <- function(constructor_name, constructor_env) {
+  fun_name <- tolower(paste0(constructor_name, "_window"))
+  package_env <- environment(resolve_window_constructor)
+
+  if (
+    exists(fun_name, envir = package_env, mode = "function", inherits = FALSE)
+  ) {
+    return(get(fun_name, envir = package_env, mode = "function"))
+  }
+
+  if (
+    exists(
+      fun_name, envir = constructor_env, mode = "function", inherits = TRUE
+    )
+  ) {
+    return(get(fun_name, envir = constructor_env, mode = "function"))
+  }
+
+  stop_log(
+    sprintf(
+      paste(
+        "Window function does not exist: %s.",
+        "Looked in the anchoR package and in `constructor_env`; a custom",
+        "constructor must be named '%s' and live in (or be visible from)",
+        "`constructor_env`."
+      ),
+      fun_name,
+      fun_name
+    )
+  )
+}
+
+#' Apply Window Constructors to a Cross-Joined Frame
+#'
+#' Fills in `window_start`/`window_end` for every row of `window_dt`, one
+#' `constructor` value at a time.
+#'
+#' @param window_dt A data.table with a `constructor` column, such as one
+#'   produced by `cross_join_population_metadata()`.
+#' @param constructor_env Environment used to resolve user-defined
+#'   constructors. See `resolve_window_constructor()`.
+#' @return `window_dt`, modified in place, with `window_start`/`window_end`
+#'   filled in.
+#' @keywords internal
+apply_window_constructors <- function(window_dt, constructor_env) {
+  for (constructor_name in unique(window_dt[, constructor])) {
+    # Here we aim to find the function that computes the window for this constructor name.
+    constructor_fn <- resolve_window_constructor(
+      constructor_name, constructor_env
+    )
+
+    # Get only the rows of window_dt that match this constructor name,
+    # so we can apply the function to them.
+    row_idx <- window_dt[, which(constructor == constructor_name)]
+
+    # Now we apply the actual constructor function to the subset of rows.
+    # We wrap this in a tryCatch to provide a clear error message
+    # if something goes wrong.
+    tryCatch(
+      {
+        window_subset <- constructor_fn(window_dt[row_idx])
+
+        window_dt[
+          row_idx,
+          `:=`(
+            window_start = window_subset$window_start,
+            window_end = window_subset$window_end
+          )
+        ]
+      },
+      error = function(e) {
+        stop_log(
+          sprintf(
+            "Error while applying window constructor '%s': %s",
+            constructor_name,
+            conditionMessage(e)
+          )
+        )
+      }
+    )
+  }
+
+  window_dt[]
+}
+
+#' Finalize a Window Frame
+#'
+#' Restores the pre-cross-join row order, marks which rows ended up with a
+#' usable window, and assigns a stable per-row id for the downstream SQL
+#' layer.
+#'
+#' @param window_dt A data.table with `.window_row_id`, `window_start`, and
+#'   `window_end` already populated.
+#' @return `window_dt`, reordered, with `.window_row_id` removed and
+#'   `window_valid` / `anchor_row_id` columns added.
+#' @keywords internal
+finalize_windows <- function(window_dt) {
+  data.table::setorder(window_dt, .window_row_id)
+  window_dt[, .window_row_id := NULL]
+
+  # Mark invalid windows instead of dropping them here so callers can decide
+  # whether they want a sparse anchored result or a full design matrix.
+  window_dt[
+    ,
+    window_valid := !is.na(window_start) &
+      !is.na(window_end) &
+      window_start <= window_end
+  ]
+
+  # This synthetic key gives the SQL layer a stable identifier for each
+  # person-variable request, independent of the original population keys.
+  window_dt[, anchor_row_id := .I]
+  window_dt[]
+}
+
 #' Cross-join population and metadata for window definition.
 #' This helper function performs a cross join between the population and
 #' metadata data tables, which is necessary for defining windows for each
@@ -161,13 +288,20 @@ cross_join_population_metadata <- function(population_dt, metadata_dt) {
 #' @param metadata A data frame describing the variables to anchor.
 #' @param anchor_col Column to use when metadata does not specify
 #'   `anchor_start_col` or `anchor_end_col`.
+#' @param constructor_env Environment to search for user-defined window
+#'   constructors that are not built into anchoR. Defaults to the global
+#'   environment, so a constructor made with `make_constructor()` and
+#'   assigned at the top level (e.g. `my_window <- make_constructor(...)`)
+#'   is found automatically. Pass a different environment (or a small one
+#'   built just for the purpose) to use a constructor defined elsewhere.
 #'
 #' @return A `data.table` with one row per population row and metadata row.
 #' @export
 define_window <- function(
   population,
   metadata,
-  anchor_col = "T0"
+  anchor_col = "T0",
+  constructor_env = globalenv()
 ) {
   validated <- validate_anchor_inputs(
     population = population,
@@ -176,75 +310,25 @@ define_window <- function(
     anchor_col = anchor_col
   )
 
-  population_dt <- validated$population
-  metadata_dt <- validated$metadata
-
-  # here we want to build one row for every person-variable combination,
+  # Here we want to build one row for every person-variable combination,
   # because later the package computes:
   ## the window start/end for that combination
   ## whether a concept matched in that window
   ## the final value for that variable for that person
   # Basically we match each person with each variable_id.
   window_dt <- cross_join_population_metadata(
-    population_dt, metadata_dt
+    validated$population, validated$metadata
   )
   # Preserve the pre-processing order so later operations can reorder safely
   # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]
 
+  # Apply the window constructor for each unique `constructor` value in the
+  # metadata. This will fill in the `window_start` and `window_end` columns
+  # for each person-variable combination.
+  apply_window_constructors(window_dt, constructor_env)
 
-  for (window_fun in unique(window_dt[, constructor])) {
-    fun_name <- tolower(paste0(window_fun, "_window"))
-    row_idx <- window_dt[, which(constructor == window_fun)]
-
-    if (!exists(fun_name, mode = "function")) {
-      stop_log(
-        sprintf("Window function does not exist: %s", fun_name)
-      )
-    }
-
-    tryCatch(
-      {
-        window_subset <- base::do.call(
-          what = get(fun_name, mode = "function"),
-          args = list(window_dt = window_dt[row_idx])
-        )
-
-        window_dt[
-          row_idx,
-          `:=`(
-            window_start = window_subset$window_start,
-            window_end = window_subset$window_end
-          )
-        ]
-      },
-      error = function(e) {
-        stop_log(
-          sprintf(
-            "Error while applying window function '%s': %s",
-            fun_name,
-            conditionMessage(e)
-          )
-        )
-      }
-    )
-  }
-
-  data.table::setorder(window_dt, .window_row_id)
-  # Remove the temporary row ID column before returning the result
-  window_dt[, .window_row_id := NULL]
-
-  # Mark invalid windows instead of dropping them here so callers can decide
-  # whether they want a sparse anchored result or a full design matrix.
-  window_dt[
-    ,
-    window_valid := !is.na(window_start) &
-      !is.na(window_end) &
-      window_start <= window_end
-  ]
-
-  # This synthetic key gives the SQL layer a stable identifier for each
-  # person-variable request, independent of the original population keys.
-  window_dt[, anchor_row_id := .I]
-  window_dt[]
+  # Finalize the windows by restoring the original order, marking valid windows,
+  # and assigning a stable row ID for downstream processing.
+  finalize_windows(window_dt)
 }
