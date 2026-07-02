@@ -101,23 +101,6 @@ generic_window <- make_constructor(
   check_fn = generic_window_check
 )
 
-preg1_window <- make_constructor(
-  # This is a placeholder for a more complex window definition that might be
-  # needed for pregnancy-related variables. For now, it just calls the generic
-  # definition, but in the future it could add additional logic specific to
-  # pregnancy episodes.
-  transform_fn = function(window_dt) {
-    generic_window(window_dt)
-  },
-  required_cols = c(
-    "anchor_start_col",
-    "anchor_end_col",
-    "start_offset",
-    "end_offset"
-  ),
-  check_fn = generic_window_check
-)
-
 #' Resolve a Window Constructor by Name
 #'
 #' Looks up the function that computes windows for a given `constructor`
@@ -165,19 +148,26 @@ resolve_window_constructor <- function(constructor_name, constructor_env) {
 
 #' Apply Window Constructors to a Cross-Joined Frame
 #'
-#' Fills in `window_start`/`window_end` for every row of `window_dt`, one
-#' `constructor` value at a time.
+#' Runs one constructor per unique `constructor` value in `window_dt` and
+#' combines their outputs. A constructor may return a different number of
+#' rows than it was given -- an event-based constructor (see
+#' `R/pregnancy_window.R`) turns one input row into zero, one, or many
+#' candidate windows -- so outputs are combined by row-binding rather than
+#' assigned back into fixed row positions.
 #'
 #' @param window_dt A data.table with a `constructor` column, such as one
 #'   produced by `cross_join_population_metadata()`.
 #' @param constructor_env Environment used to resolve user-defined
 #'   constructors. See `resolve_window_constructor()`.
-#' @return `window_dt`, modified in place, with `window_start`/`window_end`
-#'   filled in.
+#' @return A new data.table combining every constructor's output, each row
+#'   carrying `window_start`/`window_end`.
 #' @keywords internal
 apply_window_constructors <- function(window_dt, constructor_env) {
-  for (constructor_name in unique(window_dt[, constructor])) {
-    # Here we aim to find the function that computes the window for this constructor name.
+  constructor_names <- unique(window_dt[, constructor])
+  constructor_outputs <- vector("list", length(constructor_names))
+
+  for (i in seq_along(constructor_names)) {
+    constructor_name <- constructor_names[[i]]
     constructor_fn <- resolve_window_constructor(
       constructor_name, constructor_env
     )
@@ -189,18 +179,8 @@ apply_window_constructors <- function(window_dt, constructor_env) {
     # Now we apply the actual constructor function to the subset of rows.
     # We wrap this in a tryCatch to provide a clear error message
     # if something goes wrong.
-    tryCatch(
-      {
-        window_subset <- constructor_fn(window_dt[row_idx])
-
-        window_dt[
-          row_idx,
-          `:=`(
-            window_start = window_subset$window_start,
-            window_end = window_subset$window_end
-          )
-        ]
-      },
+    constructor_outputs[[i]] <- tryCatch(
+      constructor_fn(window_dt[row_idx]),
       error = function(e) {
         stop_log(
           sprintf(
@@ -213,7 +193,7 @@ apply_window_constructors <- function(window_dt, constructor_env) {
     )
   }
 
-  window_dt[]
+  data.table::rbindlist(constructor_outputs, use.names = TRUE, fill = TRUE)
 }
 
 #' Finalize a Window Frame
@@ -326,8 +306,9 @@ define_window <- function(
 
   # Apply the window constructor for each unique `constructor` value in the
   # metadata. This will fill in the `window_start` and `window_end` columns
-  # for each person-variable combination.
-  apply_window_constructors(window_dt, constructor_env)
+  # for each person-variable combination (a constructor may expand one row
+  # into several candidate windows, so the result replaces `window_dt`).
+  window_dt <- apply_window_constructors(window_dt, constructor_env)
 
   # Finalize the windows by restoring the original order, marking valid windows,
   # and assigning a stable row ID for downstream processing.

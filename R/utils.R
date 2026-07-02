@@ -224,6 +224,14 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   }
   if (!"range_min" %in% names(metadata_dt)) metadata_dt[, range_min := NA_real_]
   if (!"range_max" %in% names(metadata_dt)) metadata_dt[, range_max := NA_real_]
+  # Only the event-based constructors (see R/pregnancy_window.R) use these;
+  # other constructors carry them along unused.
+  if (!"event_col" %in% names(metadata_dt)) {
+    metadata_dt[, event_col := NA_character_]
+  }
+  if (!"end_cap_offset" %in% names(metadata_dt)) {
+    metadata_dt[, end_cap_offset := NA_real_]
+  }
 
   metadata_dt[, `:=`(
     anchor_start_col = normalize_anchor_reference(anchor_start_col, anchor_col),
