@@ -8,6 +8,7 @@
 | 3         | 2021-04-02 |
 
 ## pregnancy_metadata
+
 | variable_id    | concept_id    | constructor              | selector | start_offset | end_offset | other_arguments                                                                                                                                                                | description_constructor                                                                                                                                   |
 | -------------- | ------------- | ------------------------ | -------- | -----------: | ---------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | preg_example_1 | gest_diabetes | IN_PRIOR_PREG            | LATEST   |            0 |    -3652.5 | start_pregnancy_offset = 0, end_pregnancy_offset = 0, start_preg_window = 'start_pregnancy + start_pregnancy_offset', end_preg_window = 'end_pregnancy + end_pregnancy_offset' | Look for records during (parts) of prior pregnancies, defined here only by start and end pregnancy                                                        |
@@ -17,6 +18,7 @@
 | preg_example_5 | abortion      | IN_PRIOR_PREG            | LATEST   |            0 |    -3652.5 | start_preg_offset = 90, end_offset = 166, start_preg_window = 'start_pregnancy + start_preg_offset', end_preg_window = 'min(end_pregnancy, start_pregnancy + end_offset)'      | Look for records during (parts) of prior pregnancy, here defined by start_pregnancy + 90 days and the earliest of end_pregnancy and start_pregnancy + 166 |
 
 ## pregnancy_concepts
+
 | person_id | concept_id    | date       | value |
 | --------- | ------------- | ---------- | ----- |
 | 1         | gest_diabetes | 2021-05-01 | TRUE  |
@@ -26,6 +28,7 @@
 | 2         | abortion      | 2021-07-01 | TRUE  |
 
 ## intermediate_windows_pregnancy
+
 | person_id | T0         | variable_id    | start      | end        |
 | --------- | ---------- | -------------- | ---------- | ---------- |
 | 1         | 2021-04-02 | preg_example_1 | 2020-01-01 | 2020-09-01 |
@@ -56,6 +59,7 @@
 | 3         | 2021-04-02 | preg_example_5 | NA         | NA         |
 
 ## pregnancy_output
+
 | person_id | T0         | variable_id    | date       | value |
 | --------- | ---------- | -------------- | ---------- | ----- |
 | 1         | 2021-04-02 | preg_example_1 | NA         | NA    |
