@@ -291,6 +291,111 @@ pregnancy_output <- function() {
   )
 }
 
+# Hand-computed fixtures for the event-based window constructors
+# (R/pregnancy_window.R). Unlike pregnancy_output/intermediate_windows_pregnancy
+# above, every number here was worked out by hand against the constructor
+# rules and can be trusted as ground truth.
+#
+# Person "1" has three pregnancy events; person "2" has none (covers the
+# "no candidate window" case). T0 = 2022-08-16 falls inside person 1's third
+# event (2022-03-01 to 2022-12-01).
+event_population <- function() {
+  data.table::data.table(
+    person_id = c("1", "2"),
+    T0 = as.Date(c("2022-08-16", "2022-08-16")),
+    pregnancy_events = list(
+      data.table::data.table(
+        event_start = as.Date(c("2020-01-01", "2021-02-15", "2022-03-01")),
+        event_end = as.Date(c("2020-09-01", "2021-05-20", "2022-12-01"))
+      ),
+      data.table::data.table(
+        event_start = as.Date(character()),
+        event_end = as.Date(character())
+      )
+    )
+  )
+}
+
+# One variable_id, IN_PRIOR_PREG: person 1 has two prior events (ended
+# before T0), each becoming its own candidate window with no offset.
+event_metadata <- function() {
+  data.table::data.table(
+    variable_id = "gest_diabetes_prior",
+    concept_id = "GEST_DIAB",
+    constructor = "IN_PRIOR_PREG",
+    selector = "LATEST",
+    start_offset = 0L,
+    end_offset = 0L,
+    event_col = "pregnancy_events"
+  )
+}
+
+# Two GEST_DIAB records for person 1, one inside each prior event, so a
+# LATEST selector must pick the later one (2021-03-01) across both candidate
+# windows -- this is what exercises the SQL PARTITION BY fix.
+event_concepts <- function() {
+  data.table::data.table(
+    person_id = c("1", "1"),
+    concept_id = c("GEST_DIAB", "GEST_DIAB"),
+    date = as.Date(c("2020-05-01", "2021-03-01")),
+    value = c("TRUE", "TRUE")
+  )
+}
+
+# Adapters that reuse the documented pregnancy_periods()/pregnancy_population()
+# /pregnancy_metadata() fixtures above with the event engine. Two things
+# still need translating, since those fixtures predate the event engine:
+# - population/periods are two separate tables (one row per person,
+#   one row per pregnancy) instead of population with a nested episode
+#   list-column, so pregnancy_periods() is nested onto pregnancy_population()
+#   per person.
+# - pregnancy_metadata()'s start_offset/end_offset are placeholders for this
+#   engine (the real per-row parameters lived in its free-text
+#   `other_arguments`, which anchoR deliberately does not parse -- see
+#   R/pregnancy_window.R). Each row below is that same other_arguments text
+#   translated by hand into start_offset/end_offset/end_cap_offset.
+pregnancy_population_with_events <- function() {
+  population <- data.table::copy(pregnancy_population())
+  periods <- pregnancy_periods()
+
+  population[
+    ,
+    pregnancy_events := lapply(person_id, function(id) {
+      periods[
+        person_id == id,
+        .(event_start = start_pregnancy, event_end = end_pregnancy)
+      ]
+    })
+  ]
+  population[]
+}
+
+pregnancy_metadata_translated <- function() {
+  meta <- pregnancy_metadata()
+
+  data.table::data.table(
+    variable_id = meta$variable_id,
+    concept_id = meta$concept_id,
+    constructor = meta$constructor,
+    selector = meta$selector,
+    # preg_example_1 (IN_PRIOR_PREG): start_pregnancy_offset = 0,
+    #   end_pregnancy_offset = 0.
+    # preg_example_2 (SINCE_START_CURRENT_PREG): start_preg_offset = 0,
+    #   anchor_offset = 0.
+    # preg_example_3 (ANYTIME_CURRENT_PREG): start_preg_offset = 0,
+    #   end_preg_offset = 30.
+    # preg_example_4 (OUTSIDE_ALL_PREG): its main start_offset/end_offset
+    #   (0, -3652.5) already are what this engine expects for the overall
+    #   anchor-relative search range, so they're reused as-is.
+    # preg_example_5 (IN_PRIOR_PREG, capped): start_preg_offset = 90,
+    #   end_offset = 166 (the cap).
+    start_offset = c(0L, 0L, 0L, 0L, 90L),
+    end_offset = c(0L, 0L, 30L, -3652L, 0L),
+    end_cap_offset = c(NA_real_, NA_real_, NA_real_, NA_real_, 166),
+    event_col = "pregnancy_events"
+  )
+}
+
 ## Functions
 example_concepts_parquet <- function(data = NULL) {
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")

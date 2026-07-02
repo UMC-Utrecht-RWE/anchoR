@@ -1,5 +1,5 @@
 SELECT
-    w.anchor_row_id,
+    MIN(w.anchor_row_id) AS anchor_row_id,
     w.person_id,
     w.T0,
     w.variable_id,
@@ -17,7 +17,6 @@ WHERE w.selector = 'RANGE_COUNT'
   AND w.range_max IS NOT NULL
   AND TRY_CAST(c.value AS DOUBLE) BETWEEN w.range_min AND w.range_max
 GROUP BY
-    w.anchor_row_id,
     w.person_id,
     w.T0,
     w.variable_id,

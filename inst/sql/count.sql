@@ -1,5 +1,5 @@
 SELECT
-    w.anchor_row_id,
+    MIN(w.anchor_row_id) AS anchor_row_id,
     w.person_id,
     w.T0,
     w.variable_id,
@@ -14,7 +14,6 @@ INNER JOIN concepts AS c
    AND c.date BETWEEN w.window_start AND w.window_end
 WHERE w.selector = 'COUNT'
 GROUP BY
-    w.anchor_row_id,
     w.person_id,
     w.T0,
     w.variable_id,

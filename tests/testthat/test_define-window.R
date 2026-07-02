@@ -267,30 +267,30 @@ testthat::test_that("define_window uses caller-supplied global anchor column", {
 testthat::test_that("define_window supports per-variable anchor columns", {
   # A single metadata table can mix anchors: one variable's window comes from
   # T0, another's from a completely different pair of date columns (e.g. a
-  # pregnancy episode). generic_window() loops by anchor column name so this
+  # pregnancy event). generic_window() loops by anchor column name so this
   # works without special-casing any particular anchor.
   population <- data.table::data.table(
     person_id = "1",
     T0 = as.Date("2024-01-01"),
-    episode_start = as.Date("2023-06-01"),
-    episode_end = as.Date("2023-09-01")
+    event_start = as.Date("2023-06-01"),
+    event_end = as.Date("2023-09-01")
   )
 
   metadata <- data.table::data.table(
-    variable_id = "episode_var",
-    concept_id = "EPISODE_X",
+    variable_id = "event_var",
+    concept_id = "event_X",
     constructor = "GENERIC",
     selector = "LATEST",
     start_offset = 0,
     end_offset = 0,
-    anchor_date_start = "episode_start",
-    anchor_date_end = "episode_end"
+    anchor_date_start = "event_start",
+    anchor_date_end = "event_end"
   )
 
   windows <- define_window(population, metadata)
 
-  testthat::expect_equal(windows$window_start, population$episode_start)
-  testthat::expect_equal(windows$window_end, population$episode_end)
+  testthat::expect_equal(windows$window_start, population$event_start)
+  testthat::expect_equal(windows$window_end, population$event_end)
 })
 
 testthat::test_that(
