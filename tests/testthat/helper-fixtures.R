@@ -354,7 +354,7 @@ event_concepts <- function() {
 #   `other_arguments`, which anchoR deliberately does not parse -- see
 #   R/pregnancy_window.R). Each row below is that same other_arguments text
 #   translated by hand into start_offset/end_offset/end_cap_offset.
-pregnancy_population_with_events <- function() {
+pregnancy_population_with_events <- function() { # nolint
   population <- data.table::copy(pregnancy_population())
   periods <- pregnancy_periods()
 
@@ -378,17 +378,6 @@ pregnancy_metadata_translated <- function() {
     concept_id = meta$concept_id,
     constructor = meta$constructor,
     selector = meta$selector,
-    # preg_example_1 (IN_PRIOR_PREG): start_pregnancy_offset = 0,
-    #   end_pregnancy_offset = 0.
-    # preg_example_2 (SINCE_START_CURRENT_PREG): start_preg_offset = 0,
-    #   anchor_offset = 0.
-    # preg_example_3 (ANYTIME_CURRENT_PREG): start_preg_offset = 0,
-    #   end_preg_offset = 30.
-    # preg_example_4 (OUTSIDE_ALL_PREG): its main start_offset/end_offset
-    #   (0, -3652.5) already are what this engine expects for the overall
-    #   anchor-relative search range, so they're reused as-is.
-    # preg_example_5 (IN_PRIOR_PREG, capped): start_preg_offset = 90,
-    #   end_offset = 166 (the cap).
     start_offset = c(0L, 0L, 0L, 0L, 90L),
     end_offset = c(0L, 0L, 30L, -3652L, 0L),
     end_cap_offset = c(NA_real_, NA_real_, NA_real_, NA_real_, 166),

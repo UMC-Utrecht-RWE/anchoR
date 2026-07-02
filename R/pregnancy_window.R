@@ -172,7 +172,7 @@ in_prior_preg_window <- make_constructor(
 )
 
 # Look for records between start pregnancy and the anchor date (T0)
-since_start_current_preg_window <- make_constructor(
+since_start_current_preg_window <- make_constructor( # nolint
   transform_fn = function(window_dt) {
     event_window_engine(
       window_dt,

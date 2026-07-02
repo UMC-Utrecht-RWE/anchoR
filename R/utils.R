@@ -1,11 +1,3 @@
-`%||%` <- function(lhs, rhs) {
-  if (is.null(lhs)) {
-    return(rhs)
-  }
-
-  lhs
-}
-
 stop_log <- function(message) {
   msg <- sprintf(message)
   logger::log_error(msg)
