@@ -180,10 +180,10 @@ testthat::test_that("apply_window_constructors fills window_start/window_end", {
     T0 = as.Date("2024-01-01")
   )
 
-  apply_window_constructors(window_dt, constructor_env = globalenv())
+  out <- apply_window_constructors(window_dt, constructor_env = globalenv())
 
-  testthat::expect_equal(window_dt$window_start, as.Date("2023-12-02"))
-  testthat::expect_equal(window_dt$window_end, as.Date("2024-01-01"))
+  testthat::expect_equal(out$window_start, as.Date("2023-12-02"))
+  testthat::expect_equal(out$window_end, as.Date("2024-01-01"))
 })
 
 testthat::test_that(
