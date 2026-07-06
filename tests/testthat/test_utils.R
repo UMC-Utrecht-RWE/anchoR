@@ -1,5 +1,5 @@
 testthat::test_that("if target already exists, aliases are ignored", {
-  population <- example_population()
+  population <- minimal_population()
   original_names <- names(population)
 
   # T0 already exists, so aliases should be ignored
