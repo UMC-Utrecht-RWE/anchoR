@@ -199,8 +199,14 @@ anchor <- function(
 
   # Define windows for all person-variable combinations.
   # Impossible anchors will be marked and filtered out later.
+  # Only person_id and the anchor columns metadata references are needed past
+  # this point, so trim other population covariates before the cross join
+  # multiplies them across every metadata row.
+  window_population <- population_columns_for_window(
+    validated$population, validated$metadata
+  )
   window_dt <- define_window(
-    population = validated$population,
+    population = window_population,
     metadata = validated$metadata,
     anchor_col = anchor_col
   )

@@ -19,6 +19,26 @@ population_anchor_columns <- function(population_dt, metadata_dt) {
   invisible(population_dt)
 }
 
+#' Trim population to the columns needed for window definition.
+#' Anchor-only callers (like `anchor()`) never need population covariates
+#' beyond `person_id` and the anchor columns metadata actually references, so
+#' dropping them here keeps the population x metadata cross join from
+#' replicating unused columns.
+#' @param population_dt A data.table containing the study population.
+#' @param metadata_dt A data.table containing the metadata for the variables.
+#' @return A data.table subset of population_dt with only `person_id` and the
+#' referenced anchor columns.
+#' @keywords internal
+#' @noRd
+population_columns_for_window <- function(population_dt, metadata_dt) {
+  needed_cols <- unique(c(
+    "person_id",
+    metadata_dt$anchor_start_col,
+    metadata_dt$anchor_end_col
+  ))
+  population_dt[, needed_cols, with = FALSE]
+}
+
 metadata_supported_selectors <- function(metadata_dt) {
   # Selector validation happens before any SQL runs so unsupported study
   # variables fail with a metadata error instead of a late database error.
