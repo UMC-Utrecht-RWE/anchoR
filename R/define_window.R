@@ -103,6 +103,13 @@ define_window <- function(
   population_dt <- validated$population
   metadata_dt <- validated$metadata
 
+  logger::log_debug(
+    sprintf(
+      "Cross-joining %d population row(s) with %d metadata row(s).",
+      nrow(population_dt),
+      nrow(metadata_dt)
+    )
+  )
   # here we want to build one row for every person-variable combination,
   # because later the package computes:
   ## the window start/end for that combination
@@ -116,7 +123,13 @@ define_window <- function(
   # and still return rows in the same sequence the cross join produced.
   window_dt[, .window_row_id := .I]
 
-
+  logger::log_debug(
+    sprintf(
+      "Cross join produced %d row(s); computing windows for %d constructor(s).",
+      nrow(window_dt),
+      length(unique(window_dt$constructor))
+    )
+  )
   for (window_fun in unique(window_dt[, constructor])) {
     fun_name <- tolower(paste0(window_fun, "_window"))
     row_idx <- window_dt[, which(constructor == window_fun)]
@@ -153,6 +166,8 @@ define_window <- function(
       }
     )
   }
+
+  logger::log_debug("Finished computing windows for all constructor(s).")
 
   data.table::setorder(window_dt, .window_row_id)
   window_dt[, .window_row_id := NULL]
