@@ -323,6 +323,7 @@ anchor_by_variable <- function(
   )
 
   for (current_variable_id in variable_ids) {
+    variable_start_time <- Sys.time()
     variable_metadata <- metadata_dt[variable_id == current_variable_id]
     logger::log_info(
       sprintf("Anchoring variable_id: %s", current_variable_id)
@@ -407,6 +408,18 @@ anchor_by_variable <- function(
           )
         )
         unlink(staging_hive_path, recursive = TRUE, force = TRUE)
+
+        variable_duration <- difftime(
+          Sys.time(), variable_start_time,
+          units = "secs"
+        )
+        logger::log_info(
+          sprintf(
+            "Finished anchoring variable_id `%s` in %.2f secs.",
+            current_variable_id,
+            as.numeric(variable_duration)
+          )
+        )
       }
     )
   }
