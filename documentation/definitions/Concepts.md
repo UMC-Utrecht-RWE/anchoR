@@ -1,0 +1,5 @@
+> The raw event source anchoR filters and collapses: one row per `person_id x concept_id x date x value` record.
+
+Concepts are the long, event-level input, everything a person had recorded, independent of any window. `anchor()` filters concept rows down to whichever fall inside a person-variable [[Window]] (built from [[Population]] + [[Metadata]]), then a [[Selector]] collapses the matches into one result per window.
+
+Required columns for the core anchoring step: `person_id`, `concept_id`, `date`, `value`. The same person can have many rows for the same `concept_id`, rows for many different concepts, and events both inside and outside any given window, none of that is deduplicated upstream, it's the window + selector combination that narrows it down. `value` is stored as character; for pure presence/absence concepts it's typically the string `"TRUE"`.

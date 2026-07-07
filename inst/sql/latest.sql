@@ -7,9 +7,11 @@ WITH candidate_rows AS (
         w.window_name,
         COALESCE(CAST(c.value AS VARCHAR), 'TRUE') AS value,
         c.date,
-        COUNT(*) OVER (PARTITION BY w.anchor_row_id) AS n,
+        COUNT(*) OVER (
+            PARTITION BY w.person_id, w.T0, w.variable_id, w.window_name
+        ) AS n,
         ROW_NUMBER() OVER (
-            PARTITION BY w.anchor_row_id
+            PARTITION BY w.person_id, w.T0, w.variable_id, w.window_name
             ORDER BY c.date DESC, COALESCE(CAST(c.value AS VARCHAR), '') DESC
         ) AS row_number_
     FROM population_windows AS w

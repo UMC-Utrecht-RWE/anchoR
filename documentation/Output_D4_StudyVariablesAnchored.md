@@ -1,16 +1,16 @@
 # OUTPUT
 
-| Table name                | anchored result / `D4_StudyVariablesAnchored`                                                                                                                              |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Description               | Output of `anchoR`. Concept records are filtered to metadata-defined windows and collapsed with the selected selector.                                                     |
-| Source                    | Concepts source + population + metadata + `anchor_col`.                                                                                                                    |
-| Content                   | Anchored variable values returned in long or wide format by `get_anchor_result()`.                                                                                         |
-| Population                | Subset of the input population with at least one anchored result among the requested variables.                                                                            |
-| Unit of Observation (UoO) | In long format: one row per matched `person_id x T0 x variable_id x window_name`. In wide format: one row per `person_id x T0` combination present in the anchored result. |
+| Table name                | anchored result /`D4_StudyVariablesAnchored`                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Description               | Output of`anchoR`. Concept records are filtered to metadata-defined windows and collapsed with the selected selector.                                                     |
+| Source                    | Concepts source + population + metadata +`anchor_col`.                                                                                                                    |
+| Content                   | Anchored variable values returned in long or wide format by`get_anchor_result()`.                                                                                         |
+| Population                | Subset of the input population with at least one anchored result among the requested variables.                                                                           |
+| Unit of Observation (UoO) | In long format: one row per matched`person_id x T0 x variable_id x window_name`. In wide format: one row per `person_id x T0` combination present in the anchored result. |
 
 # LONG OUTPUT
 
-The long-format public result is returned by:
+The [[Long Output|long-format]] public result is returned by:
 
 ```r
 get_anchor_result(
@@ -22,16 +22,16 @@ get_anchor_result(
 
 Codebook:
 
-| column        | format | description                                                                                             |
-| ------------- | ------ | ------------------------------------------------------------------------------------------------------- |
-| `person_id`   | chr    | Person identifier from the population input.                                                            |
-| `T0`          | Date   | Anchor value used during output. The current implementation writes the anchor column to output as `T0`. |
-| `variable_id` | chr    | Variable identifier from metadata.                                                                      |
-| `window_name` | chr    | Window label from metadata.                                                                             |
-| `date`        | Date   | Anchored event date returned by the selector.                                                           |
-| `value`       | chr    | Anchored value returned by the selector.                                                                |
+| column        | format | description                                                                                            |
+| ------------- | ------ | ------------------------------------------------------------------------------------------------------ |
+| `person_id`   | chr    | Person identifier from the population input.                                                           |
+| `T0`          | Date   | Anchor value used during output. The current implementation writes the anchor column to output as`T0`. |
+| `variable_id` | chr    | Variable identifier from metadata.                                                                     |
+| `window_name` | chr    | Window label from metadata.                                                                            |
+| `date`        | Date   | Anchored event date returned by the selector.                                                          |
+| `value`       | chr    | Anchored value returned by the selector.                                                               |
 
-Current behavior:
+Current behaviour:
 
 - The long result is sparse.
 - Rows with no matching concept record in the requested window are omitted.
@@ -40,7 +40,7 @@ Current behavior:
 
 # WIDE OUTPUT
 
-Wide output is returned by:
+[[Wide Output]] is returned by:
 
 ```r
 get_anchor_result(
@@ -58,12 +58,12 @@ result and creates columns of the form:
 
 Codebook:
 
-| column                | format | description                                                                                                                         |
-| --------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `person_id`           | chr    | Person identifier from the population input.                                                                                        |
-| `T0`                  | Date   | Anchor value written to output.                                                                                                     |
-| `value_<variable_id>` | chr    | Anchored value for the corresponding study variable. `NA` means that variable did not produce an anchored result for that row.      |
-| `date_<variable_id>`  | Date   | Anchored event date for the corresponding study variable. `NA` means that variable did not produce an anchored result for that row. |
+| column                | format | description                                                                                                                        |
+| --------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `person_id`           | chr    | Person identifier from the population input.                                                                                       |
+| `T0`                  | Date   | Anchor value written to output.                                                                                                    |
+| `value_<variable_id>` | chr    | Anchored value for the corresponding study variable.`NA` means that variable did not produce an anchored result for that row.      |
+| `date_<variable_id>`  | Date   | Anchored event date for the corresponding study variable.`NA` means that variable did not produce an anchored result for that row. |
 
 Example wide output shape:
 

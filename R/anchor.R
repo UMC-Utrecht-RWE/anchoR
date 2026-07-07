@@ -171,6 +171,7 @@ anchor <- function(
   anchor_col = "T0",
   anchor_hive_path = NULL
 ) {
+  logger::log_debug("Starting anchor().")
   # Normalize inputs at the beginning so the rest
   # of the workflow has stable input.
   validated <- validate_anchor_inputs(
@@ -278,6 +279,7 @@ anchor <- function(
     selectors = selector_names,
     anchor_hive_path = anchor_hive_path
   )
+  logger::log_debug("Finished anchor().")
 }
 
 #' Anchor study variables one variable_id at a the time
@@ -321,6 +323,7 @@ anchor_by_variable <- function(
   )
 
   for (current_variable_id in variable_ids) {
+    variable_start_time <- Sys.time()
     variable_metadata <- metadata_dt[variable_id == current_variable_id]
     logger::log_info(
       sprintf("Anchoring variable_id: %s", current_variable_id)
@@ -405,8 +408,26 @@ anchor_by_variable <- function(
           )
         )
         unlink(staging_hive_path, recursive = TRUE, force = TRUE)
+
+        variable_duration <- difftime(
+          Sys.time(), variable_start_time,
+          units = "secs"
+        )
+        logger::log_info(
+          sprintf(
+            "Finished anchoring variable_id `%s` in %.2f secs.",
+            current_variable_id,
+            as.numeric(variable_duration)
+          )
+        )
       }
     )
   }
+  logger::log_debug(
+    sprintf(
+      "Finished anchor_by_variable() for %d variable_id(s).",
+      length(variable_ids)
+    )
+  )
   invisible(variable_ids)
 }

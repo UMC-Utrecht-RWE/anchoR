@@ -1,23 +1,23 @@
-# CONCEPTS
+# [[Concepts|CONCEPTS]]
 
-| Table name                | concepts / `concept_table` / parquet concept files                                                                                                                                           |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Description               | Input concepts source for `anchoR`. This contains the raw event records that are filtered to metadata-defined windows and collapsed with selectors such as `LATEST`, `EARLIEST`, or `COUNT`. |
-| Source                    | User-supplied. In the current workflow this is often a parquet concept store such as `D3_CONCEPTS_parquet`, but the package also accepts an in-memory table or a DuckDB file.                |
-| Content                   | One row per concept event, with a person identifier, concept identifier, event date, and value.                                                                                              |
-| Population                | All concept records available for anchoring.                                                                                                                                                 |
-| Unit of Observation (UoO) | One row per `person_id x concept_id x date x value` record.                                                                                                                                  |
+| Table name                | concepts /`concept_table` / parquet concept files                                                                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Description               | Input concepts source for`anchoR`. This contains the raw event records that are filtered to metadata-defined windows and collapsed with selectors such as `LATEST`, `EARLIEST`, or `COUNT`. |
+| Source                    | User-supplied. In the current workflow this is often a parquet concept store such as`D3_CONCEPTS_parquet`, but the package also accepts an in-memory table or a DuckDB file.                |
+| Content                   | One row per concept event, with a person identifier, concept identifier, event date, and value.                                                                                             |
+| Population                | All concept records available for anchoring.                                                                                                                                                |
+| Unit of Observation (UoO) | One row per`person_id x concept_id x date x value` record.                                                                                                                                  |
 
 # CODEBOOK
 
 The current concepts object shown in your results has the following columns.
 
-| column       | format | description                                                                                                                 |
-| ------------ | ------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `person_id`  | chr    | Person identifier used to join concept events to the population input.                                                      |
-| `concept_id` | chr    | Concept identifier matched against `metadata$concept_id`.                                                                   |
-| `date`       | Date   | Event date used to determine whether a concept record falls inside the requested window.                                    |
-| `value`      | chr    | Value associated with the concept event. In the current concepts output this is often `TRUE` for presence/absence concepts. |
+| column       | format | description                                                                                                                |
+| ------------ | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `person_id`  | chr    | Person identifier used to join concept events to the population input.                                                     |
+| `concept_id` | chr    | Concept identifier matched against`metadata$concept_id`.                                                                   |
+| `date`       | Date   | Event date used to determine whether a concept record falls inside the requested window.                                   |
+| `value`      | chr    | Value associated with the concept event. In the current concepts output this is often`TRUE` for presence/absence concepts. |
 
 # CURRENT USAGE
 

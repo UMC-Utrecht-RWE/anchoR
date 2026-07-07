@@ -1,0 +1,5 @@
+> The study-variable specification: one row per `variable_id x window_name`, describing which concept to look for, where the window sits relative to the anchor, and how to collapse matches.
+
+Metadata is the "recipe" table anchoR cross-joins against [[Population]]. Each row says: for this [[Identifiers (person_id, concept_id, variable_id)|`variable_id`]], look for [[Identifiers (person_id, concept_id, variable_id)|`concept_id`]] inside a window built by a [[Constructor]] (named in the `constructor` column), and collapse whatever [[Concepts|concept]] records land in that window using a [[Selector]].
+
+Mandatory columns after normalisation: `variable_id`, `concept_id`, `window_name`, `constructor`, `selector`, `start_offset`/`end_offset` (aliased from `start_look_back`/`end_look_back`), `anchor_start_col`/`anchor_end_col`, `range_min`/`range_max`, `event_col`, `end_cap_offset`. `normalize_metadata()` fills in sensible defaults for anything not supplied, so a minimal metadata table only needs `variable_id`, `concept_id`, `constructor`, `selector`, and an offset pair.
