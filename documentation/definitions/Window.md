@@ -1,0 +1,5 @@
+> The `[window_start, window_end]` date range computed for one person-variable(-window) combination; only [[Concepts|concept]] records with a `date` inside it are eligible for the [[Selector]] to collapse.
+
+Computed by [[define_window()]], which cross-joins [[Population]] with [[Metadata]] and applies each row's [[Window Constructor]] to fill in `window_start`/`window_end`. A window is only **valid** when both bounds are non-missing and `window_start <= window_end`; invalid windows are marked (`window_valid = FALSE`) rather than dropped at this stage, so callers can choose sparse output or a fuller design matrix. `anchor()` filters to valid windows before running any [[Selector|selector]] SQL.
+
+A constructor can turn one input row into zero, one, or several candidate windows for the same person-variable pair (this is exactly what the episode-based constructors do — see [[Episode-Based Window Engine]]). When that happens, a [[Selector|selector]] still runs across *all* of that person-variable's candidate windows together and returns one answer, not one answer per window.

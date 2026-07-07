@@ -1,0 +1,5 @@
+> Reads the Anchor Hive back via DuckDB, filters to the requested `variable_id`/`window_name` pairs from `metadata`, and reshapes into [[Long Output]] or [[Wide Output]].
+
+Key parameters: `result_shape` (`"wide"` default or `"long"`), `population` (optional — when given, restricts/backfills [[Wide Output|wide]] rows to exactly the population's keys), `cast_window` (folds [[Window Name|`window_name`]] into wide column names instead of keeping it as a row key), `only_date` (wide output with only `date_<variable_id>` columns, no `value_<...>`), and `impute_missing` (runs `imputation` on the wide result).
+
+For wide output, duplicate `person_id + T0 + window_name + variable_id` rows in the hive (e.g. from the [[Selector - ALL|`ALL`]] selector) cause an explicit error rather than a silently wrong cast — the message tells the caller to use `result_shape = "long"` instead.
