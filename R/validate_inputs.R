@@ -34,7 +34,8 @@ population_columns_for_window <- function(population_dt, metadata_dt) {
   needed_cols <- unique(c(
     "person_id",
     metadata_dt$anchor_start_col,
-    metadata_dt$anchor_end_col
+    metadata_dt$anchor_end_col,
+    metadata_dt$event_col[!is.na(metadata_dt$event_col)]
   ))
   population_dt[, needed_cols, with = FALSE]
 }

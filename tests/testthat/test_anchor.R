@@ -52,24 +52,21 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    population <- data.table::copy(example_population())
-    population[, sex := c("F", "M")]
+    population <- data.table::copy(minimal_population())
+    population[, sex := c("F", "M", "F", "M", "F")]
 
     anchor(
       population = population,
-      metadata = example_metadata()[variable_id == "cov_latest"],
-      concepts = example_concepts(),
+      metadata = minimal_metadata()[variable_id == "cov_latest"],
+      concepts = minimal_concepts(),
       anchor_hive_path = hive_path
     )
 
     anchored <- read_anchor_hive(hive_path)
 
-    testthat::expect_equal(anchored$variable_id, c("cov_latest", "cov_latest"))
-    testthat::expect_equal(anchored$value, c("TRUE", "FALSE"))
-    testthat::expect_equal(
-      anchored$date,
-      as.Date(c("2023-12-20", "2024-01-14"))
-    )
+    testthat::expect_equal(anchored$variable_id, "cov_latest")
+    testthat::expect_equal(anchored$value, "TRUE")
+    testthat::expect_equal(anchored$date, as.Date("2023-12-20"))
   }
 )
 

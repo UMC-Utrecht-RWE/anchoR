@@ -217,7 +217,11 @@ testthat::test_that("errors when referenced anchor columns are missing", {
 testthat::test_that(
   "population_columns_for_window keeps only person_id and referenced anchors",
   {
-    population <- example_population()
+    population <- data.table::copy(minimal_population())
+    population[, `:=`(
+      lmp_date = T0 - 280,
+      pregnancy_end_date = T0
+    )]
     metadata <- data.table::data.table(
       anchor_start_col = c("T0", "lmp_date"),
       anchor_end_col = c("T0", "pregnancy_end_date")

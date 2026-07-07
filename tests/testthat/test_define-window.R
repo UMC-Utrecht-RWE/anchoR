@@ -374,7 +374,7 @@ testthat::test_that(
   "cross_join_population_metadata errors on overlapping column names",
   {
     population <- data.table::data.table(person_id = "1", selector = "LATEST")
-    metadata <- example_metadata()
+    metadata <- minimal_metadata()
 
     testthat::expect_error(
       cross_join_population_metadata(population, metadata),
@@ -386,8 +386,8 @@ testthat::test_that(
 testthat::test_that(
   "cross_join_population_metadata produces a person-major cartesian product",
   {
-    population <- example_population()
-    metadata <- example_metadata()
+    population <- minimal_population()
+    metadata <- minimal_metadata()
 
     result <- cross_join_population_metadata(population, metadata)
 
