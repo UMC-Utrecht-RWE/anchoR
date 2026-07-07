@@ -261,13 +261,16 @@ get_anchor_result <- function(
 
     expected_date_cols <- unique(if (cast_window) {
       paste0(
-        "date_",
+        if (only_date == FALSE) "date_" else "",
         expected_window_pairs$window_name,
         "_",
         expected_window_pairs$variable_id
       )
     } else {
-      paste0("date_", metadata_dt$variable_id)
+      paste0(
+        if (only_date == FALSE) "date_" else "",
+        metadata_dt$variable_id
+      )
     })
     missing_date_cols <- setdiff(expected_date_cols, names(wide_anchored))
     for (col_name in missing_date_cols) {

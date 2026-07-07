@@ -230,9 +230,11 @@ finalize_windows <- function(window_dt) {
 #' This helper function performs a cross join between the population and
 #' metadata data tables, which is necessary for defining windows for each
 #' person-variable combination.
-#' It includes an optimization to avoid the overhead of a cartesian merge when
-#' the metadata has only one row and there are no overlapping column names
-#' between the population and metadata.
+#' A merge on a constant dummy key is data.table's fastest cartesian-join
+#' mechanism (benchmarked against row-index replication, which was
+#' consistently slower); the real cost at scale is `population_dt` carrying
+#' unrelated covariate columns into the join, which callers should trim before
+#' calling `define_window()` (see `population_columns_for_window()`).
 #' @param population_dt A data.table containing the study population.
 #' @param metadata_dt A data.table containing the metadata for the variables.
 #' @return A data.table resulting from the cross join of population_dt and
@@ -241,8 +243,17 @@ finalize_windows <- function(window_dt) {
 #' @keywords internal
 #' @noRd
 cross_join_population_metadata <- function(population_dt, metadata_dt) {
-  # The single-variable orchestration usually reaches `define_window()` with a
-  # one-row metadata slice, so avoid the cartesian merge overhead in that case.
+  overlapping_cols <- intersect(names(population_dt), names(metadata_dt))
+  if (length(overlapping_cols) > 0L) {
+    stop(
+      sprintf(
+        "`population` and `metadata` cannot share column names: %s.",
+        paste(overlapping_cols, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+
   population_dt[, .anchor_join_key := 1L]
   metadata_dt[, .anchor_join_key := 1L]
 
@@ -291,7 +302,17 @@ define_window <- function(
     anchor_col = anchor_col
   )
 
-  # Here we want to build one row for every person-variable combination,
+  population_dt <- validated$population
+  metadata_dt <- validated$metadata
+
+  logger::log_debug(
+    sprintf(
+      "Cross-joining %d population row(s) with %d metadata row(s).",
+      nrow(population_dt),
+      nrow(metadata_dt)
+    )
+  )
+  # here we want to build one row for every person-variable combination,
   # because later the package computes:
   ## the window start/end for that combination
   ## whether a concept matched in that window

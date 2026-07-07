@@ -205,4 +205,8 @@ run_selector_queries <- function(con, selectors, anchor_hive_path) {
       }
     )
   }
+
+  logger::log_debug(
+    sprintf("Finished processing %d selector(s).", length(selectors))
+  )
 }

@@ -369,3 +369,36 @@ testthat::test_that("a custom constructor enforces its own required columns", {
     "missing required column\\(s\\): index_date"
   )
 })
+
+testthat::test_that(
+  "cross_join_population_metadata errors on overlapping column names",
+  {
+    population <- data.table::data.table(person_id = "1", selector = "LATEST")
+    metadata <- example_metadata()
+
+    testthat::expect_error(
+      cross_join_population_metadata(population, metadata),
+      "`population` and `metadata` cannot share column names: selector\\." # nolint
+    )
+  }
+)
+
+testthat::test_that(
+  "cross_join_population_metadata produces a person-major cartesian product",
+  {
+    population <- example_population()
+    metadata <- example_metadata()
+
+    result <- cross_join_population_metadata(population, metadata)
+
+    testthat::expect_equal(nrow(result), nrow(population) * nrow(metadata))
+    testthat::expect_equal(
+      result$person_id,
+      rep(population$person_id, each = nrow(metadata))
+    )
+    testthat::expect_equal(
+      result$variable_id,
+      rep(metadata$variable_id, times = nrow(population))
+    )
+  }
+)

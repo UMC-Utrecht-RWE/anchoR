@@ -213,3 +213,22 @@ testthat::test_that("errors when referenced anchor columns are missing", {
     "`population` is missing anchor columns referenced by `metadata`: missing_start, missing_end\\." # nolint
   )
 })
+
+testthat::test_that(
+  "population_columns_for_window keeps only person_id and referenced anchors",
+  {
+    population <- example_population()
+    metadata <- data.table::data.table(
+      anchor_start_col = c("T0", "lmp_date"),
+      anchor_end_col = c("T0", "pregnancy_end_date")
+    )
+
+    result <- population_columns_for_window(population, metadata)
+
+    testthat::expect_identical(
+      names(result),
+      c("person_id", "T0", "lmp_date", "pregnancy_end_date")
+    )
+    testthat::expect_identical(result$person_id, population$person_id)
+  }
+)
