@@ -1,6 +1,6 @@
 > The pluggable function (named by metadata's `constructor` column) that computes `window_start`/`window_end` for a batch of cross-joined population-metadata rows sharing that constructor name.
 
-Resolved by name at runtime: `resolve_window_constructor()` looks for a function called `<constructor>_window` (lower-cased) first inside the anchoR package itself, then in a caller-supplied `constructor_env` (defaulting to the global environment). This is how a user-defined constructor — built with [[make_constructor()]] — can sit alongside the built-in ones without editing the package.
+Resolved by name at runtime: `resolve_window_constructor()` looks for a function called `<constructor>_window` (lower-cased) first inside the anchoR package itself, then in a caller-supplied `constructor_env` (defaulting to the global environment). This is how a user-defined constructor, built with make_constructor() can sit alongside the built-in ones without editing the package.
 
 Built-in constructors:
 - GENERIC:  a fixed offset around one anchor date; the only constructor needed for [[Anchor Column (T0)|single-anchor]] study variables.

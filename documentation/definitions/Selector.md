@@ -10,8 +10,8 @@ Built-in selectors:
 - COUNT_MORE_THAN_1 : `TRUE` only with 2+ matches, else no row
   > Returns `value = "TRUE"` only when 2 or more [[Concepts|concept]] records matched a [[Window]]; a person with 0 or exactly 1 match gets no row at all.
 - RANGE_COUNT: count of matches with a numeric value inside `[range_min, range_max]`
-  > Returns the count of matching [[Concepts|concept]] records whose numeric `value` falls inside `[range_min, range_max]` — the count is the output `value`, not the underlying measurement.
+  > Returns the count of matching [[Concepts|concept]] records whose numeric `value` falls inside `[range_min, range_max]`, the count is the output `value`, not the underlying measurement.
 - ALL: every matching record, one output row each.
-  > Returns every matching [[Concepts|concept]] record in a [[Window]], one output row per record — the only selector that can produce more than one row per `person_id x T0 x variable_id x window_name`.
+  > Returns every matching [[Concepts|concept]] record in a [[Window]], one output row per record, the only selector that can produce more than one row per `person_id x T0 x variable_id x window_name`.
 
 A window with zero matching concept records produces no row for any selector.

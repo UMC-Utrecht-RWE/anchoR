@@ -1,5 +1,5 @@
 > [[Episode-Based Window Engine|Engine]] configured with `event_select = "PRIOR"`, `end_boundary = "event_END"`: one window per episode that ended before the anchor date.
 
-Selects *every* episode with `event_end < anchor` — not just the most recent one — so a person with several prior pregnancies gets one candidate [[Window]] per prior pregnancy, and the [[Selector]] then picks across all of them (e.g. `LATEST` returns the latest matching record from *any* of those windows).
+Selects *every* episode with `event_end < anchor`,  not just the most recent one, so a person with several prior pregnancies gets one candidate [[Window]] per prior pregnancy, and the [[Selector]] then picks across all of them (e.g. `LATEST` returns the latest matching record from *any* of those windows).
 
-Window: `[episode_start + start_offset, episode_end + end_offset]`, optionally capped by [[End Cap Offset|`end_cap_offset`]] (`window_end = pmin(episode_end + end_offset, episode_start + end_cap_offset)`). The capped variant is how a study variable like "records during the first N days of any prior pregnancy" is expressed — same constructor, different offset metadata, not new code.
+Window: `[episode_start + start_offset, episode_end + end_offset]`, optionally capped by [[End Cap Offset|`end_cap_offset`]] (`window_end = pmin(episode_end + end_offset, episode_start + end_cap_offset)`). The capped variant is how a study variable like "records during the first N days of any prior pregnancy" is expressed, same constructor, different offset metadata, not new code.
