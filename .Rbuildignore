@@ -4,3 +4,5 @@
 ^CITATION\.cff$
 ^\.zenodo\.json$
 ^codemeta\.json$
+^documentation$
+^trial_run\.R$
