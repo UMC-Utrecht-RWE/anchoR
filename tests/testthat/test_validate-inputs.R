@@ -1,8 +1,10 @@
 testthat::test_that("validate_anchor_inputs standardizes metadata names", {
+  # minimal_metadata() already uses the start_look_back/end_look_back
+  # aliases, so this exercises the renaming to start_offset/end_offset too.
   validated <- validate_anchor_inputs(
-    population = example_population(),
-    metadata = example_metadata(),
-    concepts = example_concepts()
+    population = minimal_population(),
+    metadata = minimal_metadata(),
+    concepts = minimal_concepts()
   )
 
   expect_true(all(
@@ -19,20 +21,22 @@ testthat::test_that("validate_anchor_inputs standardizes metadata names", {
 
   testthat::expect_equal(validated$metadata$anchor_start_col, rep("T0", 3L))
   testthat::expect_equal(validated$metadata$anchor_end_col, rep("T0", 3L))
-  testthat::expect_equal(validated$metadata$range_min[3], 1)
-  testthat::expect_equal(validated$metadata$range_max[3], 5)
+  # minimal_metadata() does not set range_min/range_max, so they default to
+  # NA even for its RANGE_COUNT row (lab_range).
+  testthat::expect_true(is.na(validated$metadata$range_min[3]))
+  testthat::expect_true(is.na(validated$metadata$range_max[3]))
 })
 
 testthat::test_that(
   "validate_anchor_inputs accepts character anchor dates in YYYY-mm-dd format",
   {
-    population <- example_population()
+    population <- minimal_population()[1:2]
     population[, T0 := as.character(T0)]
 
     validated <- validate_anchor_inputs(
       population = population,
-      metadata = example_metadata(),
-      concepts = example_concepts()
+      metadata = minimal_metadata(),
+      concepts = minimal_concepts()
     )
 
     testthat::expect_s3_class(validated$population$T0, "Date")
@@ -46,14 +50,14 @@ testthat::test_that(
 testthat::test_that(
   "validate_anchor_inputs fails on population anchor dates outside YYYY-mm-dd",
   {
-    population <- example_population()
+    population <- minimal_population()[1:2]
     population[, T0 := c("01-01-2024", "2024-01-15")]
 
     testthat::expect_error(
       validate_anchor_inputs(
         population = population,
-        metadata = example_metadata(),
-        concepts = example_concepts()
+        metadata = minimal_metadata(),
+        concepts = minimal_concepts()
       ),
       "must use the date format YYYY-mm-dd"
     )
@@ -63,14 +67,14 @@ testthat::test_that(
 testthat::test_that(
   "validate_anchor_inputs fails on invalid population anchor dates",
   {
-    population <- example_population()
+    population <- minimal_population()[1:2]
     population[, T0 := c("2024-02-30", "2024-01-15")]
 
     testthat::expect_error(
       validate_anchor_inputs(
         population = population,
-        metadata = example_metadata(),
-        concepts = example_concepts()
+        metadata = minimal_metadata(),
+        concepts = minimal_concepts()
       ),
       "contains invalid dates; use the format YYYY-mm-dd"
     )
@@ -91,17 +95,17 @@ testthat::test_that("validate_anchor_inputs fails on missing anchor columns", {
   )
 
   expect_error(
-    validate_anchor_inputs(example_population(), metadata, example_concepts()),
+    validate_anchor_inputs(minimal_population(), metadata, minimal_concepts()),
     "missing anchor columns"
   )
 })
 
 testthat::test_that("validate_anchor_inputs fails on unsupported selectors", {
-  metadata <- example_metadata()
+  metadata <- minimal_metadata()
   metadata[, selector := "LATEST_PRIOR_ANCHOREDPREG"]
 
   testthat::expect_error(
-    validate_anchor_inputs(example_population(), metadata, example_concepts()),
+    validate_anchor_inputs(minimal_population(), metadata, minimal_concepts()),
     "Unsupported selector"
   )
 })
@@ -178,7 +182,15 @@ testthat::test_that(
 )
 
 testthat::test_that("returns input when anchors exist", {
-  population <- example_population()
+  # This test is purely about column presence, not real anchoring data, so
+  # it builds its own population with the extra anchor columns it needs
+  # rather than relying on minimal_population(), which only has T0.
+  population <- data.table::data.table(
+    person_id = "1",
+    T0 = as.Date("2024-01-01"),
+    candidate_start = as.Date("2023-01-01"),
+    candidate_end = as.Date("2023-06-01")
+  )
   metadata <- data.table::data.table(
     anchor_start_col = c("T0", "candidate_start"),
     anchor_end_col = c("candidate_end", "T0")
@@ -189,11 +201,11 @@ testthat::test_that("returns input when anchors exist", {
   testthat::expect_identical(result, population)
 })
 
-testthat::test_that("returns input when anchors exist", {
-  population <- example_population()
+testthat::test_that("errors when referenced anchor columns are missing", {
+  population <- minimal_population()
   metadata <- data.table::data.table(
     anchor_start_col = c("T0", "missing_start"),
-    anchor_end_col = c("candidate_end", "missing_end")
+    anchor_end_col = c("T0", "missing_end")
   )
 
   testthat::expect_error(

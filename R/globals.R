@@ -38,7 +38,11 @@ if (getRversion() >= "2.15.1") {
       "start_offset",
       "window_valid",
       "window_name",
-      "..result_key_cols"
+      "..result_key_cols",
+      "event_start",
+      "event_end",
+      "event_col",
+      "end_cap_offset"
     )
   )
 }

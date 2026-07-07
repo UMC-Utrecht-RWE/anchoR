@@ -160,8 +160,6 @@ run_selector_query <- function(con, selector, anchor_hive_path) {
 }
 
 run_selector_queries <- function(con, selectors, anchor_hive_path) {
-  result_list <- vector("list", length(selectors))
-
   if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
     msg <- "`anchor_hive_path` must be a valid path!"
     logger::log_error(msg)

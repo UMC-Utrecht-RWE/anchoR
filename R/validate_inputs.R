@@ -190,7 +190,9 @@ validate_anchor_inputs <- function(
       "anchor_start_col",
       "anchor_end_col",
       "range_min",
-      "range_max"
+      "range_max",
+      "event_col",
+      "end_cap_offset"
     ),
     arg = "metadata"
   )
@@ -205,7 +207,9 @@ validate_anchor_inputs <- function(
     "anchor_start_col",
     "anchor_end_col",
     "range_min",
-    "range_max"
+    "range_max",
+    "event_col",
+    "end_cap_offset"
   )]
 
   population_anchor_columns(population_dt, metadata_dt)

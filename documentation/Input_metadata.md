@@ -1,4 +1,4 @@
-# METADATA
+# [[Metadata|METADATA]]
 
 | Table name                | study_variables / windows_metadata                                                                                                                                                         |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -10,44 +10,31 @@
 
 # CODEBOOK
 
-The current metadata object used in `trial_run.R` contains the following
-columns.
+Mandatory columns are the following:
 
-| column              | format    | description                                                                                                                                                                                                                     |
-| ------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `variable_id`       | chr       | Name of the study variable. This becomes the output variable identifier. Repeat `variable_id` across rows to define multiple windows for the same variable.                                                                     |
-| `concept_id`        | chr       | Concept identifier queried in the concepts source. May be missing for variables that are handled upstream or are not directly anchorable from the concepts table.                                                               |
-| `data_type`         | chr       | Intended output type, for example `INT`, `BOOL`, `CHAR`, `FACTOR`. Useful for downstream interpretation; not currently enforced by core anchoring logic.                                                                        |
-| `start_offset`      | num       | Start of the anchoring window relative to the anchor date. In the current source metadata these values may be fractional (for example `-54750.5`); `anchoR` currently coerces offsets with `as.integer()` during normalization. |
-| `end_offset`        | int / num | End of the anchoring window relative to the anchor date.                                                                                                                                                                        |
-| `window_name`       | chr       | Label of the window, for example `lookback`, `risk`, `induction`, `control`.                                                                                                                                                    |
-| `window_definition` | chr       | Name of the window-construction function. In the current metadata this is typically `GENERIC`.                                                                                                                                  |
-| `selector`          | chr       | Rule used to collapse one or more matching concept rows inside the window, for example `LATEST`, `EARLIEST`, `COUNT`, `RANGE_COUNT`.                                                                                            |
+| column            | format    | description                                                                                                                                                                                                                     |
+| ----------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `variable_id`     | chr       | Name of the study variable. This becomes the output variable identifier. Repeat `variable_id` across rows to define multiple windows for the same variable.                                                                     |
+| `concept_id`      | chr       | Concept identifier queried in the concepts source. May be missing for variables that are handled upstream or are not directly anchorable from the concepts table.                                                               |
+| `start_look_back` | num       | Start of the anchoring window relative to the anchor date. In the current source metadata these values may be fractional (for example `-54750.5`); `anchoR` currently coerces offsets with `as.integer()` during normalization. |
+| `end_look_back`   | int / num | End of the anchoring window relative to the anchor date.                                                                                                                                                                        |
+| `window_name`     | chr       | Label of the window, for example `lookback`, `risk`, `induction`, `control`.                                                                                                                                                    |
+| `constructor`     | chr       | Name of the window-construction function. In the current metadata this is typically `GENERIC`.                                                                                                                                  |
+| `selector`        | chr       | Rule used to collapse one or more matching concept rows inside the window, for example `LATEST`, `EARLIEST`, `COUNT`, `RANGE_COUNT`.                                                                                            |
 
 Optional columns supported by the package, even when absent from the current metadata object:
 
-| column             | format | description                                                                                                                    |
-| ------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `anchor_start_col` | chr    | Population column used as the start anchor for the window. If missing,`anchoR` uses the `anchor_col` argument, typically `T0`. |
-| `anchor_end_col`   | chr    | Population column used as the end anchor for the window. If missing,`anchoR` uses the `anchor_col` argument.                   |
-| `range_min`        | num    | Lower bound used by `RANGE_COUNT`.                                                                                             |
-| `range_max`        | num    | Upper bound used by `RANGE_COUNT`.                                                                                             |
+| column            | format | description                                                                                                                    |
+| ----------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `start_look_back` | chr    | Population column used as the start anchor for the window. If missing,`anchoR` uses the `anchor_col` argument, typically `T0`. |
+| `end_look_back`   | chr    | Population column used as the end anchor for the window. If missing,`anchoR` uses the `anchor_col` argument.                   |
+| `range_min`       | num    | Lower bound used by `RANGE_COUNT`.                                                                                             |
+| `range_max`       | num    | Upper bound used by `RANGE_COUNT`.                                                                                             |
 
-# CURRENT USAGE
-
-The core anchoring functions currently rely on these columns:
-
-- `variable_id`
-- `concept_id`
-- `window_start_offset`
-- `window_end_offset`
-- `window_name`
-- `window_definition`
-- `selector`
 
 Everything else in the current metadata object is descriptive or study-management metadata and can remain in the table without affecting the core anchoring step.
 
-If `anchor_start_col` and `anchor_end_col` are not present, the metadata is interpreted relative to the `anchor_col` argument supplied to `anchor()` or `anchor_by_variable()`. In the current workflow that anchor is usually `T0`.
+If `start_look_back` and `end_look_back` are not present, the metadata is interpreted relative to the `anchor_col` argument supplied to `anchor()` or `anchor_by_variable()`. In the current workflow that anchor is usually `T0`.
 
 # EXAMPLE
 

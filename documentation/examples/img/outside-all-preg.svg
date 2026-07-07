@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 236" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <style>
+    .surface { fill: #fcfcfb; stroke: #e1e0d9; }
+    .title { font-size: 16px; font-weight: 700; fill: #0b0b0b; }
+    .formula { font-size: 11.3px; fill: #52514e; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .ep { fill: rgba(42,120,214,0.14); stroke: #2a78d6; stroke-width: 1.5; }
+    .ep-name { font-size: 11.5px; font-weight: 700; fill: #0b0b0b; text-anchor: middle; }
+    .ep-date { font-size: 9.5px; fill: #52514e; text-anchor: middle; }
+    .win { fill: rgba(27,175,122,0.20); stroke: #1baf7a; stroke-width: 1.5; }
+    .win-label { font-size: 10.5px; font-weight: 700; fill: #128a5e; text-anchor: middle; }
+    .win-date { font-size: 9px; fill: #52514e; text-anchor: middle; }
+    .baseline { stroke: #c3c2b7; stroke-width: 1.5; }
+    .anchor-line { stroke: #898781; stroke-width: 1.5; stroke-dasharray: 4 3; }
+    .anchor-label { font-size: 11px; font-weight: 700; fill: #52514e; text-anchor: middle; }
+    .range-line { stroke: #52514e; stroke-width: 1; stroke-dasharray: 2 2; }
+    .range-label { font-size: 10px; fill: #52514e; }
+    .note { font-size: 10px; fill: #898781; text-anchor: middle; }
+  </style>
+
+  <rect class="surface" x="1" y="1" width="898" height="234" rx="12"/>
+
+  <text class="title" x="20" y="26">OUTSIDE_ALL_PREG</text>
+  <text class="formula" x="20" y="44">start_offset=-1172, end_offset=0 &#8594; gaps in [anchor-1172d, anchor] not covered by A, B, or C</text>
+
+  <!-- search range: 2022-12-01 (x=40) -> T0 (x=590), end_offset=0 so range end == anchor -->
+  <line class="range-line" x1="40" y1="50" x2="590" y2="50"/>
+  <line class="range-line" x1="40" y1="45" x2="40" y2="55"/>
+  <text class="range-label" x="40" y="65">range start: 2022-12-01</text>
+  <text class="anchor-label" x="590" y="65" text-anchor="middle">T0 = 2026-02-15 (range end)</text>
+  <line class="anchor-line" x1="590" y1="50" x2="590" y2="178"/>
+
+  <rect class="ep" x="70" y="74" width="120" height="34" rx="6"/>
+  <text class="ep-name" x="130" y="89">A (prior)</text>
+  <text class="ep-date" x="130" y="102">2023-01-01 &#8594; 2023-09-01</text>
+
+  <rect class="ep" x="250" y="74" width="120" height="34" rx="6"/>
+  <text class="ep-name" x="310" y="89">B (prior)</text>
+  <text class="ep-date" x="310" y="102">2024-03-01 &#8594; 2024-11-15</text>
+
+  <rect class="ep" x="470" y="74" width="270" height="34" rx="6"/>
+  <text class="ep-name" x="605" y="89">C (current, contains T0)</text>
+  <text class="ep-date" x="605" y="102">2025-11-01 &#8594; 2026-08-01</text>
+
+  <line class="baseline" x1="30" y1="128" x2="860" y2="128"/>
+  <polygon points="860,128 852,123.5 852,132.5" fill="#c3c2b7"/>
+
+  <!-- gap 1: before A -->
+  <rect class="win" x="40" y="144" width="30" height="26" rx="5"/>
+  <text class="win-label" x="55" y="186">gap 1</text>
+  <text class="win-date" x="55" y="198">2022-12-01</text>
+  <text class="win-date" x="55" y="208">&#8594; 2022-12-31</text>
+
+  <!-- gap 2: between A and B -->
+  <rect class="win" x="190" y="144" width="60" height="26" rx="5"/>
+  <text class="win-label" x="220" y="186">gap 2</text>
+  <text class="win-date" x="220" y="198">2023-09-02</text>
+  <text class="win-date" x="220" y="208">&#8594; 2024-02-29</text>
+
+  <!-- gap 3: between B and C -->
+  <rect class="win" x="370" y="144" width="100" height="26" rx="5"/>
+  <text class="win-label" x="420" y="186">gap 3</text>
+  <text class="win-date" x="420" y="198">2024-11-16</text>
+  <text class="win-date" x="420" y="208">&#8594; 2025-10-31</text>
+
+  <text class="note" x="700" y="163">no trailing gap &#8212;</text>
+  <text class="note" x="700" y="175">T0 sits inside C</text>
+</svg>
