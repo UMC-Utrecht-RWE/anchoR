@@ -1,13 +1,13 @@
+
 # Using Episode-Based (Pregnancy) Windows
 
 This is a usage guide for the feature described in [pregnancy_examples.md](pregnancy_examples.md):
 anchoring study variables to a *recurring* event (pregnancy today; anything with repeatable start/end episodes tomorrow) instead of a single fixed anchor date. It shows the metadata shape actually implemented in `R/pregnancy_window.R`, which is a deliberate simplification of the free-text `other_arguments` sketched in `pregnancy_examples.md`, a small, fixed set of metadata columns rather than expression strings.
 
 ## The idea
-
 Every constructor in this family answers the same two questions about a person's episodes (their pregnancies):
 
-1. **Which episode(s) matter relative to the anchor date (`T0`)?**
+1. **Which episode(s) matter relative to the anchor date ([[Anchor Column (T0)|`T0`]])?**
    - `PRIOR`: every episode that ended before `T0`
    - `CURRENT`: the one episode `T0` falls inside, if any
    - `OUTSIDE_ALL`: the gaps between all episodes, not any specific one

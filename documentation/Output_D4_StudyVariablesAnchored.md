@@ -10,7 +10,7 @@
 
 # LONG OUTPUT
 
-The long-format public result is returned by:
+The [[Long Output|long-format]] public result is returned by:
 
 ```r
 get_anchor_result(
@@ -31,7 +31,7 @@ Codebook:
 | `date`        | Date   | Anchored event date returned by the selector.                                                          |
 | `value`       | chr    | Anchored value returned by the selector.                                                               |
 
-Current behavior:
+Current behaviour:
 
 - The long result is sparse.
 - Rows with no matching concept record in the requested window are omitted.
@@ -40,7 +40,7 @@ Current behavior:
 
 # WIDE OUTPUT
 
-Wide output is returned by:
+[[Wide Output]] is returned by:
 
 ```r
 get_anchor_result(
