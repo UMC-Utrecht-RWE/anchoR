@@ -1,6 +1,6 @@
 # Using anchoR for Standard (Single-Anchor) Study Variables
 
-This is the usage guide for anchoR's core workflow: a study variable anchored to one fixed date per person (usually called `T0`), with a window defined as a fixed offset around it. If you need a window that depends on a *recurring* event instead (e.g. pregnancy, or any condition that can start and stop multiple times), see [pregnancy_windows_usage.md](pregnancy_windows_usage.md), everything on this page is the `GENERIC` special case of that same machinery.
+This is the usage guide for anchoR's core workflow: a study variable anchored to one fixed date per person (usually called `T0`), with a window defined as a fixed offset around it. If you need a window that depends on a *recurring* event instead (e.g. pregnancy, or any condition that can start and stop multiple times), see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows), everything on this page is the `GENERIC` special case of that same machinery.
 
 ## The three inputs
 
@@ -12,7 +12,7 @@ This is the usage guide for anchoR's core workflow: a study variable anchored to
 
 `anchor()` cross-joins population with metadata, builds a window per person-variable pair, filters `concepts` to whichever records fall in that window, and collapses the matches with the requested selector.
 
-## Step 1: population
+## Step 1: [[Population]]
 
 ```r
 library(data.table)
@@ -25,7 +25,7 @@ population <- data.table(
 
 Only `person_id` and the anchor column (`T0` by default) are required. Extra columns are fine and are simply ignored by the anchoring step itself.
 
-## Step 2: metadata
+## Step 2: [[Metadata]]
 
 Each row says: for this `variable_id`, look for `concept_id` in a window built from `start_offset`/`end_offset` days around the anchor, and collapse whatever matches with `selector`.
 
@@ -42,7 +42,7 @@ metadata <- data.table(
 
 `start_look_back`/`end_look_back` are accepted aliases for `start_offset`/`end_offset` (either name works; `anchoR` renames whichever one you supply). `constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow.
 
-## Step 3: concepts
+## Step 3: Concepts
 
 ```r
 concepts <- data.table(
@@ -53,7 +53,7 @@ concepts <- data.table(
 )
 ```
 
-## Step 4: anchor and read the result
+## Step 4: Anchor and read the result
 
 ```r
 hive_path <- tempfile(pattern = "anchor-hive-")
