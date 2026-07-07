@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 250" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <style>
+    .surface { fill: #fcfcfb; stroke: #e1e0d9; }
+    .title { font-size: 16px; font-weight: 700; fill: #0b0b0b; }
+    .formula { font-size: 11.3px; fill: #52514e; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .ep { fill: rgba(42,120,214,0.14); stroke: #2a78d6; stroke-width: 1.5; }
+    .ep-dim { fill: rgba(42,120,214,0.07); stroke: #2a78d6; stroke-opacity: 0.4; stroke-width: 1.5; }
+    .ep-name { font-size: 11.5px; font-weight: 700; fill: #0b0b0b; text-anchor: middle; }
+    .ep-name-dim { font-size: 11.5px; font-weight: 700; fill: #898781; text-anchor: middle; }
+    .ep-date { font-size: 9.5px; fill: #52514e; text-anchor: middle; }
+    .ep-date-dim { font-size: 9.5px; fill: #898781; text-anchor: middle; }
+    .win { fill: rgba(27,175,122,0.20); stroke: #1baf7a; stroke-width: 1.5; }
+    .win-label { font-size: 11px; font-weight: 700; fill: #128a5e; text-anchor: middle; }
+    .win-date { font-size: 10px; fill: #52514e; text-anchor: middle; }
+    .caption { font-size: 10.5px; fill: #52514e; text-anchor: middle; }
+    .legend { font-size: 10px; fill: #898781; text-anchor: middle; }
+    .baseline { stroke: #c3c2b7; stroke-width: 1.5; }
+    .anchor-line { stroke: #898781; stroke-width: 1.5; stroke-dasharray: 4 3; }
+    .anchor-label { font-size: 11px; font-weight: 700; fill: #52514e; text-anchor: middle; }
+    .cap-line { stroke: #e34948; stroke-width: 1.5; }
+  </style>
+
+  <rect class="surface" x="1" y="1" width="898" height="248" rx="12"/>
+
+  <text class="title" x="20" y="26">IN_PRIOR_PREG</text>
+  <text class="formula" x="20" y="44">start_offset=0, end_offset=30, end_cap_offset=90 &#8594; window=[episode_start, min(episode_end+30, episode_start+90)]</text>
+
+  <text class="anchor-label" x="590" y="60" text-anchor="middle">T0 = 2026-02-15</text>
+  <line class="anchor-line" x1="590" y1="52" x2="590" y2="176"/>
+
+  <!-- Episode A (prior, involved) -->
+  <rect class="ep" x="70" y="72" width="120" height="34" rx="6"/>
+  <text class="ep-name" x="130" y="87">A (prior)</text>
+  <text class="ep-date" x="130" y="100">2023-01-01 &#8594; 2023-09-01</text>
+
+  <!-- Episode B (prior, involved) -->
+  <rect class="ep" x="250" y="72" width="120" height="34" rx="6"/>
+  <text class="ep-name" x="310" y="87">B (prior)</text>
+  <text class="ep-date" x="310" y="100">2024-03-01 &#8594; 2024-11-15</text>
+
+  <!-- Episode C (current, not involved -> dimmed) -->
+  <rect class="ep-dim" x="470" y="72" width="270" height="34" rx="6"/>
+  <text class="ep-name-dim" x="605" y="87">C (current, not used here)</text>
+  <text class="ep-date-dim" x="605" y="100">2025-11-01 &#8594; 2026-08-01</text>
+
+  <!-- baseline -->
+  <line class="baseline" x1="30" y1="126" x2="860" y2="126"/>
+  <polygon points="860,126 852,121.5 852,130.5" fill="#c3c2b7"/>
+
+  <!-- window A: 2023-01-01 -> 2023-04-01 (capped at start+90d) -->
+  <rect class="win" x="70" y="142" width="44" height="26" rx="5"/>
+  <line class="cap-line" x1="114" y1="136" x2="114" y2="174"/>
+  <text class="win-label" x="92" y="159">A</text>
+  <text class="win-date" x="92" y="186">2023-01-01 &#8594; 2023-04-01</text>
+
+  <!-- window B: 2024-03-01 -> 2024-05-30 (capped at start+90d) -->
+  <rect class="win" x="250" y="142" width="42" height="26" rx="5"/>
+  <line class="cap-line" x1="292" y1="136" x2="292" y2="174"/>
+  <text class="win-label" x="271" y="159">B</text>
+  <text class="win-date" x="271" y="186">2024-03-01 &#8594; 2024-05-30</text>
+
+  <text class="caption" x="450" y="206">Both windows hit the 90-day cap first (uncapped ends would be 2023-10-01 and 2024-12-15).</text>
+  <text class="legend" x="450" y="226">red tick = end_cap_offset boundary (episode_start + 90d)</text>
+</svg>
