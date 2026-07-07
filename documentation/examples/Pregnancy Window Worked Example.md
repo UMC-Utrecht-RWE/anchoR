@@ -35,7 +35,7 @@ row <- function(start_offset, end_offset, end_cap_offset = NA_real_) {
 }
 ```
 
-## [[Constructor - IN_PRIOR_PREG|IN_PRIOR_PREG]]
+## [[IN_PRIOR_PREG|IN_PRIOR_PREG]]
 
 `start_offset = 0, end_offset = 30, end_cap_offset = 90`  both A and B ended before `T0`, so both produce a window, each capped to the episode's own first 90 days:
 
@@ -51,7 +51,7 @@ event_window_engine(
 | 2024-03-01   | 2024-05-30 | capped: uncapped would be 2024-12-15 |
 ![[IN_PRIOR_PREG worked example|1000](img/in-prior-preg.svg)
 
-## [[Constructor - SINCE_START_CURRENT_PREG|SINCE_START_CURRENT_PREG]]
+## [[SINCE_START_CURRENT_PREG|SINCE_START_CURRENT_PREG]]
 
 `start_offset = 0, end_offset = 0`  episode C contains `T0`; the window stops exactly at the anchor:
 
@@ -67,7 +67,7 @@ event_window_engine(
 
 ![SINCE_START_CURRENT_PREG worked example|1000](img/since-start-current-preg.svg)
 
-## [[Constructor - ANYTIME_CURRENT_PREG|ANYTIME_CURRENT_PREG]]
+## [[ANYTIME_CURRENT_PREG|ANYTIME_CURRENT_PREG]]
 
 `start_offset = 0, end_offset = 14`  same episode C, but bounded by its own end plus a 14-day grace period:
 
@@ -83,7 +83,7 @@ event_window_engine(
 
 ![ANYTIME_CURRENT_PREG worked example|1000](img/anytime-current-preg.svg)
 
-## [[Constructor - OUTSIDE_ALL_PREG|OUTSIDE_ALL_PREG]]
+## [[OUTSIDE_ALL_PREG|OUTSIDE_ALL_PREG]]
 
 `start_offset = -1172, end_offset = 0`  search range `[2022-12-01, 2026-02-15]`. Three gaps come back, fenced by A, B, and C; none touches `T0` since it sits inside the still-ongoing episode C:
 

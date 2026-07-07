@@ -1,4 +1,4 @@
-> Optional metadata column `end_cap_offset`, used only by [[Constructor - IN_PRIOR_PREG]]: caps a prior-episode window's end at `episode_start + end_cap_offset`, if that's earlier than the otherwise-computed `episode_end + end_offset`.
+> Optional metadata column `end_cap_offset`, used only by [[IN_PRIOR_PREG]]: caps a prior-episode window's end at `episode_start + end_cap_offset`, if that's earlier than the otherwise-computed `episode_end + end_offset`.
 
 Implemented as `window_end <- pmin(window_end, episode_start + end_cap_offset)`. 
 

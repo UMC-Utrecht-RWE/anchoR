@@ -42,7 +42,7 @@ metadata <- data.table(
 
 `start_look_back`/`end_look_back` are accepted aliases for `start_offset`/`end_offset` (either name works; `anchoR` renames whichever one you supply). `constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow.
 
-## Step 3: Concepts
+## Step 3: [[Concepts]]
 
 ```r
 concepts <- data.table(
