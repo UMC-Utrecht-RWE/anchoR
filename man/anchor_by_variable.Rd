@@ -2,14 +2,15 @@
 % Please edit documentation in R/anchor.R
 \name{anchor_by_variable}
 \alias{anchor_by_variable}
-\title{Anchor study variables one variable_id at a the time}
+\title{Anchor study variables in chunks of variable_ids}
 \usage{
 anchor_by_variable(
   population,
   metadata,
   concepts,
   anchor_col = "T0",
-  anchor_hive_path = NULL
+  anchor_hive_path = NULL,
+  chunk_size = 20L
 )
 }
 \arguments{
@@ -31,13 +32,29 @@ Defaults to \code{"T0"}.}
 \item{anchor_hive_path}{Character. Path to an existing (or creatable)
 directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
+
+\item{chunk_size}{Number of \code{variable_id} values to process per pass.
+Larger chunks mean fewer (and cheaper) \code{concepts} scans, but a
+larger \code{population_windows} working table per pass and a bigger
+unit of "all swapped or none swapped" if a chunk errors partway through.
+Set to \code{1} to process strictly one variable at a time.}
 }
 \value{
 Invisibly returns the processed \code{variable_id} values.
 }
 \description{
-Runs \code{\link[=anchor]{anchor()}} separately for each unique \code{variable_id} in
-\code{metadata}. Each variable is first written to a temporary parquet hive
-and then swapped into the target hive partition, so rerunning one variable
-replaces only that variable's prior results.
+Runs the anchoring pipeline over \code{metadata} in chunks of
+\code{chunk_size} \code{variable_id} values at a time (default 20) instead
+of computing every variable in one pass like \code{\link[=anchor]{anchor()}}. Each chunk is
+first written to a temporary parquet hive and then swapped into the target
+hive one \code{variable_id} partition at a time, so rerunning a subset of
+variables replaces only their partitions and leaves the rest of the hive
+untouched. Batching several variables per chunk lets one selector query
+(and its join against \code{concepts}) cover all of them at once, which is
+far cheaper than one query per variable when \code{concepts} is a large
+parquet or DuckDB source. Variables are ordered by selector before being
+sliced into chunks, so each chunk is as selector-homogeneous as
+\code{chunk_size} allows (see \code{\link[=anchor_by_selector]{anchor_by_selector()}} for the case where you
+want every same-selector variable processed in one uncapped query instead
+of bounding the blast radius with \code{chunk_size}).
 }

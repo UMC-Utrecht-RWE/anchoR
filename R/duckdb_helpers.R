@@ -11,8 +11,37 @@ parquet_paths_sql <- function(con, concepts) {
   paste0("[", paste(quoted_paths, collapse = ", "), "]")
 }
 
-load_concepts_table <- function(con, concepts) {
+concept_id_filter_sql <- function(con, concept_ids) {
+  # Quoted once here so both the duckdb- and parquet-backed view definitions
+  # can reuse the same `WHERE concept_id IN (...)` clause.
+  quoted_ids <- vapply(
+    concept_ids,
+    function(id) as.character(DBI::dbQuoteString(con, id)),
+    character(1)
+  )
+
+  sprintf("WHERE concept_id IN (%s)", paste(quoted_ids, collapse = ", "))
+}
+
+#' Load/register the concepts source for selector queries.
+#'
+#' @param con An open DBI connection.
+#' @param concepts A concept table, DuckDB path, or parquet source (see
+#'   [anchor()]).
+#' @param concept_ids Optional character vector. When supplied, `concepts` is
+#'   restricted to these `concept_id` values -- the selector SQL only ever
+#'   joins on `concept_id` values that come from `metadata`, so anything else
+#'   in `concepts` can never match and is safe (and cheaper) to exclude
+#'   upfront rather than relying on the query planner to prune it later.
+#' @keywords internal
+#' @noRd
+load_concepts_table <- function(con, concepts, concept_ids = NULL) {
   concepts_type <- concepts_input_type(concepts)
+  filter_sql <- if (is.null(concept_ids)) {
+    ""
+  } else {
+    concept_id_filter_sql(con, concept_ids)
+  }
 
   if (concepts_type == "duckdb") {
     # A DuckDB source can be queried in place, which avoids copying a large
@@ -34,12 +63,16 @@ load_concepts_table <- function(con, concepts) {
         concept_id,
         CAST(date AS DATE) AS date,
         value",
-        "FROM concepts_db.concept_table"
+        "FROM concepts_db.concept_table",
+        filter_sql
       )
     )
   } else if (concepts_type == "parquet") {
     # Parquet is also kept as a view so the package can query raw files
-    # directly instead of first materializing them into R memory.
+    # directly instead of first materializing them into R memory. The
+    # `WHERE` filter (when supplied) lets DuckDB's parquet reader prune whole
+    # files/row-groups that can't contain a match, e.g. via hive partition
+    # pruning if `concepts` happens to be partitioned by `concept_id`.
     DBI::dbExecute(con, "DROP VIEW IF EXISTS concepts;")
     DBI::dbExecute(
       con,
@@ -52,12 +85,19 @@ load_concepts_table <- function(con, concepts) {
         value",
         "FROM read_parquet(",
         parquet_paths_sql(con, concepts),
-        ", hive_partitioning = true, union_by_name = true)"
+        ", hive_partitioning = true, union_by_name = true)",
+        filter_sql
       )
     )
   } else {
     # Only true in-memory tables are copied into DuckDB, because they already
-    # live in R and cannot be queried lazily from the source.
+    # live in R and cannot be queried lazily from the source. Filtering here,
+    # before the copy, keeps irrelevant rows from ever being materialized
+    # into DuckDB at all.
+    if (!is.null(concept_ids)) {
+      concepts <- concepts[concepts$concept_id %in% concept_ids, ]
+    }
+
     DBI::dbWriteTable(
       con,
       name = "concepts",
