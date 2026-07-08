@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `anchor_by_selector()`: runs `anchor()` once per unique `selector` value in
+  `metadata`, so a single query covers every variable sharing that selector
+  regardless of `chunk_size`. Cheaper in `concepts` scans than
+  `anchor_by_variable()`, but (like `anchor()`) appends rather than swapping
+  individual `variable_id` partitions, so it's meant for a fresh, one-shot
+  `anchor_hive_path` rather than safe per-variable reruns.
+
 ### Changed
 
 - `anchor_by_variable()` now opens one DuckDB connection and loads `concepts`
@@ -23,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Each chunk still stages to a temporary hive and swaps in one
   `variable_id` partition at a time, so partial reruns remain isolated to the
   requested variables. Pass `chunk_size = 1` for the previous behavior.
+  Variables are also now ordered by selector before being sliced into
+  chunks, so a chunk is as selector-homogeneous as `chunk_size` allows
+  instead of following raw metadata row order.
 - `inst/sql/latest.sql`/`earliest.sql` now pick the record with
   `arg_max`/`arg_min` aggregation instead of `ROW_NUMBER() OVER (... ORDER BY
   ...)`, avoiding an unnecessary sort of every candidate match per

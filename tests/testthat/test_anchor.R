@@ -444,3 +444,78 @@ testthat::test_that(
     testthat::expect_equal(anchored$T0, as.Date("2024-01-01"))
   }
 )
+
+testthat::test_that(
+  "order_variable_ids_by_selector groups same-selector variables together",
+  {
+    metadata <- data.table::data.table(
+      variable_id = c("a", "b", "c", "d"),
+      selector = c("COUNT", "LATEST", "COUNT", "LATEST")
+    )
+
+    ordered <- order_variable_ids_by_selector(metadata)
+
+    # "COUNT" sorts before "LATEST"; within each selector, original relative
+    # order (a before c, b before d) is preserved by the stable sort.
+    testthat::expect_equal(ordered, c("a", "c", "b", "d"))
+  }
+)
+
+testthat::test_that(
+  "order_variable_ids_by_selector uses a variable_id's first-listed selector",
+  {
+    # variable_id "x" spans two windows with different selectors; its sort
+    # key should come from whichever selector is listed first for it.
+    metadata <- data.table::data.table(
+      variable_id = c("x", "y", "x"),
+      selector = c("LATEST", "COUNT", "EARLIEST")
+    )
+
+    ordered <- order_variable_ids_by_selector(metadata)
+
+    testthat::expect_equal(ordered, c("y", "x"))
+  }
+)
+
+testthat::test_that(
+  "anchor_by_selector batches variables by selector and matches anchor()",
+  {
+    # minimal_metadata() spans three selectors (LATEST, COUNT, RANGE_COUNT),
+    # so this exercises one anchor() call per selector.
+    metadata <- minimal_metadata()
+
+    reference_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(reference_path)
+    on.exit(unlink(reference_path, recursive = TRUE, force = TRUE), add = TRUE)
+    anchor(
+      population = minimal_population(),
+      metadata = metadata,
+      concepts = minimal_concepts(),
+      anchor_hive_path = reference_path
+    )
+
+    by_selector_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(by_selector_path)
+    on.exit(
+      unlink(by_selector_path, recursive = TRUE, force = TRUE), add = TRUE
+    )
+    processed_selectors <- anchor_by_selector(
+      population = minimal_population(),
+      metadata = metadata,
+      concepts = minimal_concepts(),
+      anchor_hive_path = by_selector_path
+    )
+
+    testthat::expect_setequal(
+      processed_selectors, c("LATEST", "COUNT", "RANGE_COUNT")
+    )
+
+    result_cols <- c("person_id", "T0", "variable_id", "value", "date", "n")
+    reference <- read_anchor_hive(reference_path)[, ..result_cols]
+    by_selector <- read_anchor_hive(by_selector_path)[, ..result_cols]
+    data.table::setorder(reference, variable_id, person_id)
+    data.table::setorder(by_selector, variable_id, person_id)
+
+    testthat::expect_equal(by_selector, reference)
+  }
+)

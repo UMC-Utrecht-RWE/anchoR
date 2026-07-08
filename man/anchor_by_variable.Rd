@@ -52,5 +52,9 @@ variables replaces only their partitions and leaves the rest of the hive
 untouched. Batching several variables per chunk lets one selector query
 (and its join against \code{concepts}) cover all of them at once, which is
 far cheaper than one query per variable when \code{concepts} is a large
-parquet or DuckDB source.
+parquet or DuckDB source. Variables are ordered by selector before being
+sliced into chunks, so each chunk is as selector-homogeneous as
+\code{chunk_size} allows (see \code{\link[=anchor_by_selector]{anchor_by_selector()}} for the case where you
+want every same-selector variable in one query, uncapped by
+\code{chunk_size}, and don't need per-variable rerun safety).
 }

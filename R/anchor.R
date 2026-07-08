@@ -142,6 +142,27 @@ move_anchor_partition <- function(
   invisible(target_partition_path)
 }
 
+#' Order variable_ids by Selector for Chunking
+#'
+#' Each `variable_id`'s first-listed `selector` value (in case it spans more
+#' than one across multiple windows) is used as a stable sort key, so
+#' variable_ids sharing a selector end up adjacent. Ties (same selector) keep
+#' their original relative order.
+#'
+#' @param metadata_dt A data.table with `variable_id` and `selector` columns.
+#' @return A character vector of unique `variable_id` values, ordered by
+#'   selector.
+#' @keywords internal
+#' @noRd
+order_variable_ids_by_selector <- function(metadata_dt) {
+  variable_ids <- unique(as.character(metadata_dt$variable_id))
+  first_selector_per_variable <- metadata_dt$selector[
+    match(variable_ids, metadata_dt$variable_id)
+  ]
+
+  variable_ids[order(first_selector_per_variable)]
+}
+
 #' Core Windowing + Selector Execution Given an Open Connection
 #'
 #' Shared by [anchor()] and [anchor_by_variable()] so that opening a DuckDB
@@ -341,7 +362,11 @@ anchor <- function(
 #' untouched. Batching several variables per chunk lets one selector query
 #' (and its join against \code{concepts}) cover all of them at once, which is
 #' far cheaper than one query per variable when \code{concepts} is a large
-#' parquet or DuckDB source.
+#' parquet or DuckDB source. Variables are ordered by selector before being
+#' sliced into chunks, so each chunk is as selector-homogeneous as
+#' \code{chunk_size} allows (see [anchor_by_selector()] for the case where you
+#' want every same-selector variable in one query, uncapped by
+#' \code{chunk_size}, and don't need per-variable rerun safety).
 #'
 #' @inheritParams anchor
 #' @param chunk_size Number of \code{variable_id} values to process per pass.
@@ -374,6 +399,15 @@ anchor_by_variable <- function(
   anchor_hive_path <- ensure_anchor_hive_path(anchor_hive_path)
   metadata_dt <- validated$metadata
   variable_ids <- unique(as.character(metadata_dt$variable_id))
+
+  # Variable_ids are ordered by selector before slicing into chunks (see
+  # `order_variable_ids_by_selector()`) so each chunk is as
+  # selector-homogeneous as `chunk_size` allows -- `run_selector_queries()`
+  # still runs one join per distinct selector *within* a chunk, so grouping
+  # same-selector variables together keeps that count as low as possible
+  # instead of leaving it to metadata row order.
+  ordered_variable_ids <- order_variable_ids_by_selector(metadata_dt)
+
   concepts_type <- if (is.null(validated$concepts)) {
     "NULL"
   } else {
@@ -402,8 +436,8 @@ anchor_by_variable <- function(
   # so the atomicity guarantee is the same as processing one variable at a
   # time -- just at chunk granularity instead of variable granularity.
   variable_id_chunks <- split(
-    variable_ids,
-    ceiling(seq_along(variable_ids) / chunk_size)
+    ordered_variable_ids,
+    ceiling(seq_along(ordered_variable_ids) / chunk_size)
   )
 
   # A single connection and a single load of `concepts` are shared across
@@ -544,4 +578,91 @@ anchor_by_variable <- function(
     )
   )
   invisible(variable_ids)
+}
+
+#' Anchor Study Variables Grouped by Selector
+#'
+#' Runs [anchor()] once per unique \code{selector} value in \code{metadata},
+#' so a single selector query (and its join against \code{concepts}) covers
+#' every variable that uses that selector, however many there are -- no
+#' \code{chunk_size} cap splits a selector's variables across more than one
+#' query the way [anchor_by_variable()] can. This is the cheapest option in
+#' terms of \code{concepts} scans (at most one per distinct selector in
+#' \code{metadata}), but it does not stage-and-swap individual
+#' \code{variable_id} partitions the way [anchor_by_variable()] does -- each
+#' call appends to \code{anchor_hive_path} the same way [anchor()] does (see
+#' its documentation on append behavior). Use this for a fresh, one-shot
+#' \code{anchor_hive_path}; use [anchor_by_variable()] when you need to
+#' safely rerun individual variables into an existing hive.
+#'
+#' @inheritParams anchor
+#'
+#' @return Invisibly returns the processed \code{selector} values.
+#' @export
+anchor_by_selector <- function(
+  population,
+  metadata,
+  concepts,
+  anchor_col = "T0",
+  anchor_hive_path = NULL
+) {
+  validated <- validate_anchor_inputs(
+    population = population,
+    metadata = metadata,
+    concepts = concepts,
+    anchor_col = anchor_col
+  )
+
+  anchor_hive_path <- ensure_anchor_hive_path(anchor_hive_path)
+  metadata_dt <- validated$metadata
+  selectors <- unique(as.character(metadata_dt$selector))
+  logger::log_debug(
+    sprintf(
+      paste(
+        "`anchor_by_selector()` received %d population row(s),",
+        "%d metadata row(s) across %d selector(s)."
+      ),
+      nrow(validated$population),
+      nrow(metadata_dt),
+      length(selectors)
+    )
+  )
+
+  for (current_selector in selectors) {
+    selector_start_time <- Sys.time()
+    selector_metadata <- metadata_dt[selector == current_selector]
+    logger::log_info(
+      sprintf(
+        "Anchoring selector `%s` (%d variable_id(s)).",
+        current_selector,
+        length(unique(selector_metadata$variable_id))
+      )
+    )
+
+    anchor(
+      population = validated$population,
+      metadata = selector_metadata,
+      concepts = validated$concepts,
+      anchor_col = anchor_col,
+      anchor_hive_path = anchor_hive_path
+    )
+
+    logger::log_info(
+      sprintf(
+        "Finished anchoring selector `%s` in %.2f secs.",
+        current_selector,
+        as.numeric(
+          difftime(Sys.time(), selector_start_time, units = "secs")
+        )
+      )
+    )
+  }
+
+  logger::log_debug(
+    sprintf(
+      "Finished anchor_by_selector() for %d selector(s).",
+      length(selectors)
+    )
+  )
+  invisible(selectors)
 }
