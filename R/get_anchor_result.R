@@ -1,3 +1,21 @@
+# Which population columns disagree across rows sharing the same
+# person_id/T0, so get_anchor_result()'s error can name them directly.
+population_conflict_columns <- function(population_dt, duplicate_keys) {
+  conflicting_rows <- population_dt[duplicate_keys, on = .(person_id, T0)]
+  other_cols <- setdiff(names(population_dt), c("person_id", "T0"))
+
+  varying <- conflicting_rows[
+    ,
+    lapply(.SD, data.table::uniqueN),
+    .SDcols = other_cols,
+    by = .(person_id, T0)
+  ]
+  is_varying <- vapply(
+    varying[, ..other_cols], function(x) any(x > 1L), logical(1)
+  )
+  other_cols[is_varying]
+}
+
 #' Retrieve and Reshape Anchored Variable Results
 #'
 #' Reads parquet files from an anchor hive directory via DuckDB, filters to the
@@ -81,10 +99,14 @@ get_anchor_result <- function(
       by = .(person_id, T0)
     ][N > 1L]
     if (nrow(duplicate_population_keys) > 0L) {
+      conflicting_cols <- population_conflict_columns(
+        population_dt, duplicate_population_keys[, .(person_id, T0)]
+      )
       msg <- paste(
         "`population` contains multiple rows for the same `person_id` and `T0`.", # nolint
         "Wide output can only carry through additional population columns",
-        "when those keys are unique."
+        "when those keys are unique. Conflicting column(s):",
+        paste(conflicting_cols, collapse = ", ")
       )
       logger::log_error(msg)
       base::stop(msg, call. = FALSE)

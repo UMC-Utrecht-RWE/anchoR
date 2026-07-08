@@ -55,6 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `get_anchor_result()`'s "`population` contains multiple rows for the same
+  `person_id` and `T0`" error now names the conflicting column(s) (e.g.
+  `match_id`) instead of leaving the caller to hunt for which column made the
+  key non-unique.
 - `anchor()`/`anchor_by_variable()`/`anchor_by_selector()` write their parquet
   output with `OVERWRITE_OR_IGNORE` instead of `APPEND`. Previously,
   `anchor()` (and anything writing directly to `anchor_hive_path`) appended a
