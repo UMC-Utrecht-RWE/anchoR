@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Each chunk still stages to a temporary hive and swaps in one
   `variable_id` partition at a time, so partial reruns remain isolated to the
   requested variables. Pass `chunk_size = 1` for the previous behavior.
-- `inst/sql/latest.sql`/`earliest.sql` now pick the winning record with
+- `inst/sql/latest.sql`/`earliest.sql` now pick the record with
   `arg_max`/`arg_min` aggregation instead of `ROW_NUMBER() OVER (... ORDER BY
   ...)`, avoiding an unnecessary sort of every candidate match per
   person/variable/window. Output (including the same-date tie-break on the
