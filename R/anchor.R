@@ -337,7 +337,11 @@ anchor <- function(
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
   logger::log_trace("Loading concepts into DuckDB execution context.")
-  load_concepts_table(con, validated$concepts)
+  load_concepts_table(
+    con,
+    validated$concepts,
+    concept_ids = unique(as.character(validated$metadata$concept_id))
+  )
 
   result <- anchor_impl(
     con = con,
@@ -451,7 +455,11 @@ anchor_by_variable <- function(
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
   logger::log_trace("Loading concepts into DuckDB execution context.")
-  load_concepts_table(con, validated$concepts)
+  load_concepts_table(
+    con,
+    validated$concepts,
+    concept_ids = unique(as.character(metadata_dt$concept_id))
+  )
 
   for (chunk_index in seq_along(variable_id_chunks)) {
     chunk_variable_ids <- variable_id_chunks[[chunk_index]]

@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Variables are also now ordered by selector before being sliced into
   chunks, so a chunk is as selector-homogeneous as `chunk_size` allows
   instead of following raw metadata row order.
+- `load_concepts_table()` now accepts an optional `concept_ids` filter,
+  applied by `anchor()`/`anchor_by_variable()` as `unique(metadata$concept_id)`
+  for the metadata being processed in that call. For an in-memory `concepts`
+  table this filters before the copy into DuckDB, so irrelevant rows are
+  never materialized; for parquet/DuckDB sources it adds a `WHERE concept_id
+  IN (...)` to the view, giving DuckDB's reader an explicit predicate to
+  prune files/row-groups on (e.g. full hive partition pruning if `concepts`
+  happens to be partitioned by `concept_id`) instead of depending on the
+  query planner's runtime join-filter pushdown to prune it implicitly.
 - `inst/sql/latest.sql`/`earliest.sql` now pick the record with
   `arg_max`/`arg_min` aggregation instead of `ROW_NUMBER() OVER (... ORDER BY
   ...)`, avoiding an unnecessary sort of every candidate match per
