@@ -4,11 +4,11 @@ A single numerical example run through all four [[Episode-Based Window Engine|ep
 
 One person with three episodes and an anchor (`T0`) inside the third:
 
-| Episode | event_start | event_end |
-|---|---|---|
-| A (prior) | 2023-01-01 | 2023-09-01 |
-| B (prior) | 2024-03-01 | 2024-11-15 |
-| C (current) | 2025-11-01 | 2026-08-01 |
+| Episode     | event_start | event_end  |
+| ----------- | ----------- | ---------- |
+| A (prior)   | 2023-01-01  | 2023-09-01 |
+| B (prior)   | 2024-03-01  | 2024-11-15 |
+| C (current) | 2025-11-01  | 2026-08-01 |
 
 `T0 = 2026-02-15` (falls inside episode C).
 
@@ -49,7 +49,8 @@ event_window_engine(
 | ------------ | ---------- | ------------------------------------ |
 | 2023-01-01   | 2023-04-01 | capped: uncapped would be 2023-10-01 |
 | 2024-03-01   | 2024-05-30 | capped: uncapped would be 2024-12-15 |
-![[IN_PRIOR_PREG worked example|1000](img/in-prior-preg.svg)
+
+![IN_PRIOR_PREG worked example|1000](img/in-prior-preg.svg)
 
 ## [[SINCE_START_CURRENT_PREG|SINCE_START_CURRENT_PREG]]
 
@@ -78,8 +79,8 @@ event_window_engine(
 ```
 
 | window_start | window_end |
-|---|---|
-| 2025-11-01 | 2026-08-15 |
+| ------------ | ---------- |
+| 2025-11-01   | 2026-08-15 |
 
 ![ANYTIME_CURRENT_PREG worked example|1000](img/anytime-current-preg.svg)
 
@@ -93,11 +94,10 @@ event_window_engine(
 )[, .(window_start, window_end)]
 ```
 
-| window_start | window_end | gap |
-|---|---|---|
-| 2022-12-01 | 2022-12-31 | before A |
-| 2023-09-02 | 2024-02-29 | between A and B |
-| 2024-11-16 | 2025-10-31 | between B and C |
+| window_start | window_end | gap             |
+| ------------ | ---------- | --------------- |
+| 2022-12-01   | 2022-12-31 | before A        |
+| 2023-09-02   | 2024-02-29 | between A and B |
+| 2024-11-16   | 2025-10-31 | between B and C |
 
 ![OUTSIDE_ALL_PREG worked example|1000](img/outside-all-preg.svg)
-
