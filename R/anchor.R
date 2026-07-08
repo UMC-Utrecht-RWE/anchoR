@@ -142,6 +142,109 @@ move_anchor_partition <- function(
   invisible(target_partition_path)
 }
 
+#' Core Windowing + Selector Execution Given an Open Connection
+#'
+#' Shared by [anchor()] and [anchor_by_variable()] so that opening a DuckDB
+#' connection and loading `concepts` happens once per caller instead of once
+#' per `variable_id`. `anchor_by_variable()` used to call `anchor()` itself
+#' once per variable, which meant re-validating/re-copying `population`,
+#' re-opening DuckDB, and re-scanning (or re-copying) the entire `concepts`
+#' source once per variable; for metadata files with many standard-window
+#' variables that repeated concepts scan dominated runtime. This function
+#' factors out the part that is genuinely per-variable (window definition,
+#' writing `population_windows`, running the selector queries) so callers can
+#' share the expensive setup across many calls.
+#'
+#' @param con An open DBI connection with `concepts` already loaded.
+#' @param population_dt Validated population `data.table` (not yet trimmed to
+#'   window columns).
+#' @param metadata_dt Validated metadata `data.table` for the variable(s) to
+#'   process in this call.
+#' @param anchor_col Column in `population_dt` used as the index date when
+#'   metadata does not specify an anchor column.
+#' @param anchor_hive_path Existing, normalized path to write selector output.
+#' @return Invisibly `NULL` on success, or (only when no window was valid) the
+#'   same empty typed table `anchor()` has always returned in that case.
+#' @keywords internal
+#' @noRd
+anchor_impl <- function(
+  con,
+  population_dt,
+  metadata_dt,
+  anchor_col,
+  anchor_hive_path
+) {
+  # Define windows for all person-variable combinations.
+  # Impossible anchors will be marked and filtered out later.
+  # Only person_id and the anchor columns metadata references are needed past
+  # this point, so trim other population covariates before the cross join
+  # multiplies them across every metadata row.
+  window_population <- population_columns_for_window(
+    population_dt, metadata_dt
+  )
+  window_dt <- define_window(
+    population = window_population,
+    metadata = metadata_dt,
+    anchor_col = anchor_col
+  )
+  logger::log_debug(
+    sprintf(
+      paste(
+        "`define_window()` produced %d row(s); %d valid and %d invalid window."
+      ),
+      nrow(window_dt),
+      sum(window_dt$window_valid),
+      sum(!window_dt$window_valid)
+    )
+  )
+
+  # Remove impossible anchors.
+  valid_windows <- window_dt[window_valid == TRUE]
+  if (nrow(valid_windows) == 0L) {
+    logger::log_info(
+      sprintf(
+        paste(
+          "No valid windows remained after filtering for %d metadata row(s).",
+          "Returning %s output."
+        ),
+        nrow(metadata_dt),
+        "empty"
+      )
+    )
+
+    # When sparse output is requested, an empty typed table is clearer than
+    # returning the full cross join filled with missing values.
+    return(
+      window_dt[0][
+        , `:=`(value = character(), date = as.Date(character()), n = integer())
+      ]
+    )
+  }
+
+  # Only valid windows are written because invalid ones can never match and
+  # would only make the SQL side do unnecessary work.
+  logger::log_debug(
+    sprintf(
+      "Writing %d valid population window row(s) to DuckDB.",
+      nrow(valid_windows)
+    )
+  )
+  write_population_windows(
+    con,
+    valid_windows,
+    anchor_col = anchor_col
+  )
+
+  selector_names <- unique(valid_windows$selector)
+  run_selector_queries(
+    con = con,
+    selectors = selector_names,
+    anchor_hive_path = anchor_hive_path
+  )
+
+  invisible(NULL)
+}
+
 #' Anchor Study Variables to an Index Date
 #'
 #' Applies metadata-driven windowing and selector rules to a concept table,
@@ -198,57 +301,12 @@ anchor <- function(
     )
   )
 
-  # Define windows for all person-variable combinations.
-  # Impossible anchors will be marked and filtered out later.
-  # Only person_id and the anchor columns metadata references are needed past
-  # this point, so trim other population covariates before the cross join
-  # multiplies them across every metadata row.
-  window_population <- population_columns_for_window(
-    validated$population, validated$metadata
-  )
-  window_dt <- define_window(
-    population = window_population,
-    metadata = validated$metadata,
-    anchor_col = anchor_col
-  )
-  logger::log_debug(
-    sprintf(
-      paste(
-        "`define_window()` produced %d row(s); %d valid and %d invalid window."
-      ),
-      nrow(window_dt),
-      sum(window_dt$window_valid),
-      sum(!window_dt$window_valid)
-    )
-  )
-
   anchor_hive_path <- ensure_anchor_hive_path(anchor_hive_path)
   logger::log_trace(
     sprintf(
       "Writing anchored parquet output under `%s`.", anchor_hive_path
     )
   )
-  # Remove impossible anchors.
-  valid_windows <- window_dt[window_valid == TRUE]
-  if (nrow(valid_windows) == 0L) {
-    logger::log_info(
-      sprintf(
-        paste(
-          "No valid windows remained after filtering for %d metadata row(s).",
-          "Returning %s output."
-        ),
-        nrow(validated$metadata)
-      )
-    )
-
-    # When sparse output is requested, an empty typed table is clearer than
-    # returning the full cross join filled with missing values.
-    return(
-      window_dt[0][
-        , `:=`(value = character(), date = as.Date(character()), n = integer())
-      ]
-    )
-  }
 
   # Prepare to work in a SQL enviroment.
   logger::log_debug(
@@ -259,27 +317,17 @@ anchor <- function(
 
   logger::log_trace("Loading concepts into DuckDB execution context.")
   load_concepts_table(con, validated$concepts)
-  # Only valid windows are written because invalid ones can never match and
-  # would only make the SQL side do unnecessary work.
-  logger::log_debug(
-    sprintf(
-      "Writing %d valid population window row(s) to DuckDB.",
-      nrow(valid_windows)
-    )
-  )
-  write_population_windows(
-    con,
-    valid_windows,
-    anchor_col = anchor_col
-  )
 
-  selector_names <- unique(valid_windows$selector)
-  run_selector_queries(
+  result <- anchor_impl(
     con = con,
-    selectors = selector_names,
+    population_dt = validated$population,
+    metadata_dt = validated$metadata,
+    anchor_col = anchor_col,
     anchor_hive_path = anchor_hive_path
   )
+
   logger::log_debug("Finished anchor().")
+  result
 }
 
 #' Anchor study variables one variable_id at a the time
@@ -310,17 +358,36 @@ anchor_by_variable <- function(
   anchor_hive_path <- ensure_anchor_hive_path(anchor_hive_path)
   metadata_dt <- validated$metadata
   variable_ids <- unique(as.character(metadata_dt$variable_id))
+  concepts_type <- if (is.null(validated$concepts)) {
+    "NULL"
+  } else {
+    concepts_input_type(validated$concepts)
+  }
   logger::log_debug(
     sprintf(
       paste(
         "`anchor_by_variable()` received %d population row(s),",
-        "%d metadata row(s), anchor_col `%s`."
+        "%d metadata row(s), anchor_col `%s`, concept source type `%s`."
       ),
       nrow(validated$population),
       nrow(metadata_dt),
-      anchor_col
+      anchor_col,
+      concepts_type
     )
   )
+
+  # A single connection and a single load of `concepts` are shared across
+  # every variable_id below instead of one per variable (see `anchor_impl()`)
+  # -- for parquet or in-memory concepts, that used to mean re-scanning or
+  # re-copying the entire concept table once per variable.
+  logger::log_debug(
+    "Opening in-memory DuckDB connection for selector execution."
+  )
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  logger::log_trace("Loading concepts into DuckDB execution context.")
+  load_concepts_table(con, validated$concepts)
 
   for (current_variable_id in variable_ids) {
     variable_start_time <- Sys.time()
@@ -344,6 +411,7 @@ anchor_by_variable <- function(
       tmpdir = dirname(anchor_hive_path)
     )
     dir.create(staging_hive_path, recursive = TRUE)
+    staging_hive_path <- ensure_anchor_hive_path(staging_hive_path)
     logger::log_trace(
       sprintf(
         "Created staging parquet hive for variable_id `%s`: %s",
@@ -354,10 +422,10 @@ anchor_by_variable <- function(
 
     tryCatch(
       {
-        anchor(
-          population = validated$population,
-          metadata = variable_metadata,
-          concepts = validated$concepts,
+        anchor_impl(
+          con = con,
+          population_dt = validated$population,
+          metadata_dt = variable_metadata,
           anchor_col = anchor_col,
           anchor_hive_path = staging_hive_path
         )
