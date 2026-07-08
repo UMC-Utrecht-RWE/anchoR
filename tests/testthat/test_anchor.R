@@ -161,6 +161,51 @@ testthat::test_that("it refreshes only requested variable partition", {
   )
 })
 
+testthat::test_that(
+  "chunk_size batches variables (multiple selectors) without changing output",
+  {
+    # minimal_metadata() spans three different selectors (LATEST, COUNT,
+    # RANGE_COUNT), so batching all three variables into one chunk exercises
+    # one selector query per selector instead of per variable_id.
+    metadata <- minimal_metadata()
+
+    one_at_a_time_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(one_at_a_time_path)
+    on.exit(
+      unlink(one_at_a_time_path, recursive = TRUE, force = TRUE), add = TRUE
+    )
+    anchor_by_variable(
+      population = minimal_population(),
+      metadata = metadata,
+      concepts = minimal_concepts(),
+      anchor_hive_path = one_at_a_time_path,
+      chunk_size = 1
+    )
+
+    batched_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(batched_path)
+    on.exit(unlink(batched_path, recursive = TRUE, force = TRUE), add = TRUE)
+    anchor_by_variable(
+      population = minimal_population(),
+      metadata = metadata,
+      concepts = minimal_concepts(),
+      anchor_hive_path = batched_path,
+      chunk_size = 20
+    )
+
+    # `anchor_row_id` is a synthetic id scoped to each `anchor_impl()` call
+    # (see `finalize_windows()`), so it is not expected to match across
+    # different chunkings -- only the actual anchored content is.
+    result_cols <- c("person_id", "T0", "variable_id", "value", "date", "n")
+    one_at_a_time <- read_anchor_hive(one_at_a_time_path)[, ..result_cols]
+    batched <- read_anchor_hive(batched_path)[, ..result_cols]
+    data.table::setorder(one_at_a_time, variable_id, person_id)
+    data.table::setorder(batched, variable_id, person_id)
+
+    testthat::expect_equal(batched, one_at_a_time)
+  }
+)
+
 testthat::test_that("reshapes variable-by-variable hive output", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)

@@ -330,14 +330,25 @@ anchor <- function(
   result
 }
 
-#' Anchor study variables one variable_id at a the time
+#' Anchor study variables in chunks of variable_ids
 #'
-#' Runs [anchor()] separately for each unique \code{variable_id} in
-#' \code{metadata}. Each variable is first written to a temporary parquet hive
-#' and then swapped into the target hive partition, so rerunning one variable
-#' replaces only that variable's prior results.
+#' Runs the anchoring pipeline over \code{metadata} in chunks of
+#' \code{chunk_size} \code{variable_id} values at a time (default 20) instead
+#' of computing every variable in one pass like [anchor()]. Each chunk is
+#' first written to a temporary parquet hive and then swapped into the target
+#' hive one \code{variable_id} partition at a time, so rerunning a subset of
+#' variables replaces only their partitions and leaves the rest of the hive
+#' untouched. Batching several variables per chunk lets one selector query
+#' (and its join against \code{concepts}) cover all of them at once, which is
+#' far cheaper than one query per variable when \code{concepts} is a large
+#' parquet or DuckDB source.
 #'
 #' @inheritParams anchor
+#' @param chunk_size Number of \code{variable_id} values to process per pass.
+#'   Larger chunks mean fewer (and cheaper) \code{concepts} scans, but a
+#'   larger \code{population_windows} working table per pass and a bigger
+#'   unit of "all swapped or none swapped" if a chunk errors partway through.
+#'   Set to \code{1} to process strictly one variable at a time.
 #'
 #' @return Invisibly returns the processed \code{variable_id} values.
 #' @export
@@ -346,8 +357,13 @@ anchor_by_variable <- function(
   metadata,
   concepts,
   anchor_col = "T0",
-  anchor_hive_path = NULL
+  anchor_hive_path = NULL,
+  chunk_size = 20L
 ) {
+  if (!is.numeric(chunk_size) || length(chunk_size) != 1L || chunk_size < 1) {
+    stop_log("`chunk_size` must be a single positive number.")
+  }
+
   validated <- validate_anchor_inputs(
     population = population,
     metadata = metadata,
@@ -376,9 +392,23 @@ anchor_by_variable <- function(
     )
   )
 
+  # Variables are processed in chunks rather than strictly one at a time so a
+  # single selector query (and its concepts join) can cover several variables
+  # at once -- DuckDB's `COPY ... PARTITION_BY (variable_id)` already fans a
+  # multi-variable result out into separate partitions on its own, so
+  # batching only changes how many variables feed one query, not how the
+  # output is laid out. Each chunk still stages to its own temporary hive and
+  # only swaps a variable's target partition after the whole chunk succeeded,
+  # so the atomicity guarantee is the same as processing one variable at a
+  # time -- just at chunk granularity instead of variable granularity.
+  variable_id_chunks <- split(
+    variable_ids,
+    ceiling(seq_along(variable_ids) / chunk_size)
+  )
+
   # A single connection and a single load of `concepts` are shared across
-  # every variable_id below instead of one per variable (see `anchor_impl()`)
-  # -- for parquet or in-memory concepts, that used to mean re-scanning or
+  # every chunk below instead of one per variable (see `anchor_impl()`) --
+  # for parquet or in-memory concepts, that used to mean re-scanning or
   # re-copying the entire concept table once per variable.
   logger::log_debug(
     "Opening in-memory DuckDB connection for selector execution."
@@ -389,20 +419,27 @@ anchor_by_variable <- function(
   logger::log_trace("Loading concepts into DuckDB execution context.")
   load_concepts_table(con, validated$concepts)
 
-  for (current_variable_id in variable_ids) {
-    variable_start_time <- Sys.time()
-    variable_metadata <- metadata_dt[variable_id == current_variable_id]
+  for (chunk_index in seq_along(variable_id_chunks)) {
+    chunk_variable_ids <- variable_id_chunks[[chunk_index]]
+    chunk_start_time <- Sys.time()
+    chunk_metadata <- metadata_dt[variable_id %in% chunk_variable_ids]
+
     logger::log_info(
-      sprintf("Anchoring variable_id: %s", current_variable_id)
+      sprintf(
+        "Anchoring chunk %d/%d (%d variable_id(s)): %s",
+        chunk_index,
+        length(variable_id_chunks),
+        length(chunk_variable_ids),
+        paste(chunk_variable_ids, collapse = ", ")
+      )
     )
     logger::log_debug(
       sprintf(
-        paste(
-          "Current variable_id `%s` has %d metadata row(s) and selector(s): %s"
-        ),
-        current_variable_id,
-        nrow(variable_metadata),
-        paste(unique(variable_metadata$selector), collapse = ", ")
+        "Chunk %d/%d has %d metadata row(s) and selector(s): %s",
+        chunk_index,
+        length(variable_id_chunks),
+        nrow(chunk_metadata),
+        paste(unique(chunk_metadata$selector), collapse = ", ")
       )
     )
 
@@ -414,8 +451,9 @@ anchor_by_variable <- function(
     staging_hive_path <- ensure_anchor_hive_path(staging_hive_path)
     logger::log_trace(
       sprintf(
-        "Created staging parquet hive for variable_id `%s`: %s",
-        current_variable_id,
+        "Created staging parquet hive for chunk %d/%d: %s",
+        chunk_index,
+        length(variable_id_chunks),
         staging_hive_path
       )
     )
@@ -425,67 +463,74 @@ anchor_by_variable <- function(
         anchor_impl(
           con = con,
           population_dt = validated$population,
-          metadata_dt = variable_metadata,
+          metadata_dt = chunk_metadata,
           anchor_col = anchor_col,
           anchor_hive_path = staging_hive_path
         )
 
-        target_partition_path <- anchor_partition_path(
-          anchor_hive_path,
-          current_variable_id
-        )
-        staging_partition_path <- anchor_partition_path(
-          staging_hive_path,
-          current_variable_id
-        )
+        # The chunk was written as a whole, but the target hive is still
+        # updated one variable_id partition at a time, so a variable with no
+        # matching windows in this chunk does not disturb the others.
+        for (current_variable_id in chunk_variable_ids) {
+          target_partition_path <- anchor_partition_path(
+            anchor_hive_path,
+            current_variable_id
+          )
+          staging_partition_path <- anchor_partition_path(
+            staging_hive_path,
+            current_variable_id
+          )
 
-        if (dir.exists(target_partition_path)) {
-          logger::log_debug(
-            sprintf(
-              "Deleting existing parquet partition for variable_id `%s`.",
-              current_variable_id
+          if (dir.exists(target_partition_path)) {
+            logger::log_debug(
+              sprintf(
+                "Deleting existing parquet partition for variable_id `%s`.",
+                current_variable_id
+              )
             )
-          )
-          unlink(target_partition_path, recursive = TRUE, force = TRUE)
-        }
+            unlink(target_partition_path, recursive = TRUE, force = TRUE)
+          }
 
-        if (dir.exists(staging_partition_path)) {
-          move_anchor_partition(
-            source_partition_path = staging_partition_path,
-            target_partition_path = target_partition_path,
-            variable_id = current_variable_id
-          )
-        } else {
-          logger::log_debug(
-            sprintf(
-              paste(
-                "No parquet partition was produced for variable_id `%s`.",
-                "The target hive was left without that partition."
-              ),
-              current_variable_id
+          if (dir.exists(staging_partition_path)) {
+            move_anchor_partition(
+              source_partition_path = staging_partition_path,
+              target_partition_path = target_partition_path,
+              variable_id = current_variable_id
             )
-          )
+          } else {
+            logger::log_debug(
+              sprintf(
+                paste(
+                  "No parquet partition was produced for variable_id `%s`.",
+                  "The target hive was left without that partition."
+                ),
+                current_variable_id
+              )
+            )
+          }
         }
       },
       finally = {
         logger::log_trace(
           sprintf(
-            "Cleaning staging parquet hive for variable_id `%s`: %s",
-            current_variable_id,
+            "Cleaning staging parquet hive for chunk %d/%d: %s",
+            chunk_index,
+            length(variable_id_chunks),
             staging_hive_path
           )
         )
         unlink(staging_hive_path, recursive = TRUE, force = TRUE)
 
-        variable_duration <- difftime(
-          Sys.time(), variable_start_time,
+        chunk_duration <- difftime(
+          Sys.time(), chunk_start_time,
           units = "secs"
         )
         logger::log_info(
           sprintf(
-            "Finished anchoring variable_id `%s` in %.2f secs.",
-            current_variable_id,
-            as.numeric(variable_duration)
+            "Finished anchoring chunk %d/%d in %.2f secs.",
+            chunk_index,
+            length(variable_id_chunks),
+            as.numeric(chunk_duration)
           )
         )
       }
@@ -493,8 +538,9 @@ anchor_by_variable <- function(
   }
   logger::log_debug(
     sprintf(
-      "Finished anchor_by_variable() for %d variable_id(s).",
-      length(variable_ids)
+      "Finished anchor_by_variable() for %d variable_id(s) in %d chunk(s).",
+      length(variable_ids),
+      length(variable_id_chunks)
     )
   )
   invisible(variable_ids)

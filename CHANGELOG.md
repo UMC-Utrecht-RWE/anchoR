@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already-validated `population` table across variables instead of
   re-validating/re-copying it each time. Cuts redundant concepts scans and
   connection overhead for metadata with many standard-window variables.
+- `anchor_by_variable()` now processes `variable_id`s in chunks (new
+  `chunk_size` argument, default 20) instead of strictly one at a time, so a
+  single selector query can cover several variables' `concepts` join at once.
+  Each chunk still stages to a temporary hive and swaps in one
+  `variable_id` partition at a time, so partial reruns remain isolated to the
+  requested variables. Pass `chunk_size = 1` for the previous behavior.
 
 ### Removed
 
