@@ -1,34 +1,40 @@
-WITH candidate_rows AS (
+WITH winners AS (
     SELECT
-        w.anchor_row_id,
         w.person_id,
         w.T0,
         w.variable_id,
         w.window_name,
-        COALESCE(CAST(c.value AS VARCHAR), 'TRUE') AS value,
-        c.date,
-        COUNT(*) OVER (
-            PARTITION BY w.person_id, w.T0, w.variable_id, w.window_name
-        ) AS n,
-        ROW_NUMBER() OVER (
-            PARTITION BY w.person_id, w.T0, w.variable_id, w.window_name
-            ORDER BY c.date DESC, COALESCE(CAST(c.value AS VARCHAR), '') DESC
-        ) AS row_number_
+        -- Both fields sort DESC (latest date, then largest value on ties),
+        -- so one lexicographic arg_max on (date, value) picks the same row a
+        -- ROW_NUMBER() ORDER BY date DESC, value DESC filter would, without
+        -- needing to sort every candidate row.
+        arg_max(
+            struct_pack(
+                anchor_row_id := w.anchor_row_id,
+                value := COALESCE(CAST(c.value AS VARCHAR), 'TRUE'),
+                date := c.date
+            ),
+            struct_pack(
+                date := c.date,
+                value := COALESCE(CAST(c.value AS VARCHAR), '')
+            )
+        ) AS winner,
+        COUNT(*) AS n
     FROM population_windows AS w
     INNER JOIN concepts AS c
         ON c.person_id = w.person_id
        AND c.concept_id = w.concept_id
        AND c.date BETWEEN w.window_start AND w.window_end
     WHERE w.selector = 'LATEST'
+    GROUP BY w.person_id, w.T0, w.variable_id, w.window_name
 )
 SELECT
-    anchor_row_id,
+    winner.anchor_row_id AS anchor_row_id,
     person_id,
     T0,
     variable_id,
     window_name,
-    value,
-    date,
+    winner.value AS value,
+    winner.date AS date,
     n
-FROM candidate_rows
-WHERE row_number_ = 1
+FROM winners

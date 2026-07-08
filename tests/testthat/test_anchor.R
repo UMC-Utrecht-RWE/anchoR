@@ -22,6 +22,68 @@ testthat::test_that("COUNT stores the matched event date in minimal output", {
   )
 })
 
+testthat::test_that(
+  "LATEST/EARLIEST break same-date ties on the larger value",
+  {
+    # Locks down the arg_max/arg_min rewrite of latest.sql/earliest.sql:
+    # LATEST must pick the row with the winning (latest) date, then the
+    # larger value on ties; EARLIEST the winning (earliest) date, then the
+    # larger value on ties. Each concept_id also carries a third, non-tied
+    # record so a wrong date comparison (not just a wrong tie-break) would
+    # be caught too.
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    population <- data.table::data.table(
+      person_id = "1", T0 = as.Date("2024-01-01")
+    )
+    metadata <- data.table::data.table(
+      variable_id = c("latest_tie", "earliest_tie"),
+      concept_id  = c("TIE_LATEST", "TIE_EARLIEST"),
+      constructor = "GENERIC",
+      selector    = c("LATEST", "EARLIEST"),
+      start_look_back = -3650L,
+      end_look_back   = 0L
+    )
+    concepts <- data.table::data.table(
+      person_id = "1",
+      concept_id = c(
+        "TIE_LATEST", "TIE_LATEST", "TIE_LATEST",
+        "TIE_EARLIEST", "TIE_EARLIEST", "TIE_EARLIEST"
+      ),
+      date = as.Date(c(
+        "2023-06-01", "2023-06-01", "2022-01-01",
+        "2021-01-01", "2021-01-01", "2022-01-01"
+      )),
+      value = c("A", "B", "Z", "X", "Y", "Z")
+    )
+
+    anchor(
+      population = population,
+      metadata = metadata,
+      concepts = concepts,
+      anchor_hive_path = hive_path
+    )
+
+    anchored <- read_anchor_hive(hive_path)
+    data.table::setorder(anchored, variable_id)
+
+    testthat::expect_equal(
+      anchored[variable_id == "latest_tie", .(value, date, n)],
+      data.table::data.table(
+        value = "B", date = as.Date("2023-06-01"), n = 3L
+      )
+    )
+    testthat::expect_equal(
+      anchored[variable_id == "earliest_tie", .(value, date, n)],
+      data.table::data.table(
+        value = "Y", date = as.Date("2021-01-01"), n = 3L
+      )
+    )
+  }
+)
+
 # Test with more realistic examples.
 testthat::test_that("anchor writes selector results to the parquet hive", {
   hive_path <- tempfile(pattern = "anchor-hive-")
