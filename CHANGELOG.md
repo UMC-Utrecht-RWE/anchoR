@@ -13,9 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `anchor_by_selector()`: runs `anchor()` once per unique `selector` value in
   `metadata`, so a single query covers every variable sharing that selector
   regardless of `chunk_size`. Cheaper in `concepts` scans than
-  `anchor_by_variable()`, but (like `anchor()`) appends rather than swapping
-  individual `variable_id` partitions, so it's meant for a fresh, one-shot
-  `anchor_hive_path` rather than safe per-variable reruns.
+  `anchor_by_variable()`; every `variable_id` it touches is safely replaced
+  (see the `OVERWRITE_OR_IGNORE` fix below), it just doesn't bound the blast
+  radius per query the way `anchor_by_variable()`'s `chunk_size` does --
+  every variable sharing a selector is recomputed together.
 
 ### Changed
 
@@ -53,6 +54,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+
+- `anchor()`/`anchor_by_variable()`/`anchor_by_selector()` write their parquet
+  output with `OVERWRITE_OR_IGNORE` instead of `APPEND`. Previously,
+  `anchor()` (and anything writing directly to `anchor_hive_path`) appended a
+  new file on every call, so rerunning it for a `variable_id` already present
+  at `anchor_hive_path` silently duplicated rows -- the docs' workaround was
+  "use a fresh `anchor_hive_path` per run". `OVERWRITE_OR_IGNORE` instead
+  replaces only the `variable_id` partition(s) a call actually produces and
+  leaves every other partition untouched; verified (empirically, against
+  DuckDB 1.5.4) to be precise per-partition across multiple variables and
+  separate connections, and to leave existing data untouched if the query
+  itself fails partway through.
 
 ### Future Work
 

@@ -42,10 +42,10 @@ every variable that uses that selector, however many there are -- no
 \code{chunk_size} cap splits a selector's variables across more than one
 query the way \code{\link[=anchor_by_variable]{anchor_by_variable()}} can. This is the cheapest option in
 terms of \code{concepts} scans (at most one per distinct selector in
-\code{metadata}), but it does not stage-and-swap individual
-\code{variable_id} partitions the way \code{\link[=anchor_by_variable]{anchor_by_variable()}} does -- each
-call appends to \code{anchor_hive_path} the same way \code{\link[=anchor]{anchor()}} does (see
-its documentation on append behavior). Use this for a fresh, one-shot
-\code{anchor_hive_path}; use \code{\link[=anchor_by_variable]{anchor_by_variable()}} when you need to
-safely rerun individual variables into an existing hive.
+\code{metadata}). Each call to \code{\link[=anchor]{anchor()}} safely replaces only the
+\code{variable_id} partitions it computes and leaves the rest of
+\code{anchor_hive_path} untouched, so rerunning \code{anchor_by_selector()}
+with the same or a smaller \code{metadata} is safe; it just does not give
+you \code{\link[=anchor_by_variable]{anchor_by_variable()}}'s \code{chunk_size}-bounded blast radius --
+every variable sharing a selector is recomputed together in one query.
 }

@@ -77,7 +77,7 @@ get_anchor_result(
 
 Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 record. Persons 2 and 3 have no matching record, so they simply don't appear, long output is sparse by design.
 
-`anchor()` *appends* to whatever parquet is already at `anchor_hive_path` per `variable_id` (rather than replacing it), so calling it twice with overlapping `variable_id` values into the same path produces duplicate rows. Use a fresh `anchor_hive_path` per independent run, or `anchor_by_variable()` (below) if you want safe, variable-scoped re-runs into the same path.
+`anchor()` *replaces* whatever parquet is already at `anchor_hive_path` for each `variable_id` it computes (rather than appending to it), so calling it twice with overlapping `variable_id` values into the same path re-runs cleanly instead of producing duplicate rows. `variable_id`s outside the current `metadata` call are left untouched. See `anchor_by_variable()`/`anchor_by_selector()` (below) if you want to recompute a subset of variables without recomputing everything else in one pass.
 
 ## Selector reference
 

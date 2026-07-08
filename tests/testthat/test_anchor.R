@@ -108,6 +108,45 @@ testthat::test_that("anchor writes selector results to the parquet hive", {
 })
 
 testthat::test_that(
+  "rerunning anchor() into the same path replaces, not duplicates, rows",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    metadata <- minimal_metadata()[variable_id == "cov_latest"]
+
+    anchor(
+      population = minimal_population(),
+      metadata = metadata,
+      concepts = minimal_concepts(),
+      anchor_hive_path = hive_path
+    )
+
+    refreshed_concepts <- data.table::rbindlist(list(
+      minimal_concepts(),
+      data.table::data.table(
+        person_id = "1", concept_id = "COV_A",
+        date = as.Date("2023-12-31"), value = "UPDATED"
+      )
+    ))
+
+    anchor(
+      population = minimal_population(),
+      metadata = metadata,
+      concepts = refreshed_concepts,
+      anchor_hive_path = hive_path
+    )
+
+    anchored <- read_anchor_hive(hive_path)
+
+    testthat::expect_equal(nrow(anchored), 1L)
+    testthat::expect_equal(anchored$value, "UPDATED")
+    testthat::expect_equal(anchored$date, as.Date("2023-12-31"))
+  }
+)
+
+testthat::test_that(
   "anchor ignores unrelated population covariates",
   {
     hive_path <- tempfile(pattern = "anchor-hive-")

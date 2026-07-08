@@ -369,8 +369,8 @@ anchor <- function(
 #' parquet or DuckDB source. Variables are ordered by selector before being
 #' sliced into chunks, so each chunk is as selector-homogeneous as
 #' \code{chunk_size} allows (see [anchor_by_selector()] for the case where you
-#' want every same-selector variable in one query, uncapped by
-#' \code{chunk_size}, and don't need per-variable rerun safety).
+#' want every same-selector variable processed in one uncapped query instead
+#' of bounding the blast radius with \code{chunk_size}).
 #'
 #' @inheritParams anchor
 #' @param chunk_size Number of \code{variable_id} values to process per pass.
@@ -596,12 +596,12 @@ anchor_by_variable <- function(
 #' \code{chunk_size} cap splits a selector's variables across more than one
 #' query the way [anchor_by_variable()] can. This is the cheapest option in
 #' terms of \code{concepts} scans (at most one per distinct selector in
-#' \code{metadata}), but it does not stage-and-swap individual
-#' \code{variable_id} partitions the way [anchor_by_variable()] does -- each
-#' call appends to \code{anchor_hive_path} the same way [anchor()] does (see
-#' its documentation on append behavior). Use this for a fresh, one-shot
-#' \code{anchor_hive_path}; use [anchor_by_variable()] when you need to
-#' safely rerun individual variables into an existing hive.
+#' \code{metadata}). Each call to [anchor()] safely replaces only the
+#' \code{variable_id} partitions it computes and leaves the rest of
+#' \code{anchor_hive_path} untouched, so rerunning \code{anchor_by_selector()}
+#' with the same or a smaller \code{metadata} is safe; it just does not give
+#' you [anchor_by_variable()]'s \code{chunk_size}-bounded blast radius --
+#' every variable sharing a selector is recomputed together in one query.
 #'
 #' @inheritParams anchor
 #'
