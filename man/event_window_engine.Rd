@@ -7,7 +7,13 @@
 event_window_engine(window_dt, event_select, end_boundary = "event_END")
 }
 \arguments{
-\item{window_dt}{A data.table produced by \code{cross_join_population_metadata()}.}
+\item{window_dt}{A data.table produced by \code{cross_join_population_metadata()}.
+When \code{event_select} is \code{"PRIOR"}, its optional \code{start_look_back}/
+\code{end_look_back} columns (NA by default) additionally restrict which
+prior episodes are eligible at all: only episodes overlapping the
+anchor-relative range \code{anchor + start_look_back} through
+\code{anchor + end_look_back} are considered; the survivors' windows are
+still computed from \code{start_offset}/\code{end_offset} as usual, unclipped.}
 
 \item{event_select}{One of \code{"PRIOR"}, \code{"CURRENT"}, \code{"OUTSIDE_ALL"}.}
 

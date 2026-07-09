@@ -59,6 +59,8 @@ event_window_dt <- function(
   start_offset = 0L,
   end_offset = 0L,
   end_cap_offset = NA_real_,
+  start_look_back = NA_real_,
+  end_look_back = NA_real_,
   events = NULL
 ) {
   if (is.null(events)) {
@@ -78,6 +80,8 @@ event_window_dt <- function(
     start_offset = start_offset,
     end_offset = end_offset,
     end_cap_offset = end_cap_offset,
+    start_look_back = start_look_back,
+    end_look_back = end_look_back,
     pregnancy_events = list(events)
   )
 }
@@ -116,6 +120,96 @@ testthat::test_that("event_window_engine PRIOR applies an end cap", {
     out$window_end, as.Date(c("2020-06-15", "2021-05-20"))
   )
 })
+
+testthat::test_that(
+  "event_window_engine PRIOR filters out episodes outside the lookback range",
+  {
+    # anchor (T0) = 2022-08-16, lookback = [T0 - 500, T0]. Episode 1
+    # (2020-01-01/2020-09-01) ends well before the lookback range starts, so
+    # it never becomes a candidate at all. Episode 2 (2021-02-15/2021-05-20)
+    # overlaps the lookback range, so it is kept -- and with start_offset/
+    # end_offset both 0 here, its window is exactly the episode's own span.
+    out <- event_window_engine(
+      event_window_dt(
+        "IN_PRIOR_PREG",
+        start_look_back = -500, end_look_back = 0
+      ),
+      event_select = "PRIOR"
+    )
+
+    testthat::expect_equal(nrow(out), 1L)
+    testthat::expect_equal(out$window_start, as.Date("2021-02-15"))
+    testthat::expect_equal(out$window_end, as.Date("2021-05-20"))
+  }
+)
+
+testthat::test_that(
+  "event_window_engine PRIOR lookback range only filters, never clips",
+  {
+    # Same lookback range as above ([T0 - 500, T0] ~= [2021-04-03,
+    # 2022-08-16]), but start_offset/end_offset now shift episode 2's window
+    # to [2021-01-16, 2021-06-19] -- window_start ends up *before* the
+    # lookback's own lower bound. The shifted window is kept exactly as
+    # computed, proving the lookback range only decides which episodes are
+    # eligible; it never truncates the resulting window.
+    out <- event_window_engine(
+      event_window_dt(
+        "IN_PRIOR_PREG",
+        start_offset = -30L, end_offset = 30L,
+        start_look_back = -500, end_look_back = 0
+      ),
+      event_select = "PRIOR"
+    )
+
+    testthat::expect_equal(nrow(out), 1L)
+    testthat::expect_equal(out$window_start, as.Date("2021-01-16"))
+    testthat::expect_equal(out$window_end, as.Date("2021-06-19"))
+  }
+)
+
+testthat::test_that(
+  "event_window_engine PRIOR leaves windows alone when lookback is NA",
+  {
+    out <- event_window_engine(
+      event_window_dt("IN_PRIOR_PREG"),
+      event_select = "PRIOR"
+    )
+
+    testthat::expect_equal(
+      out$window_start, as.Date(c("2020-01-01", "2021-02-15"))
+    )
+    testthat::expect_equal(
+      out$window_end, as.Date(c("2020-09-01", "2021-05-20"))
+    )
+  }
+)
+
+testthat::test_that(
+  "IN_PRIOR_PREG lookback range flows end to end through define_window",
+  {
+    metadata <- data.table::data.table(
+      variable_id = "gest_diabetes_prior",
+      concept_id = "GEST_DIAB",
+      constructor = "IN_PRIOR_PREG",
+      selector = "LATEST",
+      start_offset = 0L,
+      end_offset = 0L,
+      start_look_back = -500L,
+      end_look_back = 0L,
+      event_col = "pregnancy_events"
+    )
+
+    windows <- define_window(event_population(), metadata)
+
+    # Person 1's two prior episodes end at 2020-09-01 and 2021-05-20; anchor
+    # is 2022-08-16. Only the second overlaps the 500-day lookback range, so
+    # the first is filtered out before a window row is even created -- only
+    # one candidate window reaches define_window() at all.
+    testthat::expect_equal(nrow(windows), 1L)
+    testthat::expect_true(windows$window_valid)
+    testthat::expect_equal(windows$window_end, as.Date("2021-05-20"))
+  }
+)
 
 testthat::test_that(
   "event_window_engine CURRENT with event_END covers whole event",
