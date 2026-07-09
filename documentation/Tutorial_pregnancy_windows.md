@@ -1,10 +1,10 @@
-
 # Using Episode-Based (Pregnancy) Windows
 
 This is a usage guide for the feature described in [pregnancy_examples.md](pregnancy_examples.md):
 anchoring study variables to a *recurring* event (pregnancy today; anything with repeatable start/end episodes tomorrow) instead of a single fixed anchor date. It shows the metadata shape actually implemented in `R/pregnancy_window.R`, which is a deliberate simplification of the free-text `other_arguments` sketched in `pregnancy_examples.md`, a small, fixed set of metadata columns rather than expression strings.
 
 ## The idea
+
 Every constructor in this family answers the same two questions about a person's episodes (their pregnancies):
 
 1. **Which episode(s) matter relative to the anchor date ([[Anchor Column (T0)|`T0`]])?**
@@ -29,7 +29,7 @@ There is one shared engine underneath (`episode_window_engine()`); the four cons
 Both pairs shift dates around, which invites mixing them up, but they answer different questions and are read by different constructors:
 
 - `start_offset`/`end_offset` answer *"where do the window boundaries sit"* (question 2 above). For `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/`ANYTIME_CURRENT_PREG` they shift the *selected episode's own* start/end. For `OUTSIDE_ALL_PREG` specifically, there is no episode to shift, they instead define the anchor-relative range `[T0 + start_offset, T0 + end_offset]` that gaps are searched within.
-- `start_look_back`/`end_look_back` answer a different question, *"which episodes are even eligible"*, and only `IN_PRIOR_PREG` reads them. When set (both default to unset), an episode not overlapping `[T0 + start_look_back, T0 + end_look_back]` is dropped before any window is built at all, not truncated, the episode simply never becomes a candidate. A survivor's window is still computed from `start_offset`/`end_offset` exactly as usual, unaffected by where the lookback range's own edges fall. See [[IN_PRIOR_PREG]] and the worked example in [Pregnancy Window Worked Example.md](examples/Pregnancy%20Window%20Worked%20Example.md) for a computed, verified case.
+- `start_look_back`/`end_look_back` answer a different question, *"which episodes are even eligible"*, and only `IN_PRIOR_PREG` reads them. When set (both default to unset), an episode not overlapping `[T0 + start_look_back, T0 + end_look_back]` is dropped before any window is built at all, not truncated, the episode simply never becomes a candidate. A survivor's window is still computed from `start_offset`/`end_offset` exactly as usual, unaffected by where the lookback range's own edges fall. See [[IN_PRIOR_PREG]] and the worked example in [Pregnancy Window Worked Example.md](<examples/Pregnancy%20Window%20Worked%20Example.md>) for a computed, verified case.
 - Setting `start_look_back`/`end_look_back` on anything other than `IN_PRIOR_PREG` (in particular `OUTSIDE_ALL_PREG`, since its own `start_offset`/`end_offset` already play that anchor-relative-range role) has **no effect** -- those columns are simply not read by any other constructor. If you set them expecting to control `OUTSIDE_ALL_PREG`'s search range, that's a silent no-op to watch for; use `start_offset`/`end_offset` there instead.
 
 ## Step 1: attach episodes to the population
@@ -133,13 +133,13 @@ Using the person below (three pregnancies) anchored at `T0 = 2022-08-16` (which 
 | 2       | `2021-02-15` | `2021-05-20` |
 | 3       | `2022-03-01` | `2022-12-01` |
 
-| constructor                                                    | resulting window(s)                                                                |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `IN_PRIOR_PREG` (`start_offset=0, end_offset=0`)               | `[2020-01-01, 2020-09-01]` and `[2021-02-15, 2021-05-20]`                          |
-| `SINCE_START_CURRENT_PREG` (`start_offset=0, end_offset=0`)    | `[2022-03-01, 2022-08-16]` (episode 3's start to `T0`)                             |
-| `ANYTIME_CURRENT_PREG` (`start_offset=0, end_offset=30`)       | `[2022-03-01, 2022-12-31]` (episode 3, +30 days)                                   |
-| `OUTSIDE_ALL_PREG` (`start_offset=0, end_offset=-1000`)        | `[2019-11-20, 2019-12-31]`, `[2020-09-02, 2021-02-14]`, `[2021-05-21, 2022-02-28]` |
-| `IN_PRIOR_PREG` capped (`start_offset=90, end_cap_offset=166`) | `[2020-03-31, 2020-06-15]` and `[2021-05-16, 2021-05-20]`                          |
+| constructor                                                                                      | resulting window(s)                                                                           |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `IN_PRIOR_PREG` (`start_offset=0, end_offset=0`)                                                 | `[2020-01-01, 2020-09-01]` and `[2021-02-15, 2021-05-20]`                                     |
+| `SINCE_START_CURRENT_PREG` (`start_offset=0, end_offset=0`)                                      | `[2022-03-01, 2022-08-16]` (episode 3's start to `T0`)                                        |
+| `ANYTIME_CURRENT_PREG` (`start_offset=0, end_offset=30`)                                         | `[2022-03-01, 2022-12-31]` (episode 3, +30 days)                                              |
+| `OUTSIDE_ALL_PREG` (`start_offset=0, end_offset=-1000`)                                          | `[2019-11-20, 2019-12-31]`, `[2020-09-02, 2021-02-14]`, `[2021-05-21, 2022-02-28]`            |
+| `IN_PRIOR_PREG` capped (`start_offset=90, end_cap_offset=166`)                                   | `[2020-03-31, 2020-06-15]` and `[2021-05-16, 2021-05-20]`                                     |
 | `IN_PRIOR_PREG` with lookback (`start_look_back=-592, end_look_back=0`, i.e. `[2021-01-01, T0]`) | `[2021-02-15, 2021-05-20]` only, episode 1 dropped entirely (ended before the lookback range) |
 
 Notes on `OUTSIDE_ALL_PREG`: it searches `[T0 + start_offset, T0 + end_offset]` for the parts *not* covered by any episode. An episode always fences a gap, even the one containing `T0` itself, so there is no gap after episode 3 starts, even though `T0` is inside the search range.

@@ -70,9 +70,11 @@ event_window_engine(
 )[, .(window_start, window_end)]
 ```
 
-| window_start | window_end | note                                          |
-| ------------ | ---------- | ---------------------------------------------- |
+| window_start | window_end | note                                       |
+| ------------ | ---------- | ------------------------------------------ |
 | 2024-03-01   | 2024-12-15 | episode B only; episode A dropped entirely |
+
+![IN_PRIOR_PREG with start_look_back/end_look_back worked example|1000](img/in-prior-preg-lookback.svg)
 
 Compare to the unfiltered row above: episode A's window (`2023-01-01`/`2023-10-01`) is simply gone, not clipped to `2024-01-01`. If you want the OUTSIDE_ALL_PREG-style behavior of clipping a *search range* rather than filtering episodes, that's what `OUTSIDE_ALL_PREG`'s own `start_offset`/`end_offset` already does, see below, it is a different mechanism for a different constructor, not the same feature under a different name.
 
@@ -115,9 +117,7 @@ event_window_engine(
 > **`OUTSIDE_ALL_PREG` does not read `start_look_back`/`end_look_back`.** Its own `start_offset`/`end_offset` already are the anchor-relative range (there is no separate "shift the episode" role for them here, unlike `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/`ANYTIME_CURRENT_PREG`), so setting `start_look_back`/`end_look_back` on an `OUTSIDE_ALL_PREG` row has no effect at all. If you set them expecting to control the search range, that's the bug to look for, use `start_offset`/`end_offset` instead.
 
 ```r
-event_window_engine(
-  row(-1172L, 0L), event_select = "OUTSIDE_ALL"
-)[, .(window_start, window_end)]
+event_window_engine(row(-1172L, 0L), event_select = "OUTSIDE_ALL")[, .(window_start, window_end)]
 ```
 
 | window_start | window_end | gap             |
