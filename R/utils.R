@@ -214,13 +214,6 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   if (!"end_cap_offset" %in% names(metadata_dt)) {
     metadata_dt[, end_cap_offset := NA_real_]
   }
-  # Only IN_PRIOR_PREG uses these, to optionally restrict which prior
-  # episodes are eligible to an anchor-relative lookback range; NA (the
-  # default) means no filter, so metadata that never sets them keeps its
-  # previous behavior unchanged. Not aliased to start_offset/end_offset --
-  # those already shift the episode's own start/end, and a positive
-  # start_offset would otherwise push the lookback's lower bound past the
-  # anchor, which a by-definition-prior episode could never satisfy.
   if (!"start_look_back" %in% names(metadata_dt)) {
     metadata_dt[, start_look_back := NA_real_]
   }
