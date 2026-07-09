@@ -38,7 +38,7 @@ testthat::test_that(
 )
 
 testthat::test_that(
-  "get_anchor_result reports the conflicting column when population keys clash", # nolint
+  "get_anchor_result warns and keeps the first row when population keys clash", # nolint
   {
     hive_path <- tempfile(pattern = "anchor-hive-")
     dir.create(hive_path)
@@ -58,17 +58,20 @@ testthat::test_that(
       )
     ))
 
-    err <- testthat::expect_error(
-      get_anchor_result(
+    result <- NULL
+    testthat::expect_warning(
+      result <- get_anchor_result(
         metadata = minimal_metadata()[variable_id == "cov_latest"],
         anchor_hive_path = hive_path,
         population = conflicting_population,
         result_shape = "wide"
-      )
+      ),
+      "Conflicting column\\(s\\): match_id"
     )
 
-    testthat::expect_match(
-      conditionMessage(err), "Conflicting column\\(s\\): match_id"
+    testthat::expect_equal(nrow(result[person_id == "1"]), 1L)
+    testthat::expect_equal(
+      result[person_id == "1", match_id], "m1"
     )
   }
 )

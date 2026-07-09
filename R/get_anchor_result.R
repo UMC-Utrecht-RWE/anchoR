@@ -31,7 +31,10 @@ population_conflict_columns <- function(population_dt, duplicate_keys) {
 #' @param population Optional data frame with population rows to be represented
 #'   in wide output. When provided, it must contain person_id and
 #'   T0 columns. Additional population columns are carried into the
-#'   wide result and therefore must be unique per person_id/T0 key.
+#'   wide result. When multiple rows share the same person_id/T0
+#'   key but disagree on other columns (e.g. matching with replacement), the
+#'   first row per key is kept, a warning names the conflicting column(s),
+#'   and processing continues.
 #' @param result_shape A character string specifying the desired shape of the
 #'   output. Must be either "wide" or "long".
 #' @param impute_missing Logical; when TRUE and
@@ -99,17 +102,21 @@ get_anchor_result <- function(
       by = .(person_id, T0)
     ][N > 1L]
     if (nrow(duplicate_population_keys) > 0L) {
+      # Matching with replacement can legitimately assign the same control to
+      # multiple exposed persons, so a repeated person_id/T0 key is not an
+      # error. Keep the first row per key and tell the caller which
+      # column(s) disagreed, rather than halting the whole pipeline.
       conflicting_cols <- population_conflict_columns(
         population_dt, duplicate_population_keys[, .(person_id, T0)]
       )
       msg <- paste(
         "`population` contains multiple rows for the same `person_id` and `T0`.", # nolint
-        "Wide output can only carry through additional population columns",
-        "when those keys are unique. Conflicting column(s):",
+        "Keeping the first row per key. Conflicting column(s):",
         paste(conflicting_cols, collapse = ", ")
       )
-      logger::log_error(msg)
-      base::stop(msg, call. = FALSE)
+      logger::log_warn(msg)
+      warning(msg, call. = FALSE)
+      population_dt <- unique(population_dt, by = c("person_id", "T0"))
     }
 
     population_dt[, T0 := as.Date(T0)]
