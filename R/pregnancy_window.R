@@ -134,6 +134,20 @@ event_window_engine <- function(
         )
       }
 
+      if (event_select == "PRIOR") {
+        # IN_PRIOR_PREG additionally clips every candidate window to the
+        # anchor-relative lookback range [anchor + start_offset, anchor +
+        # end_offset] (order-independent, same as OUTSIDE_ALL_PREG's search
+        # bounds). A prior episode entirely outside that range yields
+        # window_start > window_end, which finalize_windows() already marks
+        # invalid and anchor()/anchor_by_variable() already filter out.
+        lookback_bounds <- sort(
+          as.Date(c(anchor + row$start_offset, anchor + row$end_offset))
+        )
+        window_start <- pmax(window_start, lookback_bounds[[1]])
+        window_end <- pmin(window_end, lookback_bounds[[2]])
+      }
+
       windows <- data.table::data.table(
         window_start = as.Date(window_start), window_end = as.Date(window_end)
       )
