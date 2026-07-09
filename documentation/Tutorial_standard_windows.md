@@ -31,16 +31,16 @@ Each row says: for this `variable_id`, look for `concept_id` in a window built f
 
 ```r
 metadata <- data.table(
-  variable_id     = "flu_vaccine_recent",
-  concept_id      = "FLU_VAX",
-  constructor     = "GENERIC",
-  selector        = "LATEST",
-  start_look_back = -365L,   # 365 days before T0 ...
-  end_look_back   = 0L       # ... through T0 itself
+  variable_id  = "flu_vaccine_recent",
+  concept_id   = "FLU_VAX",
+  constructor  = "GENERIC",
+  selector     = "LATEST",
+  start_offset = -365L,   # 365 days before T0 ...
+  end_offset   = 0L       # ... through T0 itself
 )
 ```
 
-`start_look_back`/`end_look_back` are accepted aliases for `start_offset`/`end_offset` (either name works; `anchoR` renames whichever one you supply). `constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow.
+`constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow. (`start_offset`/`end_offset` are not aliased to anything else -- `start_look_back`/`end_look_back` are a separate, unrelated pair of columns used only by `IN_PRIOR_PREG`, see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows).)
 
 ## Step 3: [[Concepts]]
 
@@ -111,8 +111,8 @@ metadata <- data.table(
   selector = c(
     "LATEST", "EARLIEST", "COUNT", "COUNT_MORE_THAN_1", "RANGE_COUNT", "ALL"
   ),
-  start_look_back = c(-365L, -3650L, -365L, -365L, -180L, -365L),
-  end_look_back   = 0L,
+  start_offset = c(-365L, -3650L, -365L, -365L, -180L, -365L),
+  end_offset   = 0L,
   range_min = c(NA, NA, NA, NA, 18.5, NA),
   range_max = c(NA, NA, NA, NA, 25, NA)
 )
@@ -174,8 +174,8 @@ metadata <- data.table(
   constructor = "GENERIC",
   window_name = c("recent", "ever"),
   selector    = c("LATEST", "EARLIEST"),
-  start_look_back = c(-365L, -3650L),
-  end_look_back   = 0L
+  start_offset = c(-365L, -3650L),
+  end_offset   = 0L
 )
 
 anchor_by_variable(population, metadata, concepts, anchor_hive_path = hive_path)
@@ -219,8 +219,8 @@ metadata <- data.table(
   concept_id  = c("FLU_VAX", "HOSP"),
   constructor = "GENERIC",
   selector    = c("LATEST", "COUNT"),
-  start_look_back = -365L,
-  end_look_back   = 0L
+  start_offset = -365L,
+  end_offset   = 0L
 )
 concepts <- data.table(
   person_id  = c("1", "2"),
@@ -276,8 +276,8 @@ metadata <- data.table(
   concept_id  = "FLU_VAX",
   constructor = "GENERIC",
   selector    = "LATEST",
-  start_look_back = -365L,
-  end_look_back   = 0L
+  start_offset = -365L,
+  end_offset   = 0L
 )
 concepts <- data.table(
   person_id = "1", concept_id = "FLU_VAX",

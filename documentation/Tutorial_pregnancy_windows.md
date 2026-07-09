@@ -24,6 +24,14 @@ There is one shared engine underneath (`episode_window_engine()`); the four cons
 
 `IN_PRIOR_PREG` can produce more than one candidate window per person (one per prior episode); `OUTSIDE_ALL_PREG` can too (one per gap). `anchoR` handles that automatically, see "Multiple candidate windows" below.
 
+### `start_offset`/`end_offset` vs `start_look_back`/`end_look_back` -- these are not the same thing
+
+Both pairs shift dates around, which invites mixing them up, but they answer different questions and are read by different constructors:
+
+- `start_offset`/`end_offset` answer *"where do the window boundaries sit"* (question 2 above). For `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/`ANYTIME_CURRENT_PREG` they shift the *selected episode's own* start/end. For `OUTSIDE_ALL_PREG` specifically, there is no episode to shift, they instead define the anchor-relative range `[T0 + start_offset, T0 + end_offset]` that gaps are searched within.
+- `start_look_back`/`end_look_back` answer a different question, *"which episodes are even eligible"*, and only `IN_PRIOR_PREG` reads them. When set (both default to unset), an episode not overlapping `[T0 + start_look_back, T0 + end_look_back]` is dropped before any window is built at all, not truncated, the episode simply never becomes a candidate. A survivor's window is still computed from `start_offset`/`end_offset` exactly as usual, unaffected by where the lookback range's own edges fall. See [[IN_PRIOR_PREG]] and the worked example in [Pregnancy Window Worked Example.md](examples/Pregnancy%20Window%20Worked%20Example.md) for a computed, verified case.
+- Setting `start_look_back`/`end_look_back` on anything other than `IN_PRIOR_PREG` (in particular `OUTSIDE_ALL_PREG`, since its own `start_offset`/`end_offset` already play that anchor-relative-range role) has **no effect** -- those columns are simply not read by any other constructor. If you set them expecting to control `OUTSIDE_ALL_PREG`'s search range, that's a silent no-op to watch for; use `start_offset`/`end_offset` there instead.
+
 ## Step 1: attach episodes to the population
 
 Unlike `T0`, episodes are a *list* per person (a person can have any number of pregnancies), so they don't fit as a plain population column. Nest them instead: one row per person still, with a list-column holding that person's own small table of episodes.
@@ -64,6 +72,7 @@ Alongside the usual columns (`variable_id`, `concept_id`, `selector`, `start_off
 - `constructor`: one of the four names above
 - `event_col`: the name of the population list-column from step 1 (`"pregnancy_episodes"` in this example)
 - `end_cap_offset` (optional): when set, the final window end is `pmin(window_end, episode_start + end_cap_offset)`
+- `start_look_back`/`end_look_back` (optional, `IN_PRIOR_PREG` only): when both are set, an episode not overlapping `[T0 + start_look_back, T0 + end_look_back]` is dropped before its window is even built, see the callout above
 
 ```r
 metadata <- data.table(
@@ -131,8 +140,11 @@ Using the person below (three pregnancies) anchored at `T0 = 2022-08-16` (which 
 | `ANYTIME_CURRENT_PREG` (`start_offset=0, end_offset=30`)       | `[2022-03-01, 2022-12-31]` (episode 3, +30 days)                                   |
 | `OUTSIDE_ALL_PREG` (`start_offset=0, end_offset=-1000`)        | `[2019-11-20, 2019-12-31]`, `[2020-09-02, 2021-02-14]`, `[2021-05-21, 2022-02-28]` |
 | `IN_PRIOR_PREG` capped (`start_offset=90, end_cap_offset=166`) | `[2020-03-31, 2020-06-15]` and `[2021-05-16, 2021-05-20]`                          |
+| `IN_PRIOR_PREG` with lookback (`start_look_back=-592, end_look_back=0`, i.e. `[2021-01-01, T0]`) | `[2021-02-15, 2021-05-20]` only, episode 1 dropped entirely (ended before the lookback range) |
 
 Notes on `OUTSIDE_ALL_PREG`: it searches `[T0 + start_offset, T0 + end_offset]` for the parts *not* covered by any episode. An episode always fences a gap, even the one containing `T0` itself, so there is no gap after episode 3 starts, even though `T0` is inside the search range.
+
+Notes on the `IN_PRIOR_PREG` lookback row: `start_look_back`/`end_look_back` are separate columns from `start_offset`/`end_offset` (both `NA` unless set), and only `IN_PRIOR_PREG` reads them. They decide which episodes are candidates at all (episode 1 never becomes one here, its window doesn't even get computed), not where a surviving episode's window sits, that's still `start_offset`/`end_offset`'s job, unaffected by the lookback range. This is a different mechanism from `OUTSIDE_ALL_PREG`'s search range above, even though both are "an anchor-relative range" conceptually, see the callout near the top of this page for why they use different column names.
 
 Notes on the capped `IN_PRIOR_PREG` row: this is the same constructor as the first row, just with different metadata values, `start_offset = 90` shifts the window start 90 days into the episode, and `end_cap_offset = 166` caps the window end at `episode_start + 166` days if that's earlier than `episode_end + end_offset`. This is exactly how `pregnancy_examples.md`'s `preg_example_1` and `preg_example_5` differ, same constructor, different offsets, and it's the direct answer to "can one function cover all of these": yes, by moving what varies per study variable into metadata instead of into new R code.
 
