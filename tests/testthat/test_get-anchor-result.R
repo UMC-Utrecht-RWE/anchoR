@@ -12,7 +12,9 @@ testthat::test_that(
     )
 
     testthat::expect_equal(
-      population_conflict_columns(population_dt, duplicate_keys), "match_id"
+      population_conflict_columns(
+        population_dt, duplicate_keys, c("person_id", "T0")
+      ), "match_id"
     )
   }
 )
@@ -31,7 +33,9 @@ testthat::test_that(
     )
 
     testthat::expect_setequal(
-      population_conflict_columns(population_dt, duplicate_keys),
+      population_conflict_columns(
+        population_dt, duplicate_keys, c("person_id", "T0")
+      ),
       c("match_id", "group")
     )
   }

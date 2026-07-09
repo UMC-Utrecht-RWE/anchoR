@@ -11,7 +11,8 @@ get_anchor_result(
   result_shape = "wide",
   impute_missing = FALSE,
   cast_window = FALSE,
-  only_date = FALSE
+  only_date = FALSE,
+  required_population_cols = c("person_id", "T0")
 )
 }
 \arguments{
@@ -25,7 +26,10 @@ directory.}
 \item{population}{Optional data frame with population rows to be represented
 in wide output. When provided, it must contain person_id and
 T0 columns. Additional population columns are carried into the
-wide result and therefore must be unique per person_id/T0 key.}
+wide result. When multiple rows share the same person_id/T0
+key but disagree on other columns (e.g. matching with replacement), the
+first row per key is kept, a warning names the conflicting column(s),
+and processing continues.}
 
 \item{result_shape}{A character string specifying the desired shape of the
 output. Must be either "wide" or "long".}
@@ -44,6 +48,10 @@ results are cast by \code{person_id + T0 ~ window_name + variable_id}.}
 result_shape = "wide", only date columns are cast (no
 \code{value_<...>} columns). When \code{FALSE}, both value and date
 columns are cast.}
+
+\item{required_population_cols}{Character vector of column names that must
+be present in the population data frame when provided.
+Defaults to \code{c("person_id", "T0")}.}
 }
 \value{
 A data.table with anchored variable results in the specified shape.
