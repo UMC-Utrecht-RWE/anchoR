@@ -7,30 +7,39 @@ anchoring study variables to a *recurring* event (pregnancy today; anything with
 
 Every constructor in this family answers the same two questions about a person's episodes (their pregnancies):
 
-1. **Which episode(s) matter relative to the anchor date ([[Anchor Column (T0)|`T0`]])?**
+1. **Which episode(s) matter relative to the anchor date ([[Anchor Column (T0)|T0]])?**
    - `PRIOR`: every episode that ended before `T0`
    - `CURRENT`: the one episode `T0` falls inside, if any
    - `OUTSIDE_ALL`: the gaps between all episodes, not any specific one
-2. **Where do the window boundaries sit, relative to the selected episode(s)?**, an offset (`start_offset`/`end_offset`), optionally capped against a second boundary (`end_cap_offset`).
+2. **Where do the window boundaries sit, relative to the selected episode(s)?**
+   - An offset (`start_offset`/`end_offset`), optionally capped against a second boundary (`end_cap_offset`).
 
 There is one shared engine underneath (`episode_window_engine()`); the four constructor names below are just that engine pre-configured with a selection rule. Adding a new named shape later means adding one more five-line wrapper, not a new bespoke implementation.
 
-| `constructor`              | Selects                         | Window                                                       |
-| -------------------------- | ------------------------------- | ------------------------------------------------------------ |
-| `IN_PRIOR_PREG`            | every episode ending before`T0` | `episode_start + start_offset` to `episode_end + end_offset` |
-| `SINCE_START_CURRENT_PREG` | the episode containing`T0`      | `episode_start + start_offset` to `T0 + end_offset`          |
-| `ANYTIME_CURRENT_PREG`     | the episode containing`T0`      | `episode_start + start_offset` to `episode_end + end_offset` |
-| `OUTSIDE_ALL_PREG`         | gaps between*all* episodes      | each gap within`[T0 + start_offset, T0 + end_offset]`        |
+| `constructor`                | Selects                         | Window                                                       |
+| ---------------------------- | ------------------------------- | ------------------------------------------------------------ |
+| [[IN_PRIOR_PREG]]            | every episode ending before`T0` | `episode_start + start_offset` to `episode_end + end_offset` |
+| [[SINCE_START_CURRENT_PREG]] | the episode containing`T0`      | `episode_start + start_offset` to `T0 + end_offset`          |
+| [[ANYTIME_CURRENT_PREG]]     | the episode containing`T0`      | `episode_start + start_offset` to `episode_end + end_offset` |
+| [[OUTSIDE_ALL_PREG]]         | gaps between*all* episodes      | each gap within`[T0 + start_offset, T0 + end_offset]`        |
 
 `IN_PRIOR_PREG` can produce more than one candidate window per person (one per prior episode); `OUTSIDE_ALL_PREG` can too (one per gap). `anchoR` handles that automatically, see "Multiple candidate windows" below.
 
-### `start_offset`/`end_offset` vs `start_look_back`/`end_look_back` -- these are not the same thing
+### `start_offset`/`end_offset` vs `start_look_back`/`end_look_back` these are not the same thing
 
-Both pairs shift dates around, which invites mixing them up, but they answer different questions and are read by different constructors:
+Both pairs shift dates around, which invites mixing them up. The short version: `start_offset`/`end_offset` are **not consistently "the pregnancy's own offset"** -- whether they're relative to the *event* (the episode) or to the *anchor* (`T0`) depends on which constructor you're using. `start_look_back`/`end_look_back` are a single, separate mechanism (an eligibility filter, `IN_PRIOR_PREG`-only) that a reader could easily mistake for "the anchor-relative version of the other two", because for one constructor it is exactly that.
 
-- `start_offset`/`end_offset` answer *"where do the window boundaries sit"* (question 2 above). For `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/`ANYTIME_CURRENT_PREG` they shift the *selected episode's own* start/end. For `OUTSIDE_ALL_PREG` specifically, there is no episode to shift, they instead define the anchor-relative range `[T0 + start_offset, T0 + end_offset]` that gaps are searched within.
-- `start_look_back`/`end_look_back` answer a different question, *"which episodes are even eligible"*, and only `IN_PRIOR_PREG` reads them. When set (both default to unset), an episode not overlapping `[T0 + start_look_back, T0 + end_look_back]` is dropped before any window is built at all, not truncated, the episode simply never becomes a candidate. A survivor's window is still computed from `start_offset`/`end_offset` exactly as usual, unaffected by where the lookback range's own edges fall. See [[IN_PRIOR_PREG]] and the worked example in [Pregnancy Window Worked Example.md](<examples/Pregnancy%20Window%20Worked%20Example.md>) for a computed, verified case.
-- Setting `start_look_back`/`end_look_back` on anything other than `IN_PRIOR_PREG` (in particular `OUTSIDE_ALL_PREG`, since its own `start_offset`/`end_offset` already play that anchor-relative-range role) has **no effect** -- those columns are simply not read by any other constructor. If you set them expecting to control `OUTSIDE_ALL_PREG`'s search range, that's a silent no-op to watch for; use `start_offset`/`end_offset` there instead.
+| constructor                 | `start_offset` / `end_offset` are relative to&hellip;                                                                            | `start_look_back` / `end_look_back`                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `IN_PRIOR_PREG`               | the **event** -- shift the selected episode's own `event_start`/`event_end`                                                       | optional eligibility filter: an episode outside `[T0 + start_look_back, T0 + end_look_back]` is dropped *before* a window is built at all |
+| `ANYTIME_CURRENT_PREG`        | the **event** -- shift the selected episode's own `event_start`/`event_end`                                                       | not read; setting them has no effect                                                             |
+| `SINCE_START_CURRENT_PREG`    | mixed -- `start_offset` shifts the episode's `event_start`, but `end_offset` shifts the **anchor** (`T0 + end_offset`)             | not read; setting them has no effect                                                             |
+| `OUTSIDE_ALL_PREG`            | the **anchor** -- there is no single selected episode to shift; together they define the search range `[T0 + start_offset, T0 + end_offset]` itself | not read; setting them has no effect                                                              |
+
+A few things that follow from the table, since they're easy to get wrong:
+
+- `start_look_back`/`end_look_back` don't *define* a window the way the table's other column does -- they only gate which episodes are candidates. The window itself is still built from `start_offset`/`end_offset` on whichever episode survives, unaffected by where the lookback range's own edges fall. See [[IN_PRIOR_PREG]] and the worked example in [Pregnancy Window Worked Example.md](<examples/Pregnancy%20Window%20Worked%20Example.md>) for a computed, verified case.
+- `OUTSIDE_ALL_PREG` is the constructor most likely to get confused with the lookback columns, because its `start_offset`/`end_offset` play the anchor-relative-range role that `start_look_back`/`end_look_back` play for `IN_PRIOR_PREG`. Setting `start_look_back`/`end_look_back` on an `OUTSIDE_ALL_PREG` row is a **silent no-op**: to control its search range, use `start_offset`/`end_offset` there instead.
 
 ## Step 1: attach episodes to the population
 

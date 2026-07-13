@@ -59,9 +59,9 @@ event_window_engine(
 
 ### IN_PRIOR_PREG with `start_look_back`/`end_look_back`
 
-`start_look_back`/`end_look_back` are a *separate* pair of columns from `start_offset`/`end_offset` (both `NA` unless set), and only `IN_PRIOR_PREG` reads them. They restrict *which episodes are eligible at all* -- an episode not overlapping `[anchor + start_look_back, anchor + end_look_back]` is dropped before any window is built; a survivor's window is still computed from `start_offset`/`end_offset` exactly as above, unaffected by where the lookback range's edges fall.
+`start_look_back`/`end_look_back` are a *separate* pair of columns from `start_offset`/`end_offset` (both `NA` unless set), and only `IN_PRIOR_PREG` reads them. They restrict *which episodes are eligible at all* ; an episode not overlapping `[anchor + start_look_back, anchor + end_look_back]` is dropped before any window is built; a survivor's window is still computed from `start_offset`/`end_offset` exactly as above, unaffected by where the lookback range's edges fall.
 
-With `start_look_back` set to `2024-01-01 - T0` (`-776` days) and `end_look_back = 0`, the lookback range is `[2024-01-01, 2026-02-15]`. Episode A (`2023-01-01`/`2023-09-01`) ended before that range starts, so it is dropped entirely -- not truncated, just absent. Episode B overlaps the range, so it survives with the *same* window as the row above (`start_offset = 0, end_offset = 30`, no lookback):
+With `start_look_back` set to `2024-01-01 - T0` (`-776` days) and `end_look_back = 0`, the lookback range is `[2024-01-01, 2026-02-15]`. Episode A (`2023-01-01`/`2023-09-01`) ended before that range starts, so it is dropped entirely; not truncated, just absent. Episode B overlaps the range, so it survives with the *same* window as the row above (`start_offset = 0, end_offset = 30`, no lookback):
 
 ```r
 event_window_engine(
