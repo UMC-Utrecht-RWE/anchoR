@@ -214,6 +214,45 @@ publish_anchor_partitions <- function(
   invisible(NULL)
 }
 
+#' Write an in-memory accumulator table to the real output hive.
+#'
+#' Used by [anchor_by_variable()]'s "memory" staging mode: instead of a
+#' local scratch hive on disk, chunk results pile up in one DuckDB table
+#' (see `add_table_accumulation()`), and this is the single write that
+#' finally sends that table to `anchor_hive_path` as parquet. Because the
+#' underlying `COPY ... OVERWRITE_OR_IGNORE` only touches the
+#' `variable_id` values actually present in the table, a variable that was
+#' never produced simply never appears here, and its existing output (if
+#' any) is left alone -- same behavior as `publish_anchor_partitions()`,
+#' just without needing a local hive or a list of variable ids to check.
+#'
+#' @param con An open database connection.
+#' @param table_name Name of the accumulator table to publish. If it
+#'   doesn't exist (nothing was ever accumulated), this is a no-op.
+#' @param anchor_hive_path The real output hive (this can be slow or
+#'   network storage).
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+publish_accumulated_table <- function(con, table_name, anchor_hive_path) {
+  if (!(table_name %in% DBI::dbListTables(con))) {
+    logger::log_debug(
+      sprintf("No rows were accumulated in `%s`; nothing to publish.", table_name)
+    )
+    return(invisible(NULL))
+  }
+
+  DBI::dbExecute(
+    con,
+    add_parquet_export(
+      sprintf("SELECT * FROM %s", table_name),
+      anchor_hive_path
+    )
+  )
+
+  invisible(NULL)
+}
+
 #' Sort variable_ids so ones sharing a selector sit next to each other.
 #'
 #' Groups variables by which selector rule they use (using each variable's
@@ -247,7 +286,12 @@ order_variable_ids_by_selector <- function(metadata_dt) {
 #' @param metadata_dt The variable(s) to process in this call.
 #' @param anchor_col Which column in `population_dt` to use as the index
 #'   date when a variable doesn't specify its own.
-#' @param anchor_hive_path Where to write the results.
+#' @param anchor_hive_path Where to write the results. Ignored when
+#'   `accumulate_table` is set.
+#' @param accumulate_table If set, results are appended to this DuckDB
+#'   table (creating it on the first call) instead of being written to
+#'   `anchor_hive_path` -- used by [anchor_by_variable()]'s "memory"
+#'   staging mode so several calls can share one growing table.
 #' @return Invisibly `NULL` on success. If none of the variables had a
 #'   valid window, an empty result table is returned instead.
 #' @keywords internal
@@ -257,7 +301,8 @@ anchor_impl <- function(
   population_dt,
   metadata_dt,
   anchor_col,
-  anchor_hive_path
+  anchor_hive_path = NULL,
+  accumulate_table = NULL
 ) {
   # Define windows for all person-variable combinations.
   # Impossible anchors will be marked and filtered out later.
@@ -324,7 +369,8 @@ anchor_impl <- function(
   run_selector_queries(
     con = con,
     selectors = selector_names,
-    anchor_hive_path = anchor_hive_path
+    anchor_hive_path = anchor_hive_path,
+    accumulate_table = accumulate_table
   )
 
   invisible(NULL)
@@ -425,17 +471,34 @@ anchor <- function(
 #' batches of \code{chunk_size} variables at a time (default 20) instead of
 #' all at once.
 #'
-#' Every batch first writes its results to a scratch folder on local disk
-#' (under \code{staging_dir}), not to \code{anchor_hive_path} itself. That
-#' keeps all the repeated reading and writing off \code{anchor_hive_path},
-#' which matters when it points at slow or network storage. Only once every
-#' batch in the call has finished successfully are the results copied into
-#' \code{anchor_hive_path}, all in one go, one variable at a time so
-#' re-running for just a few variables still only replaces their part of
-#' the hive and leaves the rest alone. If any batch fails, nothing gets
-#' copied over at all: \code{anchor_hive_path} is left exactly as it was
-#' before the call, and the error is raised. That way you never end up with
-#' some variables refreshed and others not.
+#' Every batch's results are held somewhere other than
+#' \code{anchor_hive_path} until they're ready to publish -- either in one
+#' growing DuckDB table (\code{staging_mode = "memory"}, the default), or
+#' in a scratch folder on local disk (\code{staging_mode = "disk"}, under
+#' \code{staging_dir}). Either way, this keeps the repeated reading and
+#' writing that happens while batches are being computed off
+#' \code{anchor_hive_path}, which matters when it points at slow or
+#' network storage. \code{"memory"} avoids an extra local write-then-read
+#' round trip that \code{"disk"} needs, but holds the whole run's output in
+#' memory (DuckDB spills to local disk on its own if that gets too big);
+#' \code{"disk"} bounds memory use to one batch at a time instead.
+#'
+#' \code{publish} controls when that held output actually gets written to
+#' \code{anchor_hive_path}. With \code{publish = "once"} (the default),
+#' nothing is written until every batch in the call has finished
+#' successfully, and if any batch fails, nothing is written at all --
+#' \code{anchor_hive_path} is left exactly as it was before the call, and
+#' the error is raised, so you never end up with some variables refreshed
+#' and others not. With \code{publish = "per_chunk"}, each batch's results
+#' are written as soon as that batch finishes, so a later batch's failure
+#' doesn't discard earlier batches' already-published results -- useful if
+#' \code{anchor_hive_path} is fast enough that the extra writes don't
+#' matter and you'd rather keep whatever progress you can.
+#'
+#' Whichever combination is used, publishing only ever replaces the
+#' \code{variable_id} partitions that were actually computed and leaves
+#' the rest of \code{anchor_hive_path} untouched, so re-running for just a
+#' few variables is always safe.
 #'
 #' Grouping several variables into one batch also means a single query
 #' (and a single join against \code{concepts}) can cover all of them at
@@ -448,16 +511,22 @@ anchor <- function(
 #'
 #' @inheritParams anchor
 #' @param chunk_size How many variables to process per batch. Bigger
-#'   batches mean fewer (and cheaper) scans of \code{concepts}, but since
-#'   nothing gets saved until the whole call succeeds, a bigger batch also
-#'   means more work is thrown away if it fails partway through. Use
-#'   \code{1} to process one variable at a time.
-#' @param staging_dir Folder to use as local scratch space, and for
-#'   DuckDB's own temporary files. Defaults to \code{tempdir()}. Only
-#'   change this if your machine's default temporary folder is itself slow
-#'   or on a network drive otherwise leave it on local disk so
-#'   \code{anchor_hive_path} only gets touched once, right at the end,
-#'   however slow it is.
+#'   batches mean fewer (and cheaper) scans of \code{concepts}, but (with
+#'   \code{publish = "once"}) also means more work is thrown away if a
+#'   batch fails partway through, since nothing is saved until the whole
+#'   call succeeds. Use \code{1} to process one variable at a time.
+#' @param staging_dir Folder to use for DuckDB's own temporary files, and
+#'   (only when \code{staging_mode = "disk"}) for the local scratch hive
+#'   every batch writes into. Defaults to \code{tempdir()}. Only change
+#'   this if your machine's default temporary folder is itself slow or on
+#'   a network drive.
+#' @param staging_mode Where each batch's results are held before being
+#'   published: \code{"memory"} (default) accumulates them in one DuckDB
+#'   table; \code{"disk"} writes them to a local scratch parquet hive
+#'   instead. See Details.
+#' @param publish When to write results to \code{anchor_hive_path}:
+#'   \code{"once"} (default) after the whole call succeeds, all together;
+#'   \code{"per_chunk"} after each batch, incrementally. See Details.
 #'
 #' @return Invisibly returns the variable ids that were processed.
 #' @export
@@ -468,8 +537,13 @@ anchor_by_variable <- function(
   anchor_col = "T0",
   anchor_hive_path = NULL,
   chunk_size = 20L,
-  staging_dir = NULL
+  staging_dir = NULL,
+  staging_mode = c("memory", "disk"),
+  publish = c("once", "per_chunk")
 ) {
+  staging_mode <- match.arg(staging_mode)
+  publish <- match.arg(publish)
+
   if (!is.numeric(chunk_size) || length(chunk_size) != 1L || chunk_size < 1) {
     stop_log("`chunk_size` must be a single positive number.")
   }
@@ -487,7 +561,7 @@ anchor_by_variable <- function(
 
   # Variable_ids are ordered by selector before slicing into chunks (see
   # `order_variable_ids_by_selector()`) so each chunk is as
-  # selector-homogeneous as `chunk_size` allows `run_selector_queries()`
+  # selector-homogeneous as `chunk_size` allows -- `run_selector_queries()`
   # still runs one join per distinct selector *within* a chunk, so grouping
   # same-selector variables together keeps that count as low as possible
   # instead of leaving it to metadata row order.
@@ -502,18 +576,21 @@ anchor_by_variable <- function(
     sprintf(
       paste(
         "`anchor_by_variable()` received %d population row(s),",
-        "%d metadata row(s), anchor_col `%s`, concept source type `%s`."
+        "%d metadata row(s), anchor_col `%s`, concept source type `%s`,",
+        "staging_mode `%s`, publish `%s`."
       ),
       nrow(validated$population),
       nrow(metadata_dt),
       anchor_col,
-      concepts_type
+      concepts_type,
+      staging_mode,
+      publish
     )
   )
 
   # Variables are processed in chunks rather than strictly one at a time so a
   # single selector query (and its concepts join) can cover several variables
-  # at once DuckDB's `COPY ... PARTITION_BY (variable_id)` already fans a
+  # at once -- DuckDB's `COPY ... PARTITION_BY (variable_id)` already fans a
   # multi-variable result out into separate partitions on its own, so
   # batching only changes how many variables feed one query, not how the
   # output is laid out.
@@ -522,13 +599,11 @@ anchor_by_variable <- function(
     ceiling(seq_along(ordered_variable_ids) / chunk_size)
   )
 
-  # `staging_dir` defaults to `tempdir()`, which is local disk on the machine
-  # running this process, deliberately independent of `anchor_hive_path`
-  # unlike a plain sibling of `anchor_hive_path`, this keeps every chunk's
-  # write traffic off `anchor_hive_path` entirely until the final publish
-  # step, which matters when `anchor_hive_path` is slow or network-backed
-  # storage where small-file operations (and `file.rename()` degrading to a
-  # full copy) are expensive.
+  # `staging_dir` defaults to `tempdir()`, local disk on the machine running
+  # this process. It always holds DuckDB's own spill files; when
+  # `staging_mode == "disk"` it also holds the local scratch hive every
+  # chunk writes into, deliberately independent of `anchor_hive_path` so
+  # that write traffic never touches it until the final publish step.
   if (is.null(staging_dir)) {
     staging_dir <- tempdir()
   }
@@ -537,13 +612,23 @@ anchor_by_variable <- function(
   }
   staging_dir <- normalizePath(staging_dir, winslash = "/", mustWork = TRUE)
 
-  local_hive_path <- tempfile(pattern = "anchor-local-", tmpdir = staging_dir)
-  dir.create(local_hive_path, recursive = TRUE)
-  local_hive_path <- ensure_anchor_hive_path(local_hive_path)
-  on.exit(unlink(local_hive_path, recursive = TRUE, force = TRUE), add = TRUE)
-  logger::log_trace(
-    sprintf("Created local scratch parquet hive: %s", local_hive_path)
-  )
+  local_hive_path <- NULL
+  accumulate_table <- NULL
+
+  if (staging_mode == "disk") {
+    local_hive_path <- tempfile(pattern = "anchor-local-", tmpdir = staging_dir)
+    dir.create(local_hive_path, recursive = TRUE)
+    local_hive_path <- ensure_anchor_hive_path(local_hive_path)
+    on.exit(
+      unlink(local_hive_path, recursive = TRUE, force = TRUE),
+      add = TRUE
+    )
+    logger::log_trace(
+      sprintf("Created local scratch parquet hive: %s", local_hive_path)
+    )
+  } else {
+    accumulate_table <- "anchor_results"
+  }
 
   duckdb_temp_dir <- tempfile(
     pattern = "anchor-duckdb-tmp-",
@@ -556,7 +641,7 @@ anchor_by_variable <- function(
   )
 
   # A single connection and a single load of `concepts` are shared across
-  # every chunk below instead of one per variable (see `anchor_impl()`)
+  # every chunk below instead of one per variable (see `anchor_impl()`) --
   # for parquet or in-memory concepts, that used to mean re-scanning or
   # re-copying the entire concept table once per variable.
   logger::log_debug(
@@ -565,8 +650,10 @@ anchor_by_variable <- function(
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
-  # Any out-of-core spill DuckDB needs during the join/windowing below goes
-  # to local scratch instead of wherever it would otherwise default to.
+  # Any out-of-core spill DuckDB needs -- during the join/windowing below, or
+  # (in "memory" staging mode) to keep the accumulator table from outgrowing
+  # RAM -- goes to local scratch instead of wherever it would otherwise
+  # default to.
   DBI::dbExecute(
     con,
     sprintf("SET temp_directory = '%s';", duckdb_temp_dir)
@@ -578,6 +665,32 @@ anchor_by_variable <- function(
     validated$concepts,
     concept_ids = unique(as.character(metadata_dt$concept_id))
   )
+
+  publish_chunk <- function(chunk_variable_ids) {
+    logger::log_debug(
+      sprintf(
+        "Publishing %d variable_id partition(s) to `%s`.",
+        length(chunk_variable_ids),
+        anchor_hive_path
+      )
+    )
+    if (staging_mode == "disk") {
+      publish_anchor_partitions(
+        local_hive_path = local_hive_path,
+        anchor_hive_path = anchor_hive_path,
+        variable_ids = chunk_variable_ids
+      )
+    } else {
+      publish_accumulated_table(
+        con = con,
+        table_name = accumulate_table,
+        anchor_hive_path = anchor_hive_path
+      )
+      # Reset so the next publish (per-chunk mode) only exports the rows
+      # that chunk actually produced, not everything published so far.
+      DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s;", accumulate_table))
+    }
+  }
 
   processed_variable_ids <- character(0)
   loop_error <- NULL
@@ -606,10 +719,9 @@ anchor_by_variable <- function(
       )
     )
 
-    # Every chunk writes into the same local scratch hive `add_parquet_export()`
-    # uses `OVERWRITE_OR_IGNORE`, which replaces only the `variable_id`
-    # partition(s) a given COPY call produced, so chunks with disjoint
-    # variable_id sets never collide here.
+    # Every chunk writes into the same local scratch hive or accumulator
+    # table -- both use `OVERWRITE_OR_IGNORE`/plain inserts keyed by
+    # `variable_id`, so chunks with disjoint variable_id sets never collide.
     loop_error <- tryCatch(
       {
         anchor_impl(
@@ -617,7 +729,8 @@ anchor_by_variable <- function(
           population_dt = validated$population,
           metadata_dt = chunk_metadata,
           anchor_col = anchor_col,
-          anchor_hive_path = local_hive_path
+          anchor_hive_path = local_hive_path,
+          accumulate_table = accumulate_table
         )
         NULL
       },
@@ -641,37 +754,37 @@ anchor_by_variable <- function(
       break
     }
     processed_variable_ids <- c(processed_variable_ids, chunk_variable_ids)
+
+    if (publish == "per_chunk") {
+      publish_chunk(chunk_variable_ids)
+    }
   }
 
-  # If any chunk failed, the whole run is discarded: nothing is published to
-  # `anchor_hive_path`
-  if (!is.null(loop_error)) {
-    logger::log_error(
-      sprintf(
-        paste(
-          "Chunk failed; discarding local results for this run.",
-          "`%s` is left unchanged."
-        ),
-        anchor_hive_path
+  if (publish == "once") {
+    # If any chunk failed, the whole run is discarded: nothing is published
+    # to `anchor_hive_path`, which is left exactly as it was before this
+    # call.
+    if (!is.null(loop_error)) {
+      logger::log_error(
+        sprintf(
+          paste(
+            "Chunk failed; discarding results for this run.",
+            "`%s` is left unchanged."
+          ),
+          anchor_hive_path
+        )
       )
-    )
+      stop(loop_error)
+    }
+
+    # `anchor_hive_path` is only touched here, once for the whole run,
+    # instead of once per chunk.
+    publish_chunk(processed_variable_ids)
+  } else if (!is.null(loop_error)) {
+    # publish == "per_chunk": every chunk before the failing one was already
+    # published as it completed, so only the error needs to propagate now.
     stop(loop_error)
   }
-
-  # `anchor_hive_path` is only touched here, once for the whole run, instead
-  # of once per chunk.
-  logger::log_debug(
-    sprintf(
-      "Publishing %d variable_id partition(s) to `%s`.",
-      length(processed_variable_ids),
-      anchor_hive_path
-    )
-  )
-  publish_anchor_partitions(
-    local_hive_path = local_hive_path,
-    anchor_hive_path = anchor_hive_path,
-    variable_ids = processed_variable_ids
-  )
 
   logger::log_debug(
     sprintf(

@@ -39,7 +39,7 @@ Invisibly returns the selector values that were processed.
 Runs \code{\link[=anchor]{anchor()}} once for each distinct \code{selector} value found in
 \code{metadata}, so every variable that shares a selector is covered by
 a single query (and a single join against \code{concepts}), no matter
-how many variables that is -- unlike \code{\link[=anchor_by_variable]{anchor_by_variable()}}, there's no
+how many variables that is unlike \code{\link[=anchor_by_variable]{anchor_by_variable()}}, there's no
 \code{chunk_size} limit splitting a selector's variables across more
 than one query.
 }
