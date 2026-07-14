@@ -20,8 +20,8 @@ minimal_metadata <- function() {
     concept_id = c("COV_A", "COV_B", "LAB_X"),
     constructor = c("GENERIC", "GENERIC", "GENERIC"),
     selector = c("LATEST", "COUNT", "RANGE_COUNT"),
-    start_look_back = c(-30L, -90L, -30L),
-    end_look_back = c(0L, 0L, 30L)
+    start_offset = c(-30L, -90L, -30L),
+    end_offset = c(0L, 0L, 30L)
   )
 }
 # minimal concepts data.table contains columns:

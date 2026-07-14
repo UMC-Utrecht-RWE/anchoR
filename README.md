@@ -40,12 +40,12 @@ population <- data.table(
 )
 
 metadata <- data.table(
-  variable_id     = "flu_vaccine_recent",
-  concept_id      = "FLU_VAX",
-  constructor     = "GENERIC",
-  selector        = "LATEST",
-  start_look_back = -365L,  # 365 days before T0 ...
-  end_look_back   = 0L      # ... through T0 itself
+  variable_id  = "flu_vaccine_recent",
+  concept_id   = "FLU_VAX",
+  constructor  = "GENERIC",
+  selector     = "LATEST",
+  start_offset = -365L,  # 365 days before T0 ...
+  end_offset   = 0L      # ... through T0 itself
 )
 
 concepts <- data.table(

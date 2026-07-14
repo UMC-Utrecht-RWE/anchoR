@@ -43,8 +43,8 @@ testthat::test_that(
       concept_id  = c("TIE_LATEST", "TIE_EARLIEST"),
       constructor = "GENERIC",
       selector    = c("LATEST", "EARLIEST"),
-      start_look_back = -3650L,
-      end_look_back   = 0L
+      start_offset = -3650L,
+      end_offset   = 0L
     )
     concepts <- data.table::data.table(
       person_id = "1",
