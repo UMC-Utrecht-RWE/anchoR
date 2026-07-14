@@ -2,7 +2,7 @@
 % Please edit documentation in R/anchor.R
 \name{anchor_by_selector}
 \alias{anchor_by_selector}
-\title{Anchor Study Variables Grouped by Selector}
+\title{Anchor study variables, one selector at a time}
 \usage{
 anchor_by_selector(
   population,
@@ -33,19 +33,22 @@ directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
 }
 \value{
-Invisibly returns the processed \code{selector} values.
+Invisibly returns the selector values that were processed.
 }
 \description{
-Runs \code{\link[=anchor]{anchor()}} once per unique \code{selector} value in \code{metadata},
-so a single selector query (and its join against \code{concepts}) covers
-every variable that uses that selector, however many there are -- no
-\code{chunk_size} cap splits a selector's variables across more than one
-query the way \code{\link[=anchor_by_variable]{anchor_by_variable()}} can. This is the cheapest option in
-terms of \code{concepts} scans (at most one per distinct selector in
-\code{metadata}). Each call to \code{\link[=anchor]{anchor()}} safely replaces only the
-\code{variable_id} partitions it computes and leaves the rest of
-\code{anchor_hive_path} untouched, so rerunning \code{anchor_by_selector()}
-with the same or a smaller \code{metadata} is safe; it just does not give
-you \code{\link[=anchor_by_variable]{anchor_by_variable()}}'s \code{chunk_size}-bounded blast radius --
-every variable sharing a selector is recomputed together in one query.
+Runs \code{\link[=anchor]{anchor()}} once for each distinct \code{selector} value found in
+\code{metadata}, so every variable that shares a selector is covered by
+a single query (and a single join against \code{concepts}), no matter
+how many variables that is -- unlike \code{\link[=anchor_by_variable]{anchor_by_variable()}}, there's no
+\code{chunk_size} limit splitting a selector's variables across more
+than one query.
+}
+\details{
+This is the cheapest option in terms of how many times \code{concepts}
+gets scanned (at most once per distinct selector in \code{metadata}).
+Each call to \code{\link[=anchor]{anchor()}} only replaces the variables it just computed and
+leaves the rest of \code{anchor_hive_path} untouched, so re-running this
+with the same or a smaller \code{metadata} is safe. The trade-off is
+that you don't get \code{\link[=anchor_by_variable]{anchor_by_variable()}}'s smaller batch sizes: every
+variable sharing a selector is always recomputed together in one go.
 }

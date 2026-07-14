@@ -307,6 +307,37 @@ testthat::test_that(
   }
 )
 
+testthat::test_that(
+  "a failed chunk discards the whole run instead of publishing earlier chunks",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    # `lab_range`'s selector (RANGE_COUNT) sorts last among the three
+    # selectors in `minimal_metadata()`, so with `chunk_size = 1` it lands in
+    # the final chunk -- `cov_count` and `cov_latest` succeed in earlier
+    # chunks before this one fails.
+    metadata <- minimal_metadata()
+    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+
+    testthat::expect_error(
+      anchor_by_variable(
+        population = minimal_population(),
+        metadata = metadata,
+        concepts = minimal_concepts(),
+        anchor_hive_path = hive_path,
+        chunk_size = 1
+      ),
+      "Window function does not exist"
+    )
+
+    # Even though cov_count and cov_latest were computed successfully before
+    # the failing chunk, nothing should have been published.
+    testthat::expect_length(list.files(hive_path, recursive = TRUE), 0L)
+  }
+)
+
 testthat::test_that("reshapes variable-by-variable hive output", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)

@@ -1,11 +1,11 @@
-#' Resolve and create the anchor parquet hive root if needed.
-#' It checks if a path is usable before any partition work:
-#' - it rejects NULL
-#' - it creates the hive directory if it does not exist
-#' - it returns a normalized absolute path
-#' @param anchor_hive_path Character scalar path to the hive root.
+#' Make sure the hive folder exists, and return its full path.
 #'
-#' @return A normalized absolute path.
+#' Creates the folder if it's missing, and stops with an error if no path
+#' was given at all.
+#'
+#' @param anchor_hive_path Path to the hive folder.
+#'
+#' @return The absolute path to the (now existing) hive folder.
 #' @keywords internal
 #' @noRd
 ensure_anchor_hive_path <- function(anchor_hive_path) {
@@ -38,12 +38,15 @@ ensure_anchor_hive_path <- function(anchor_hive_path) {
   normalized_path
 }
 
-#' Build the Hive-style partition directory name for a given variable.
+#' Build the subfolder path where one variable's parquet files live.
 #'
-#' @param anchor_hive_path Character scalar path to the hive root.
-#' @param variable_id Character scalar variable ID.
+#' Each variable gets its own subfolder inside the hive, named
+#' `variable_id=<id>`. This just builds that path.
 #'
-#' @return A character scalar path to the partition directory.
+#' @param anchor_hive_path Path to the hive folder.
+#' @param variable_id The variable's id.
+#'
+#' @return The path to that variable's subfolder.
 #' @keywords internal
 #' @noRd
 anchor_partition_path <- function(anchor_hive_path, variable_id) {
@@ -62,13 +65,17 @@ anchor_partition_path <- function(anchor_hive_path, variable_id) {
   partition_path
 }
 
-#' Move a staged parquet partition into the target hive, trying a single
-#' filesystem move first and falling back to copy-and-delete if that fails.
+#' Move one variable's parquet files from staging into the target hive.
 #'
-#' @param source_partition_path Character path for staged partition directory.
-#' @param target_partition_path Character path for target partition directory.
-#' @param variable_id Character scalar variable ID, used for logging.
-#' @return Invisibly returns the target partition path if the move succeeded.
+#' Tries a plain rename first, which is instant on most local disks. If
+#' that doesn't work (for example, the two folders are on different
+#' drives), it falls back to copying the files across and then deleting
+#' the originals.
+#'
+#' @param source_partition_path Where the files are right now.
+#' @param target_partition_path Where they should end up.
+#' @param variable_id The variable's id, used for logging.
+#' @return Invisibly, the target path once the move is done.
 #' @keywords internal
 #' @noRd
 move_anchor_partition <- function(
@@ -142,20 +149,21 @@ move_anchor_partition <- function(
   invisible(target_partition_path)
 }
 
-#' Publish staged partitions from a local hive into the target hive.
+#' Copy finished variables from local scratch into the real output hive.
 #'
-#' Deletes and replaces one \code{variable_id} partition at a time so a
-#' `variable_id` with no staged partition (never produced, or belonging to a
-#' chunk that was never reached) leaves the corresponding target partition
-#' untouched instead of deleting it.
+#' Goes through the requested variables one at a time. If a variable was
+#' actually produced in the local scratch hive, its old copy in the output
+#' hive (if there is one) gets deleted and replaced with the new one. A
+#' variable that was never produced is simply skipped, leaving whatever was
+#' already in the output hive untouched.
 #'
-#' @param local_hive_path Path to the local (fast-disk) staging hive that
-#'   accumulated output across every processed chunk.
-#' @param anchor_hive_path Path to the target hive, potentially on slow or
-#'   network-backed storage.
-#' @param variable_ids Character vector of `variable_id` values to publish,
-#'   normally just the ones whose chunk actually completed.
-#' @return Invisibly `NULL`.ß
+#' @param local_hive_path The local scratch hive that every chunk wrote
+#'   into.
+#' @param anchor_hive_path The real output hive (this can be slow or
+#'   network storage).
+#' @param variable_ids Which variables to copy over, normally just the ones
+#'   that finished successfully.
+#' @return Invisibly `NULL`.
 #' @keywords internal
 #' @noRd
 publish_anchor_partitions <- function(
@@ -206,16 +214,14 @@ publish_anchor_partitions <- function(
   invisible(NULL)
 }
 
-#' Order variable_ids by Selector for Chunking
+#' Sort variable_ids so ones sharing a selector sit next to each other.
 #'
-#' Each `variable_id`'s first-listed `selector` value (in case it spans more
-#' than one across multiple windows) is used as a stable sort key, so
-#' variable_ids sharing a selector end up adjacent. Ties (same selector) keep
-#' their original relative order.
+#' Groups variables by which selector rule they use (using each variable's
+#' first-listed selector, in case it appears more than once), while keeping
+#' their original order within each group.
 #'
 #' @param metadata_dt A data.table with `variable_id` and `selector` columns.
-#' @return A character vector of unique `variable_id` values, ordered by
-#'   selector.
+#' @return The unique `variable_id` values, sorted by selector.
 #' @keywords internal
 #' @noRd
 order_variable_ids_by_selector <- function(metadata_dt) {
@@ -227,29 +233,23 @@ order_variable_ids_by_selector <- function(metadata_dt) {
   variable_ids[order(first_selector_per_variable)]
 }
 
-#' Core Windowing + Selector Execution Given an Open Connection
+#' Do the windowing and selector work for one batch of variables.
 #'
-#' Shared by [anchor()] and [anchor_by_variable()] so that opening a DuckDB
-#' connection and loading `concepts` happens once per caller instead of once
-#' per `variable_id`. `anchor_by_variable()` used to call `anchor()` itself
-#' once per variable, which meant re-validating/re-copying `population`,
-#' re-opening DuckDB, and re-scanning (or re-copying) the entire `concepts`
-#' source once per variable; for metadata files with many standard-window
-#' variables that repeated concepts scan dominated runtime. This function
-#' factors out the part that is genuinely per-variable (window definition,
-#' writing `population_windows`, running the selector queries) so callers can
-#' share the expensive setup across many calls.
+#' Shared by [anchor()] and [anchor_by_variable()] so the expensive setup
+#' (opening a DuckDB connection, loading `concepts`) only happens once,
+#' instead of once per variable. This function does the part that's
+#' different for each batch: building the person-by-variable time windows,
+#' and running the selector queries that turn those windows into anchored
+#' values.
 #'
-#' @param con An open DBI connection with `concepts` already loaded.
-#' @param population_dt Validated population `data.table` (not yet trimmed to
-#'   window columns).
-#' @param metadata_dt Validated metadata `data.table` for the variable(s) to
-#'   process in this call.
-#' @param anchor_col Column in `population_dt` used as the index date when
-#'   metadata does not specify an anchor column.
-#' @param anchor_hive_path Existing, normalized path to write selector output.
-#' @return Invisibly `NULL` on success, or (only when no window was valid) the
-#'   same empty typed table `anchor()` has always returned in that case.
+#' @param con An open database connection with `concepts` already loaded.
+#' @param population_dt The population data.
+#' @param metadata_dt The variable(s) to process in this call.
+#' @param anchor_col Which column in `population_dt` to use as the index
+#'   date when a variable doesn't specify its own.
+#' @param anchor_hive_path Where to write the results.
+#' @return Invisibly `NULL` on success. If none of the variables had a
+#'   valid window, an empty result table is returned instead.
 #' @keywords internal
 #' @noRd
 anchor_impl <- function(
@@ -419,44 +419,47 @@ anchor <- function(
   result
 }
 
-#' Anchor study variables in chunks of variable_ids
+#' Anchor study variables in batches
 #'
-#' Runs the anchoring pipeline over \code{metadata} in chunks of
-#' \code{chunk_size} \code{variable_id} values at a time (default 20) instead
-#' of computing every variable in one pass like [anchor()]. Every chunk
-#' writes into one local parquet hive under \code{staging_dir} -- not into
-#' \code{anchor_hive_path} -- so all per-chunk read/write traffic, and any
-#' DuckDB out-of-core spilling, stays on fast local disk even when
-#' \code{anchor_hive_path} is slow or network-backed storage. Once every
-#' chunk that completes successfully has written its output locally, the
-#' \code{variable_id} partitions produced so far are published into
-#' \code{anchor_hive_path} in a single batch, one partition at a time, so
-#' rerunning a subset of variables still replaces only their partitions and
-#' leaves the rest of the hive untouched, and a later chunk's error does not
-#' discard earlier chunks' already-completed results. Batching several
-#' variables per chunk lets one selector query (and its join against
-#' \code{concepts}) cover all of them at once, which is far cheaper than one
-#' query per variable when \code{concepts} is a large parquet or DuckDB
-#' source. Variables are ordered by selector before being sliced into
-#' chunks, so each chunk is as selector-homogeneous as \code{chunk_size}
-#' allows (see [anchor_by_selector()] for the case where you want every
-#' same-selector variable processed in one uncapped query instead of
-#' bounding the blast radius with \code{chunk_size}).
+#' Does the same job as [anchor()], but works through \code{metadata} in
+#' batches of \code{chunk_size} variables at a time (default 20) instead of
+#' all at once.
+#'
+#' Every batch first writes its results to a scratch folder on local disk
+#' (under \code{staging_dir}), not to \code{anchor_hive_path} itself. That
+#' keeps all the repeated reading and writing off \code{anchor_hive_path},
+#' which matters when it points at slow or network storage. Only once every
+#' batch in the call has finished successfully are the results copied into
+#' \code{anchor_hive_path}, all in one go, one variable at a time so
+#' re-running for just a few variables still only replaces their part of
+#' the hive and leaves the rest alone. If any batch fails, nothing gets
+#' copied over at all: \code{anchor_hive_path} is left exactly as it was
+#' before the call, and the error is raised. That way you never end up with
+#' some variables refreshed and others not.
+#'
+#' Grouping several variables into one batch also means a single query
+#' (and a single join against \code{concepts}) can cover all of them at
+#' once, which is much cheaper than running one query per variable.
+#' Variables are sorted by selector before being split into batches, so
+#' each batch groups same-selector variables together as much as
+#' \code{chunk_size} allows (see [anchor_by_selector()] if you'd rather
+#' always process every variable sharing a selector together, with no
+#' batch-size limit).
 #'
 #' @inheritParams anchor
-#' @param chunk_size Number of \code{variable_id} values to process per pass.
-#'   Larger chunks mean fewer (and cheaper) \code{concepts} scans, but a
-#'   larger \code{population_windows} working table per pass and a bigger
-#'   unit of "all published or none published" if a chunk errors partway
-#'   through. Set to \code{1} to process strictly one variable at a time.
-#' @param staging_dir Directory used for the local scratch hive that every
-#'   chunk writes into, and for DuckDB's spill-to-disk `temp_directory`.
-#'   Defaults to \code{tempdir()}. Only override this if the default R
-#'   temporary directory is itself on slow or network-backed storage --
-#'   otherwise leave it on local disk so `anchor_hive_path` is only touched
-#'   once, at the final publish step, regardless of how slow it is.
+#' @param chunk_size How many variables to process per batch. Bigger
+#'   batches mean fewer (and cheaper) scans of \code{concepts}, but since
+#'   nothing gets saved until the whole call succeeds, a bigger batch also
+#'   means more work is thrown away if it fails partway through. Use
+#'   \code{1} to process one variable at a time.
+#' @param staging_dir Folder to use as local scratch space, and for
+#'   DuckDB's own temporary files. Defaults to \code{tempdir()}. Only
+#'   change this if your machine's default temporary folder is itself slow
+#'   or on a network drive otherwise leave it on local disk so
+#'   \code{anchor_hive_path} only gets touched once, right at the end,
+#'   however slow it is.
 #'
-#' @return Invisibly returns the processed \code{variable_id} values.
+#' @return Invisibly returns the variable ids that were processed.
 #' @export
 anchor_by_variable <- function(
   population,
@@ -484,7 +487,7 @@ anchor_by_variable <- function(
 
   # Variable_ids are ordered by selector before slicing into chunks (see
   # `order_variable_ids_by_selector()`) so each chunk is as
-  # selector-homogeneous as `chunk_size` allows -- `run_selector_queries()`
+  # selector-homogeneous as `chunk_size` allows `run_selector_queries()`
   # still runs one join per distinct selector *within* a chunk, so grouping
   # same-selector variables together keeps that count as low as possible
   # instead of leaving it to metadata row order.
@@ -510,7 +513,7 @@ anchor_by_variable <- function(
 
   # Variables are processed in chunks rather than strictly one at a time so a
   # single selector query (and its concepts join) can cover several variables
-  # at once -- DuckDB's `COPY ... PARTITION_BY (variable_id)` already fans a
+  # at once DuckDB's `COPY ... PARTITION_BY (variable_id)` already fans a
   # multi-variable result out into separate partitions on its own, so
   # batching only changes how many variables feed one query, not how the
   # output is laid out.
@@ -520,7 +523,7 @@ anchor_by_variable <- function(
   )
 
   # `staging_dir` defaults to `tempdir()`, which is local disk on the machine
-  # running this process, deliberately independent of `anchor_hive_path` --
+  # running this process, deliberately independent of `anchor_hive_path`
   # unlike a plain sibling of `anchor_hive_path`, this keeps every chunk's
   # write traffic off `anchor_hive_path` entirely until the final publish
   # step, which matters when `anchor_hive_path` is slow or network-backed
@@ -553,7 +556,7 @@ anchor_by_variable <- function(
   )
 
   # A single connection and a single load of `concepts` are shared across
-  # every chunk below instead of one per variable (see `anchor_impl()`) --
+  # every chunk below instead of one per variable (see `anchor_impl()`)
   # for parquet or in-memory concepts, that used to mean re-scanning or
   # re-copying the entire concept table once per variable.
   logger::log_debug(
@@ -640,10 +643,23 @@ anchor_by_variable <- function(
     processed_variable_ids <- c(processed_variable_ids, chunk_variable_ids)
   }
 
+  # If any chunk failed, the whole run is discarded: nothing is published to
+  # `anchor_hive_path`
+  if (!is.null(loop_error)) {
+    logger::log_error(
+      sprintf(
+        paste(
+          "Chunk failed; discarding local results for this run.",
+          "`%s` is left unchanged."
+        ),
+        anchor_hive_path
+      )
+    )
+    stop(loop_error)
+  }
+
   # `anchor_hive_path` is only touched here, once for the whole run, instead
-  # of once per chunk -- only variable_ids whose chunk actually completed are
-  # published, so a chunk that never ran (or failed) leaves its variable_ids'
-  # existing target partitions untouched rather than deleting them.
+  # of once per chunk.
   logger::log_debug(
     sprintf(
       "Publishing %d variable_id partition(s) to `%s`.",
@@ -657,10 +673,6 @@ anchor_by_variable <- function(
     variable_ids = processed_variable_ids
   )
 
-  if (!is.null(loop_error)) {
-    stop(loop_error)
-  }
-
   logger::log_debug(
     sprintf(
       "Finished anchor_by_variable() for %d variable_id(s) in %d chunk(s).",
@@ -671,24 +683,26 @@ anchor_by_variable <- function(
   invisible(variable_ids)
 }
 
-#' Anchor Study Variables Grouped by Selector
+#' Anchor study variables, one selector at a time
 #'
-#' Runs [anchor()] once per unique \code{selector} value in \code{metadata},
-#' so a single selector query (and its join against \code{concepts}) covers
-#' every variable that uses that selector, however many there are -- no
-#' \code{chunk_size} cap splits a selector's variables across more than one
-#' query the way [anchor_by_variable()] can. This is the cheapest option in
-#' terms of \code{concepts} scans (at most one per distinct selector in
-#' \code{metadata}). Each call to [anchor()] safely replaces only the
-#' \code{variable_id} partitions it computes and leaves the rest of
-#' \code{anchor_hive_path} untouched, so rerunning \code{anchor_by_selector()}
-#' with the same or a smaller \code{metadata} is safe; it just does not give
-#' you [anchor_by_variable()]'s \code{chunk_size}-bounded blast radius --
-#' every variable sharing a selector is recomputed together in one query.
+#' Runs [anchor()] once for each distinct \code{selector} value found in
+#' \code{metadata}, so every variable that shares a selector is covered by
+#' a single query (and a single join against \code{concepts}), no matter
+#' how many variables that is unlike [anchor_by_variable()], there's no
+#' \code{chunk_size} limit splitting a selector's variables across more
+#' than one query.
+#'
+#' This is the cheapest option in terms of how many times \code{concepts}
+#' gets scanned (at most once per distinct selector in \code{metadata}).
+#' Each call to [anchor()] only replaces the variables it just computed and
+#' leaves the rest of \code{anchor_hive_path} untouched, so re-running this
+#' with the same or a smaller \code{metadata} is safe. The trade-off is
+#' that you don't get [anchor_by_variable()]'s smaller batch sizes: every
+#' variable sharing a selector is always recomputed together in one go.
 #'
 #' @inheritParams anchor
 #'
-#' @return Invisibly returns the processed \code{selector} values.
+#' @return Invisibly returns the selector values that were processed.
 #' @export
 anchor_by_selector <- function(
   population,
