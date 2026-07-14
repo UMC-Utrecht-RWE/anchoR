@@ -10,7 +10,8 @@ anchor_by_variable(
   concepts,
   anchor_col = "T0",
   anchor_hive_path = NULL,
-  chunk_size = 20L
+  chunk_size = 20L,
+  staging_dir = NULL
 )
 }
 \arguments{
@@ -36,8 +37,15 @@ hive. Must not be \code{NULL}.}
 \item{chunk_size}{Number of \code{variable_id} values to process per pass.
 Larger chunks mean fewer (and cheaper) \code{concepts} scans, but a
 larger \code{population_windows} working table per pass and a bigger
-unit of "all swapped or none swapped" if a chunk errors partway through.
-Set to \code{1} to process strictly one variable at a time.}
+unit of "all published or none published" if a chunk errors partway
+through. Set to \code{1} to process strictly one variable at a time.}
+
+\item{staging_dir}{Directory used for the local scratch hive that every
+chunk writes into, and for DuckDB's spill-to-disk \code{temp_directory}.
+Defaults to \code{tempdir()}. Only override this if the default R
+temporary directory is itself on slow or network-backed storage --
+otherwise leave it on local disk so \code{anchor_hive_path} is only touched
+once, at the final publish step, regardless of how slow it is.}
 }
 \value{
 Invisibly returns the processed \code{variable_id} values.
@@ -45,16 +53,23 @@ Invisibly returns the processed \code{variable_id} values.
 \description{
 Runs the anchoring pipeline over \code{metadata} in chunks of
 \code{chunk_size} \code{variable_id} values at a time (default 20) instead
-of computing every variable in one pass like \code{\link[=anchor]{anchor()}}. Each chunk is
-first written to a temporary parquet hive and then swapped into the target
-hive one \code{variable_id} partition at a time, so rerunning a subset of
-variables replaces only their partitions and leaves the rest of the hive
-untouched. Batching several variables per chunk lets one selector query
-(and its join against \code{concepts}) cover all of them at once, which is
-far cheaper than one query per variable when \code{concepts} is a large
-parquet or DuckDB source. Variables are ordered by selector before being
-sliced into chunks, so each chunk is as selector-homogeneous as
-\code{chunk_size} allows (see \code{\link[=anchor_by_selector]{anchor_by_selector()}} for the case where you
-want every same-selector variable processed in one uncapped query instead
-of bounding the blast radius with \code{chunk_size}).
+of computing every variable in one pass like \code{\link[=anchor]{anchor()}}. Every chunk
+writes into one local parquet hive under \code{staging_dir} -- not into
+\code{anchor_hive_path} -- so all per-chunk read/write traffic, and any
+DuckDB out-of-core spilling, stays on fast local disk even when
+\code{anchor_hive_path} is slow or network-backed storage. Once every
+chunk that completes successfully has written its output locally, the
+\code{variable_id} partitions produced so far are published into
+\code{anchor_hive_path} in a single batch, one partition at a time, so
+rerunning a subset of variables still replaces only their partitions and
+leaves the rest of the hive untouched, and a later chunk's error does not
+discard earlier chunks' already-completed results. Batching several
+variables per chunk lets one selector query (and its join against
+\code{concepts}) cover all of them at once, which is far cheaper than one
+query per variable when \code{concepts} is a large parquet or DuckDB
+source. Variables are ordered by selector before being sliced into
+chunks, so each chunk is as selector-homogeneous as \code{chunk_size}
+allows (see \code{\link[=anchor_by_selector]{anchor_by_selector()}} for the case where you want every
+same-selector variable processed in one uncapped query instead of
+bounding the blast radius with \code{chunk_size}).
 }

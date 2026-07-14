@@ -142,6 +142,70 @@ move_anchor_partition <- function(
   invisible(target_partition_path)
 }
 
+#' Publish staged partitions from a local hive into the target hive.
+#'
+#' Deletes and replaces one \code{variable_id} partition at a time so a
+#' `variable_id` with no staged partition (never produced, or belonging to a
+#' chunk that was never reached) leaves the corresponding target partition
+#' untouched instead of deleting it.
+#'
+#' @param local_hive_path Path to the local (fast-disk) staging hive that
+#'   accumulated output across every processed chunk.
+#' @param anchor_hive_path Path to the target hive, potentially on slow or
+#'   network-backed storage.
+#' @param variable_ids Character vector of `variable_id` values to publish,
+#'   normally just the ones whose chunk actually completed.
+#' @return Invisibly `NULL`.ß
+#' @keywords internal
+#' @noRd
+publish_anchor_partitions <- function(
+  local_hive_path,
+  anchor_hive_path,
+  variable_ids
+) {
+  for (current_variable_id in variable_ids) {
+    target_partition_path <- anchor_partition_path(
+      anchor_hive_path,
+      current_variable_id
+    )
+    local_partition_path <- anchor_partition_path(
+      local_hive_path,
+      current_variable_id
+    )
+
+    if (!dir.exists(local_partition_path)) {
+      logger::log_debug(
+        sprintf(
+          paste(
+            "No parquet partition was produced for variable_id `%s`.",
+            "The target hive was left without that partition."
+          ),
+          current_variable_id
+        )
+      )
+      next
+    }
+
+    if (dir.exists(target_partition_path)) {
+      logger::log_debug(
+        sprintf(
+          "Deleting existing parquet partition for variable_id `%s`.",
+          current_variable_id
+        )
+      )
+      unlink(target_partition_path, recursive = TRUE, force = TRUE)
+    }
+
+    move_anchor_partition(
+      source_partition_path = local_partition_path,
+      target_partition_path = target_partition_path,
+      variable_id = current_variable_id
+    )
+  }
+
+  invisible(NULL)
+}
+
 #' Order variable_ids by Selector for Chunking
 #'
 #' Each `variable_id`'s first-listed `selector` value (in case it spans more
@@ -359,25 +423,38 @@ anchor <- function(
 #'
 #' Runs the anchoring pipeline over \code{metadata} in chunks of
 #' \code{chunk_size} \code{variable_id} values at a time (default 20) instead
-#' of computing every variable in one pass like [anchor()]. Each chunk is
-#' first written to a temporary parquet hive and then swapped into the target
-#' hive one \code{variable_id} partition at a time, so rerunning a subset of
-#' variables replaces only their partitions and leaves the rest of the hive
-#' untouched. Batching several variables per chunk lets one selector query
-#' (and its join against \code{concepts}) cover all of them at once, which is
-#' far cheaper than one query per variable when \code{concepts} is a large
-#' parquet or DuckDB source. Variables are ordered by selector before being
-#' sliced into chunks, so each chunk is as selector-homogeneous as
-#' \code{chunk_size} allows (see [anchor_by_selector()] for the case where you
-#' want every same-selector variable processed in one uncapped query instead
-#' of bounding the blast radius with \code{chunk_size}).
+#' of computing every variable in one pass like [anchor()]. Every chunk
+#' writes into one local parquet hive under \code{staging_dir} -- not into
+#' \code{anchor_hive_path} -- so all per-chunk read/write traffic, and any
+#' DuckDB out-of-core spilling, stays on fast local disk even when
+#' \code{anchor_hive_path} is slow or network-backed storage. Once every
+#' chunk that completes successfully has written its output locally, the
+#' \code{variable_id} partitions produced so far are published into
+#' \code{anchor_hive_path} in a single batch, one partition at a time, so
+#' rerunning a subset of variables still replaces only their partitions and
+#' leaves the rest of the hive untouched, and a later chunk's error does not
+#' discard earlier chunks' already-completed results. Batching several
+#' variables per chunk lets one selector query (and its join against
+#' \code{concepts}) cover all of them at once, which is far cheaper than one
+#' query per variable when \code{concepts} is a large parquet or DuckDB
+#' source. Variables are ordered by selector before being sliced into
+#' chunks, so each chunk is as selector-homogeneous as \code{chunk_size}
+#' allows (see [anchor_by_selector()] for the case where you want every
+#' same-selector variable processed in one uncapped query instead of
+#' bounding the blast radius with \code{chunk_size}).
 #'
 #' @inheritParams anchor
 #' @param chunk_size Number of \code{variable_id} values to process per pass.
 #'   Larger chunks mean fewer (and cheaper) \code{concepts} scans, but a
 #'   larger \code{population_windows} working table per pass and a bigger
-#'   unit of "all swapped or none swapped" if a chunk errors partway through.
-#'   Set to \code{1} to process strictly one variable at a time.
+#'   unit of "all published or none published" if a chunk errors partway
+#'   through. Set to \code{1} to process strictly one variable at a time.
+#' @param staging_dir Directory used for the local scratch hive that every
+#'   chunk writes into, and for DuckDB's spill-to-disk `temp_directory`.
+#'   Defaults to \code{tempdir()}. Only override this if the default R
+#'   temporary directory is itself on slow or network-backed storage --
+#'   otherwise leave it on local disk so `anchor_hive_path` is only touched
+#'   once, at the final publish step, regardless of how slow it is.
 #'
 #' @return Invisibly returns the processed \code{variable_id} values.
 #' @export
@@ -387,7 +464,8 @@ anchor_by_variable <- function(
   concepts,
   anchor_col = "T0",
   anchor_hive_path = NULL,
-  chunk_size = 20L
+  chunk_size = 20L,
+  staging_dir = NULL
 ) {
   if (!is.numeric(chunk_size) || length(chunk_size) != 1L || chunk_size < 1) {
     stop_log("`chunk_size` must be a single positive number.")
@@ -435,13 +513,43 @@ anchor_by_variable <- function(
   # at once -- DuckDB's `COPY ... PARTITION_BY (variable_id)` already fans a
   # multi-variable result out into separate partitions on its own, so
   # batching only changes how many variables feed one query, not how the
-  # output is laid out. Each chunk still stages to its own temporary hive and
-  # only swaps a variable's target partition after the whole chunk succeeded,
-  # so the atomicity guarantee is the same as processing one variable at a
-  # time -- just at chunk granularity instead of variable granularity.
+  # output is laid out.
   variable_id_chunks <- split(
     ordered_variable_ids,
     ceiling(seq_along(ordered_variable_ids) / chunk_size)
+  )
+
+  # `staging_dir` defaults to `tempdir()`, which is local disk on the machine
+  # running this process, deliberately independent of `anchor_hive_path` --
+  # unlike a plain sibling of `anchor_hive_path`, this keeps every chunk's
+  # write traffic off `anchor_hive_path` entirely until the final publish
+  # step, which matters when `anchor_hive_path` is slow or network-backed
+  # storage where small-file operations (and `file.rename()` degrading to a
+  # full copy) are expensive.
+  if (is.null(staging_dir)) {
+    staging_dir <- tempdir()
+  }
+  if (!dir.exists(staging_dir)) {
+    dir.create(staging_dir, recursive = TRUE)
+  }
+  staging_dir <- normalizePath(staging_dir, winslash = "/", mustWork = TRUE)
+
+  local_hive_path <- tempfile(pattern = "anchor-local-", tmpdir = staging_dir)
+  dir.create(local_hive_path, recursive = TRUE)
+  local_hive_path <- ensure_anchor_hive_path(local_hive_path)
+  on.exit(unlink(local_hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+  logger::log_trace(
+    sprintf("Created local scratch parquet hive: %s", local_hive_path)
+  )
+
+  duckdb_temp_dir <- tempfile(
+    pattern = "anchor-duckdb-tmp-",
+    tmpdir = staging_dir
+  )
+  dir.create(duckdb_temp_dir, recursive = TRUE)
+  on.exit(
+    unlink(duckdb_temp_dir, recursive = TRUE, force = TRUE),
+    add = TRUE
   )
 
   # A single connection and a single load of `concepts` are shared across
@@ -454,12 +562,22 @@ anchor_by_variable <- function(
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
+  # Any out-of-core spill DuckDB needs during the join/windowing below goes
+  # to local scratch instead of wherever it would otherwise default to.
+  DBI::dbExecute(
+    con,
+    sprintf("SET temp_directory = '%s';", duckdb_temp_dir)
+  )
+
   logger::log_trace("Loading concepts into DuckDB execution context.")
   load_concepts_table(
     con,
     validated$concepts,
     concept_ids = unique(as.character(metadata_dt$concept_id))
   )
+
+  processed_variable_ids <- character(0)
+  loop_error <- NULL
 
   for (chunk_index in seq_along(variable_id_chunks)) {
     chunk_variable_ids <- variable_id_chunks[[chunk_index]]
@@ -485,99 +603,64 @@ anchor_by_variable <- function(
       )
     )
 
-    staging_hive_path <- tempfile(
-      pattern = "anchor-stage-",
-      tmpdir = dirname(anchor_hive_path)
-    )
-    dir.create(staging_hive_path, recursive = TRUE)
-    staging_hive_path <- ensure_anchor_hive_path(staging_hive_path)
-    logger::log_trace(
-      sprintf(
-        "Created staging parquet hive for chunk %d/%d: %s",
-        chunk_index,
-        length(variable_id_chunks),
-        staging_hive_path
-      )
-    )
-
-    tryCatch(
+    # Every chunk writes into the same local scratch hive `add_parquet_export()`
+    # uses `OVERWRITE_OR_IGNORE`, which replaces only the `variable_id`
+    # partition(s) a given COPY call produced, so chunks with disjoint
+    # variable_id sets never collide here.
+    loop_error <- tryCatch(
       {
         anchor_impl(
           con = con,
           population_dt = validated$population,
           metadata_dt = chunk_metadata,
           anchor_col = anchor_col,
-          anchor_hive_path = staging_hive_path
+          anchor_hive_path = local_hive_path
         )
-
-        # The chunk was written as a whole, but the target hive is still
-        # updated one variable_id partition at a time, so a variable with no
-        # matching windows in this chunk does not disturb the others.
-        for (current_variable_id in chunk_variable_ids) {
-          target_partition_path <- anchor_partition_path(
-            anchor_hive_path,
-            current_variable_id
-          )
-          staging_partition_path <- anchor_partition_path(
-            staging_hive_path,
-            current_variable_id
-          )
-
-          if (dir.exists(target_partition_path)) {
-            logger::log_debug(
-              sprintf(
-                "Deleting existing parquet partition for variable_id `%s`.",
-                current_variable_id
-              )
-            )
-            unlink(target_partition_path, recursive = TRUE, force = TRUE)
-          }
-
-          if (dir.exists(staging_partition_path)) {
-            move_anchor_partition(
-              source_partition_path = staging_partition_path,
-              target_partition_path = target_partition_path,
-              variable_id = current_variable_id
-            )
-          } else {
-            logger::log_debug(
-              sprintf(
-                paste(
-                  "No parquet partition was produced for variable_id `%s`.",
-                  "The target hive was left without that partition."
-                ),
-                current_variable_id
-              )
-            )
-          }
-        }
+        NULL
       },
-      finally = {
-        logger::log_trace(
-          sprintf(
-            "Cleaning staging parquet hive for chunk %d/%d: %s",
-            chunk_index,
-            length(variable_id_chunks),
-            staging_hive_path
-          )
-        )
-        unlink(staging_hive_path, recursive = TRUE, force = TRUE)
-
-        chunk_duration <- difftime(
-          Sys.time(), chunk_start_time,
-          units = "secs"
-        )
-        logger::log_info(
-          sprintf(
-            "Finished anchoring chunk %d/%d in %.2f secs.",
-            chunk_index,
-            length(variable_id_chunks),
-            as.numeric(chunk_duration)
-          )
-        )
-      }
+      error = function(e) e
     )
+
+    chunk_duration <- difftime(
+      Sys.time(), chunk_start_time,
+      units = "secs"
+    )
+    logger::log_info(
+      sprintf(
+        "Finished anchoring chunk %d/%d in %.2f secs.",
+        chunk_index,
+        length(variable_id_chunks),
+        as.numeric(chunk_duration)
+      )
+    )
+
+    if (!is.null(loop_error)) {
+      break
+    }
+    processed_variable_ids <- c(processed_variable_ids, chunk_variable_ids)
   }
+
+  # `anchor_hive_path` is only touched here, once for the whole run, instead
+  # of once per chunk -- only variable_ids whose chunk actually completed are
+  # published, so a chunk that never ran (or failed) leaves its variable_ids'
+  # existing target partitions untouched rather than deleting them.
+  logger::log_debug(
+    sprintf(
+      "Publishing %d variable_id partition(s) to `%s`.",
+      length(processed_variable_ids),
+      anchor_hive_path
+    )
+  )
+  publish_anchor_partitions(
+    local_hive_path = local_hive_path,
+    anchor_hive_path = anchor_hive_path,
+    variable_ids = processed_variable_ids
+  )
+
+  if (!is.null(loop_error)) {
+    stop(loop_error)
+  }
+
   logger::log_debug(
     sprintf(
       "Finished anchor_by_variable() for %d variable_id(s) in %d chunk(s).",
