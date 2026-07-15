@@ -67,7 +67,7 @@ all at once.
 }
 \details{
 Every batch's results are held somewhere other than
-\code{anchor_hive_path} until they're ready to publish -- either in one
+\code{anchor_hive_path} until they're ready to publish either in one
 growing DuckDB table (\code{staging_mode = "memory"}, the default), or
 in a scratch folder on local disk (\code{staging_mode = "disk"}, under
 \code{staging_dir}). Either way, this keeps the repeated reading and
@@ -86,7 +86,7 @@ successfully, and if any batch fails, nothing is written at all --
 the error is raised, so you never end up with some variables refreshed
 and others not. With \code{publish = "per_chunk"}, each batch's results
 are written as soon as that batch finishes, so a later batch's failure
-doesn't discard earlier batches' already-published results -- useful if
+doesn't discard earlier batches' already-published results useful if
 \code{anchor_hive_path} is fast enough that the extra writes don't
 matter and you'd rather keep whatever progress you can.
 
