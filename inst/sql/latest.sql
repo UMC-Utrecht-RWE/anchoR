@@ -10,7 +10,6 @@ WITH winners AS (
         -- needing to sort every candidate row.
         arg_max(
             struct_pack(
-                anchor_row_id := w.anchor_row_id,
                 value := COALESCE(CAST(c.value AS VARCHAR), 'TRUE'),
                 date := c.date
             ),
@@ -29,7 +28,6 @@ WITH winners AS (
     GROUP BY w.person_id, w.T0, w.variable_id, w.window_name
 )
 SELECT
-    winner.anchor_row_id AS anchor_row_id,
     person_id,
     T0,
     variable_id,

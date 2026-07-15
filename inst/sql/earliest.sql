@@ -1,6 +1,5 @@
 WITH matches AS (
     SELECT
-        w.anchor_row_id,
         w.person_id,
         w.T0,
         w.variable_id,
@@ -30,7 +29,6 @@ WITH matches AS (
 -- keeps this second aggregation over just the (usually single-row) tied
 -- subset instead of every candidate row.
 SELECT
-    arg_max(anchor_row_id, sort_value) AS anchor_row_id,
     person_id,
     T0,
     variable_id,

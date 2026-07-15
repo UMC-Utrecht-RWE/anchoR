@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `anchor_row_id` no longer appears in the parquet hive written by `anchor()`/`anchor_by_variable()`/`anchor_by_selector()`. It was always a synthetic id scoped to a single internal query call (not comparable across different `chunk_size` values or between `anchor_by_selector()`/`anchor_by_variable()`), so reading it from the raw hive and using it to join/diff two runs could silently misalign rows despite matching content. It remains an internal join key inside the selector SQL templates and `population_windows`; `get_anchor_result()` now orders its output by `variable_id, person_id, T0, window_name` instead.
+
 ## [v1.4.1]
 
 ### Added
