@@ -223,7 +223,7 @@ publish_anchor_partitions <- function(
 #' underlying `COPY ... OVERWRITE_OR_IGNORE` only touches the
 #' `variable_id` values actually present in the table, a variable that was
 #' never produced simply never appears here, and its existing output (if
-#' any) is left alone -- same behavior as `publish_anchor_partitions()`,
+#' any) is left alone same behavior as `publish_anchor_partitions()`,
 #' just without needing a local hive or a list of variable ids to check.
 #'
 #' @param con An open database connection.
@@ -237,7 +237,9 @@ publish_anchor_partitions <- function(
 publish_accumulated_table <- function(con, table_name, anchor_hive_path) {
   if (!(table_name %in% DBI::dbListTables(con))) {
     logger::log_debug(
-      sprintf("No rows were accumulated in `%s`; nothing to publish.", table_name)
+      sprintf(
+        "No rows were accumulated in `%s`; nothing to publish.", table_name
+      )
     )
     return(invisible(NULL))
   }
@@ -290,7 +292,7 @@ order_variable_ids_by_selector <- function(metadata_dt) {
 #'   `accumulate_table` is set.
 #' @param accumulate_table If set, results are appended to this DuckDB
 #'   table (creating it on the first call) instead of being written to
-#'   `anchor_hive_path` -- used by [anchor_by_variable()]'s "memory"
+#'   `anchor_hive_path` used by [anchor_by_variable()]'s "memory"
 #'   staging mode so several calls can share one growing table.
 #' @return Invisibly `NULL` on success. If none of the variables had a
 #'   valid window, an empty result table is returned instead.
@@ -472,7 +474,7 @@ anchor <- function(
 #' all at once.
 #'
 #' Every batch's results are held somewhere other than
-#' \code{anchor_hive_path} until they're ready to publish -- either in one
+#' \code{anchor_hive_path} until they're ready to publish either in one
 #' growing DuckDB table (\code{staging_mode = "memory"}, the default), or
 #' in a scratch folder on local disk (\code{staging_mode = "disk"}, under
 #' \code{staging_dir}). Either way, this keeps the repeated reading and
@@ -491,7 +493,7 @@ anchor <- function(
 #' the error is raised, so you never end up with some variables refreshed
 #' and others not. With \code{publish = "per_chunk"}, each batch's results
 #' are written as soon as that batch finishes, so a later batch's failure
-#' doesn't discard earlier batches' already-published results -- useful if
+#' doesn't discard earlier batches' already-published results useful if
 #' \code{anchor_hive_path} is fast enough that the extra writes don't
 #' matter and you'd rather keep whatever progress you can.
 #'
@@ -561,7 +563,7 @@ anchor_by_variable <- function(
 
   # Variable_ids are ordered by selector before slicing into chunks (see
   # `order_variable_ids_by_selector()`) so each chunk is as
-  # selector-homogeneous as `chunk_size` allows -- `run_selector_queries()`
+  # selector-homogeneous as `chunk_size` allows `run_selector_queries()`
   # still runs one join per distinct selector *within* a chunk, so grouping
   # same-selector variables together keeps that count as low as possible
   # instead of leaving it to metadata row order.
@@ -590,7 +592,7 @@ anchor_by_variable <- function(
 
   # Variables are processed in chunks rather than strictly one at a time so a
   # single selector query (and its concepts join) can cover several variables
-  # at once -- DuckDB's `COPY ... PARTITION_BY (variable_id)` already fans a
+  # at once DuckDB's `COPY ... PARTITION_BY (variable_id)` already fans a
   # multi-variable result out into separate partitions on its own, so
   # batching only changes how many variables feed one query, not how the
   # output is laid out.
@@ -650,9 +652,9 @@ anchor_by_variable <- function(
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
-  # Any out-of-core spill DuckDB needs -- during the join/windowing below, or
+  # Any out-of-core spill DuckDB needs during the join/windowing below, or
   # (in "memory" staging mode) to keep the accumulator table from outgrowing
-  # RAM -- goes to local scratch instead of wherever it would otherwise
+  # RAM goes to local scratch instead of wherever it would otherwise
   # default to.
   DBI::dbExecute(
     con,
@@ -720,7 +722,7 @@ anchor_by_variable <- function(
     )
 
     # Every chunk writes into the same local scratch hive or accumulator
-    # table -- both use `OVERWRITE_OR_IGNORE`/plain inserts keyed by
+    # table both use `OVERWRITE_OR_IGNORE`/plain inserts keyed by
     # `variable_id`, so chunks with disjoint variable_id sets never collide.
     loop_error <- tryCatch(
       {

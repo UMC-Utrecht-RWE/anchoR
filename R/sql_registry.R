@@ -208,7 +208,11 @@ run_selector_queries <- function(
   anchor_hive_path = NULL,
   accumulate_table = NULL
 ) {
-  if (is.null(accumulate_table) && (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path))) {
+  if (
+    is.null(accumulate_table) &&
+      (is.null(anchor_hive_path) ||
+        !dir.exists(anchor_hive_path))
+  ) {
     msg <- "`anchor_hive_path` must be a valid path!"
     logger::log_error(msg)
     base::stop(msg, call. = FALSE)
