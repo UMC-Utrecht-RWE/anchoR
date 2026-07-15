@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.4.1]
+
 ### Added
 
 - `IN_PRIOR_PREG` metadata can now set optional `start_look_back`/`end_look_back` columns (NA by default, so existing metadata is unaffected) to restrict which prior pregnancies are eligible at all: only episodes overlapping the anchor-relative range `[T0 + start_look_back, T0 + end_look_back]` are considered (a selection filter on the episode, same overlap rule as `OUTSIDE_ALL_PREG`'s search range). A prior pregnancy entirely outside that range is dropped from consideration before any window is built; one that overlaps is kept and its window is still computed from `start_offset`/`end_offset` exactly as before, unclipped. Kept as separate columns from `start_offset`/`end_offset` (which already shift the episode's own start/end and can be positive) rather than reusing them, since a positive `start_offset` would otherwise push the anchor-relative bound past `T0`, which a by-definition-prior episode could never satisfy.
