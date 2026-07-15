@@ -254,8 +254,7 @@ get_anchor_result <- function(
           "`result_shape = \"long\"`."
         )
       )
-      logger::log_error(msg)
-      base::stop(msg, call. = FALSE)
+      logger::log_warn(msg)
     }
 
     # The dcast formula will create columns in the format value_<variable_id>
