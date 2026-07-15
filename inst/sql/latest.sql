@@ -26,7 +26,7 @@ WITH winners AS (
     WHERE w.selector = 'LATEST'
     GROUP BY w.person_id, w.T0, w.variable_id, w.window_name, w.date, w.value
 )
-SELECT
+SELECT DISTINCT
     person_id,
     T0,
     variable_id,
