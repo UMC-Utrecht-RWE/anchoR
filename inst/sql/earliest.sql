@@ -7,12 +7,6 @@ WITH matches AS (
         COALESCE(CAST(c.value AS VARCHAR), 'TRUE') AS value,
         COALESCE(CAST(c.value AS VARCHAR), '') AS sort_value,
         c.date,
-        -- Unordered window aggregates (no ORDER BY inside OVER) -- DuckDB
-        -- computes these with a partitioned pass, not a sort, unlike the
-        -- ROW_NUMBER() ... ORDER BY this replaces.
-        COUNT(*) OVER (
-            PARTITION BY w.person_id, w.T0, w.variable_id, w.window_name
-        ) AS n,
         MIN(c.date) OVER (
             PARTITION BY w.person_id, w.T0, w.variable_id, w.window_name
         ) AS earliest_date
@@ -34,8 +28,7 @@ SELECT
     variable_id,
     window_name,
     arg_max(value, sort_value) AS value,
-    MIN(date) AS date,
-    MIN(n) AS n
+    MIN(date) AS date
 FROM matches
 WHERE date = earliest_date
-GROUP BY person_id, T0, variable_id, window_name
+GROUP BY person_id, T0, variable_id, window_name, date, value
