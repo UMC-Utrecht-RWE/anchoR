@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <style>
+    .surface { fill: #fcfcfb; stroke: #e1e0d9; }
+    .title { font-size: 16px; font-weight: 700; fill: #0b0b0b; }
+    .formula { font-size: 11.3px; fill: #52514e; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+    .ep { fill: rgba(42,120,214,0.14); stroke: #2a78d6; stroke-width: 1.5; }
+    .ep-name { font-size: 11.5px; font-weight: 700; fill: #0b0b0b; text-anchor: middle; }
+    .ep-date { font-size: 9.5px; fill: #52514e; text-anchor: middle; }
+    .ep-dim { fill: rgba(42,120,214,0.07); stroke: #2a78d6; stroke-opacity: 0.4; stroke-width: 1.5; }
+    .ep-name-dim { font-size: 11.5px; font-weight: 700; fill: #898781; text-anchor: middle; }
+    .ep-date-dim { font-size: 9.5px; fill: #898781; text-anchor: middle; }
+    .ep-excluded { fill: rgba(227,73,72,0.08); stroke: #e34948; stroke-width: 1.5; stroke-dasharray: 3 2; }
+    .ep-name-excluded { font-size: 11.5px; font-weight: 700; fill: #b23b3a; text-anchor: middle; }
+    .ep-date-excluded { font-size: 9.5px; fill: #b23b3a; text-anchor: middle; }
+    .win { fill: rgba(27,175,122,0.20); stroke: #1baf7a; stroke-width: 1.5; }
+    .win-label { font-size: 11px; font-weight: 700; fill: #128a5e; text-anchor: middle; }
+    .win-date { font-size: 10px; fill: #52514e; text-anchor: middle; }
+    .no-win-label { font-size: 11px; font-weight: 700; fill: #b23b3a; text-anchor: middle; }
+    .no-win-note { font-size: 9.5px; fill: #b23b3a; text-anchor: middle; }
+    .caption { font-size: 10.5px; fill: #52514e; text-anchor: middle; }
+    .legend { font-size: 10px; fill: #898781; text-anchor: middle; }
+    .baseline { stroke: #c3c2b7; stroke-width: 1.5; }
+    .anchor-line { stroke: #898781; stroke-width: 1.5; stroke-dasharray: 4 3; }
+    .anchor-label { font-size: 11px; font-weight: 700; fill: #52514e; text-anchor: middle; }
+    .range-line { stroke: #1b7a4a; stroke-width: 1.5; }
+    .range-tick { stroke: #1b7a4a; stroke-width: 1.5; }
+    .range-label { font-size: 10px; fill: #1b7a4a; font-weight: 700; }
+  </style>
+
+  <rect class="surface" x="1" y="1" width="898" height="258" rx="12"/>
+
+  <text class="title" x="20" y="26">IN_PRIOR_PREG with start_look_back / end_look_back</text>
+  <text class="formula" x="20" y="44">start_look_back=-776, end_look_back=0 &#8594; lookback range=[2024-01-01, T0]. Episodes not overlapping it never become candidates.</text>
+
+  <!-- lookback range: 2024-01-01 (x=210) -> T0 (x=590), end_look_back=0 so range end == anchor -->
+  <line class="range-line" x1="210" y1="56" x2="590" y2="56"/>
+  <line class="range-tick" x1="210" y1="51" x2="210" y2="61"/>
+  <text class="range-label" x="210" y="72" text-anchor="middle">lookback start: 2024-01-01</text>
+  <text class="anchor-label" x="590" y="72" text-anchor="middle">T0 = 2026-02-15 (lookback end)</text>
+  <line class="anchor-line" x1="590" y1="56" x2="590" y2="184"/>
+
+  <!-- Episode A: entirely before the lookback range -> dropped, not truncated -->
+  <rect class="ep-excluded" x="70" y="82" width="120" height="34" rx="6"/>
+  <text class="ep-name-excluded" x="130" y="97">A &#8212; excluded</text>
+  <text class="ep-date-excluded" x="130" y="110">2023-01-01 &#8594; 2023-09-01</text>
+
+  <!-- Episode B: overlaps the lookback range -> kept, window unaffected by the range -->
+  <rect class="ep" x="250" y="82" width="120" height="34" rx="6"/>
+  <text class="ep-name" x="310" y="97">B &#8212; kept</text>
+  <text class="ep-date" x="310" y="110">2024-03-01 &#8594; 2024-11-15</text>
+
+  <!-- Episode C: not prior at all (T0 falls inside it), irrelevant to this constructor -->
+  <rect class="ep-dim" x="470" y="82" width="270" height="34" rx="6"/>
+  <text class="ep-name-dim" x="605" y="97">C (current, not prior)</text>
+  <text class="ep-date-dim" x="605" y="110">2025-11-01 &#8594; 2026-08-01</text>
+
+  <!-- baseline -->
+  <line class="baseline" x1="30" y1="136" x2="860" y2="136"/>
+  <polygon points="860,136 852,131.5 852,140.5" fill="#c3c2b7"/>
+
+  <!-- A: no window at all, dropped before start_offset/end_offset ever apply -->
+  <text class="no-win-label" x="130" y="163">&#10005; no window</text>
+  <text class="no-win-note" x="130" y="178">dropped by the lookback filter,</text>
+  <text class="no-win-note" x="130" y="190">not truncated</text>
+
+  <!-- B's window: start_offset=0, end_offset=30 -> [2024-03-01, 2024-12-15], unaffected by the lookback range -->
+  <rect class="win" x="250" y="152" width="130" height="26" rx="5"/>
+  <text class="win-label" x="315" y="169">B</text>
+  <text class="win-date" x="315" y="196">2024-03-01 &#8594; 2024-12-15</text>
+
+  <text class="caption" x="450" y="222">start_offset/end_offset still decide where a surviving episode's window sits (here, unclipped, even past the lookback range's own end).</text>
+  <text class="legend" x="450" y="240">green line = lookback range boundary &#8212; a selection filter on episodes, not a clip on the resulting window</text>
+</svg>

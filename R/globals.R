@@ -46,7 +46,9 @@ if (getRversion() >= "2.15.1") {
       "event_start",
       "event_end",
       "event_col",
-      "end_cap_offset"
+      "end_cap_offset",
+      "start_look_back",
+      "end_look_back"
     )
   )
 }

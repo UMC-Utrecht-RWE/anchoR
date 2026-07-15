@@ -72,6 +72,12 @@ outside_all_event_gaps <- function(
 #' window.
 #'
 #' @param window_dt A data.table produced by `cross_join_population_metadata()`.
+#'   When `event_select` is `"PRIOR"`, its optional `start_look_back`/
+#'   `end_look_back` columns (NA by default) additionally restrict which
+#'   prior episodes are eligible at all: only episodes overlapping the
+#'   anchor-relative range `anchor + start_look_back` through
+#'   `anchor + end_look_back` are considered; the survivors' windows are
+#'   still computed from `start_offset`/`end_offset` as usual, unclipped.
 #' @param event_select One of `"PRIOR"`, `"CURRENT"`, `"OUTSIDE_ALL"`.
 #' @param end_boundary One of `"event_END"` or `"ANCHOR"`; only used when
 #'   `event_select` is `"CURRENT"`.
@@ -117,6 +123,32 @@ event_window_engine <- function(
         events[event_start <= anchor & anchor <= event_end]
       }
 
+      if (
+        event_select == "PRIOR" &&
+          !is.na(row$start_look_back) && !is.na(row$end_look_back)
+      ) {
+        # IN_PRIOR_PREG can optionally restrict which prior pregnancies are
+        # even eligible to a separate, anchor-relative lookback range
+        # [anchor + start_look_back, anchor + end_look_back] (order-
+        # independent, same overlap rule as OUTSIDE_ALL_PREG's search range).
+        # This is a selection filter on the episode itself, not a clip on the
+        # computed window: an episode entirely outside the lookback range is
+        # dropped from consideration altogether; one that overlaps is kept,
+        # and its window is still computed from start_offset/end_offset
+        # exactly as usual, unclipped. Kept as separate columns from
+        # start_offset/end_offset (which already shift the episode's own
+        # start/end and can be positive, e.g. "start 90 days into the
+        # episode") because reusing them here would mean a positive
+        # start_offset pushes the lookback's lower bound past the anchor,
+        # which a by-definition-prior episode could never satisfy.
+        lookback_bounds <- sort(
+          as.Date(c(anchor + row$start_look_back, anchor + row$end_look_back))
+        )
+        selected <- selected[
+          event_end >= lookback_bounds[[1]] & event_start <= lookback_bounds[[2]] # nolint
+        ]
+      }
+
       if (nrow(selected) == 0L) {
         next
       }
@@ -156,7 +188,9 @@ event_window_engine <- function(
 }
 
 # Look for records during (parts) of prior pregnancies,
-# defined here only by start and end pregnancy
+# defined here only by start and end pregnancy. Optional start_look_back/
+# end_look_back additionally restrict which prior episodes are eligible at
+# all, see event_window_engine()'s docs.
 in_prior_preg_window <- make_constructor(
   transform_fn = function(window_dt) {
     event_window_engine(
@@ -166,7 +200,7 @@ in_prior_preg_window <- make_constructor(
   },
   required_cols = c(
     "event_col", "start_offset", "end_offset", "end_cap_offset",
-    "anchor_start_col"
+    "start_look_back", "end_look_back", "anchor_start_col"
   ),
   check_fn = generic_window_check
 )

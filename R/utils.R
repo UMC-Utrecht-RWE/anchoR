@@ -176,16 +176,6 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   )
   rename_first_matching_column(
     metadata_dt,
-    target = "start_offset",
-    aliases = "start_look_back"
-  )
-  rename_first_matching_column(
-    metadata_dt,
-    target = "end_offset",
-    aliases = "end_look_back"
-  )
-  rename_first_matching_column(
-    metadata_dt,
     target = "anchor_start_col",
     aliases = "anchor_date_start"
   )
@@ -223,6 +213,12 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   }
   if (!"end_cap_offset" %in% names(metadata_dt)) {
     metadata_dt[, end_cap_offset := NA_real_]
+  }
+  if (!"start_look_back" %in% names(metadata_dt)) {
+    metadata_dt[, start_look_back := NA_real_]
+  }
+  if (!"end_look_back" %in% names(metadata_dt)) {
+    metadata_dt[, end_look_back := NA_real_]
   }
 
   metadata_dt[, `:=`(
