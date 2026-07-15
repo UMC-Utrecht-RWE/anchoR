@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.4.1.1]
+
+### Changed
+- `duplicate_rows` in `R/get_anchor_result.R` had an error message now replaced with a wanring message. The decision is in line with what done previously in the same file. For now we keep this results and we will the decision if these are to be kept or not to a futere discussion with analysis team.
+
+
 ## [v1.4.1]
 
 ### Added
