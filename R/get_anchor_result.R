@@ -187,7 +187,7 @@ get_anchor_result <- function(
     anchored_dt[, T0 := as.Date(T0)]
   }
 
-  data.table::setorder(anchored_dt, anchor_row_id)
+  data.table::setorder(anchored_dt, variable_id, person_id, T0, window_name)
   if (result_shape == "long") {
     required_long_cols <- c(
       "person_id",

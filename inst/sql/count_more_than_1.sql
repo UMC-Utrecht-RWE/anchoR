@@ -1,5 +1,4 @@
 SELECT
-    MIN(w.anchor_row_id) AS anchor_row_id,
     w.person_id,
     w.T0,
     w.variable_id,
