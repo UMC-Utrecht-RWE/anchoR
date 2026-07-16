@@ -142,6 +142,32 @@ move_anchor_partition <- function(
   invisible(target_partition_path)
 }
 
+#' Delete existing parquet partitions for the given variable_ids.
+#'
+#' @param anchor_hive_path Existing path to the hive root.
+#' @param variable_ids Character vector about to be (re)written.
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+clear_anchor_partitions <- function(anchor_hive_path, variable_ids) {
+  for (variable_id in variable_ids) {
+    partition_path <- anchor_partition_path(anchor_hive_path, variable_id)
+    if (dir.exists(partition_path)) {
+      logger::log_debug(
+        sprintf(
+          paste(
+            "Clearing existing parquet partition for variable_id `%s`",
+            "before rewrite."
+          ),
+          variable_id
+        )
+      )
+      unlink(partition_path, recursive = TRUE, force = TRUE)
+    }
+  }
+  invisible(NULL)
+}
+
 #' Order variable_ids by Selector for Chunking
 #'
 #' Each `variable_id`'s first-listed `selector` value (in case it spans more
@@ -255,6 +281,10 @@ anchor_impl <- function(
     valid_windows,
     anchor_col = anchor_col
   )
+
+  # Clear each target variable_id's existing partition before writing so a
+  # rerun always fully replaces it, rather than trusting
+  clear_anchor_partitions(anchor_hive_path, unique(valid_windows$variable_id))
 
   selector_names <- unique(valid_windows$selector)
   run_selector_queries(
