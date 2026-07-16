@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.4.2]
+
 ### Added
 
 - `clear_anchor_partitions` to avoid the duplications of row while using `anchor()` and `anchor_by_selector()` by `OVERWRITE_OR_IGNORE`.
@@ -42,9 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `get_anchor_result()`'s "`population` contains multiple rows for the same `person_id` and `T0`" error now names the conflicting column(s) (e.g. `match_id`) instead of leaving the caller to hunt for which column made the key non-unique.
-- `anchor()`/`anchor_by_variable()`/`anchor_by_selector()` write their parquet output with `OVERWRITE_OR_IGNORE` instead of `APPEND`. Previously, `anchor()` (and anything writing directly to `anchor_hive_path`) appended a new file on every call, so rerunning it for a `variable_id` already present at `anchor_hive_path` silently duplicated rows -- the docs' workaround was "use a fresh `anchor_hive_path` per run". `OVERWRITE_OR_IGNORE` instead replaces only the `variable_id` partition(s) a call actually produces and leaves every other partition untouched; verified (empirically, against DuckDB 1.5.4) to be precise per-partition across multiple variables and separate connections, and to leave existing data untouched if the query itself fails partway through.
 - Clarified `Tutorial_pregnancy_windows.md` and `examples/Pregnancy Window Worked Example.md`: `start_look_back`/`end_look_back` (episode eligibility filter, `IN_PRIOR_PREG` only) and `OUTSIDE_ALL_PREG`'s own `start_offset`/`end_offset` (its anchor-relative search range) are two different mechanisms that happen to both express "an anchor-relative range" -- setting `start_look_back`/`end_look_back` on an `OUTSIDE_ALL_PREG` row has no effect, a case that came up in practice.
-- `anchor()`/`anchor_by_variable()`/`anchor_by_selector()` write their parquet output with `OVERWRITE_OR_IGNORE` instead of `APPEND`. Previously, `anchor()` (and anything writing directly to `anchor_hive_path`) appended a new file on every call, so rerunning it for a `variable_id` already present at `anchor_hive_path` silently duplicated rows -- the docs' workaround was "use a fresh `anchor_hive_path` per run". `OVERWRITE_OR_IGNORE` instead replaces only the `variable_id` partition(s) a call actually produces and leaves every other partition untouched; verified (empirically, against DuckDB 1.5.4) to be precise per-partition across multiple variables and separate connections, and to leave existing data untouched if the query itself fails partway through.
+- `anchor()`/`anchor_by_variable()`/`anchor_by_selector()` write their parquet output with `OVERWRITE_OR_IGNORE` instead of `APPEND`. Previously, `anchor()` (and anything writing directly to `anchor_hive_path`) appended a new file on every call. `OVERWRITE_OR_IGNORE` instead replaces only the `variable_id` partition(s) a call actually produces and leaves every other partition untouched; verified (empirically, against DuckDB 1.5.4) to be precise per-partition across multiple variables and separate connections, and to leave existing data untouched if the query itself fails partway through.
 
 ### Future Work
 
@@ -57,4 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # List of releases
 - unreleased: https://github.com/UMC-Utrecht-RWE/anchoR@main
-- v1.4 https://github.com/UMC-Utrecht-RWE/anchoR@1.4
+- v1.4.2 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.2
+- v1.4.1.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1.1
+- v1.4.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1
+- v1.4 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4
