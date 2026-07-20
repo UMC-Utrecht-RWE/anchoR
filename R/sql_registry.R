@@ -133,13 +133,6 @@ add_parquet_export <- function(sql_query, anchor_hive_path) {
   # filesystem where the template can write Parquet files, and the caller is
   # responsible for making sure the path is accessible and writable by
   # the database backend.
-  # OVERWRITE_OR_IGNORE (rather than APPEND) replaces only the variable_id
-  # partition(s) present in `sql_query`'s output and leaves every other
-  # partition untouched, verified to be precise per-partition and to leave
-  # existing data alone if the query itself fails. APPEND instead
-  # accumulates a new file on every call, so rerunning `anchor()` into the
-  # same `anchor_hive_path` for an already-populated variable_id used to
-  # silently duplicate rows.
   export_query <- sprintf(
     "COPY (%s) TO '%s'
     (FORMAT 'parquet',

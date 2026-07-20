@@ -424,7 +424,7 @@ read_anchor_hive <- function(anchor_hive_path) {
         "SELECT * FROM read_parquet(",
         anchor_hive_path_sql,
         ", hive_partitioning = true, union_by_name = true)",
-        "ORDER BY variable_id, anchor_row_id;"
+        "ORDER BY variable_id, person_id, T0, window_name;"
       )
     )
   )

@@ -252,7 +252,7 @@ testthat::test_that("it refreshes only requested variable partition", {
   # exactly as it was.
   testthat::expect_equal(nrow(anchored[variable_id == "cov_latest"]), 1L)
   testthat::expect_equal(
-    anchored[variable_id == "cov_latest" & anchor_row_id == 1L, value],
+    anchored[variable_id == "cov_latest", value],
     "UPDATED"
   )
   testthat::expect_equal(nrow(anchored[variable_id == "cov_count"]), 2L)
@@ -294,9 +294,6 @@ testthat::test_that(
       chunk_size = 20
     )
 
-    # `anchor_row_id` is a synthetic id scoped to each `anchor_impl()` call
-    # (see `finalize_windows()`), so it is not expected to match across
-    # different chunkings -- only the actual anchored content is.
     result_cols <- c("person_id", "T0", "variable_id", "value", "date", "n")
     one_at_a_time <- read_anchor_hive(one_at_a_time_path)[, ..result_cols]
     batched <- read_anchor_hive(batched_path)[, ..result_cols]
@@ -511,7 +508,6 @@ testthat::test_that(
       anchor_hive_path = hive_path,
       variable_id = "cov_latest",
       rows = data.table::data.table(
-        anchor_row_id = c(1L, 2L),
         person_id = c("1", "2"),
         T0 = as.Date(c("2024-01-01", "2024-01-15")),
         window_name = c("fup", "fup"),

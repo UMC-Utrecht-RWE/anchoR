@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.4.2]
+
+### Added
+
+- `clear_anchor_partitions` to avoid the duplications of row while using `anchor()` and `anchor_by_selector()` by `OVERWRITE_OR_IGNORE`.
+
+### Removed
+
+- `anchor_row_id` no longer appears in the parquet hive written by `anchor()`/`anchor_by_variable()`/`anchor_by_selector()`. It was always a synthetic id scoped to a single internal query call (not comparable across different `chunk_size` values or between `anchor_by_selector()`/`anchor_by_variable()`), so reading it from the raw hive and using it to join/diff two runs could silently misalign rows despite matching content. It remains an internal join key inside the selector SQL templates and `population_windows`; `get_anchor_result()` now orders its output by `variable_id, person_id, T0, window_name` instead.
+
+## [v1.4.1.1]
+
+### Changed
+- `duplicate_rows` in `R/get_anchor_result.R` had an error message now replaced with a wanring message. The decision is in line with what done previously in the same file. For now we keep this results and we will the decision if these are to be kept or not to a futere discussion with analysis team.
+
+## [v1.4.1]
+
 ### Added
 
 - `IN_PRIOR_PREG` metadata can now set optional `start_look_back`/`end_look_back` columns (NA by default, so existing metadata is unaffected) to restrict which prior pregnancies are eligible at all: only episodes overlapping the anchor-relative range `[T0 + start_look_back, T0 + end_look_back]` are considered (a selection filter on the episode, same overlap rule as `OUTSIDE_ALL_PREG`'s search range). A prior pregnancy entirely outside that range is dropped from consideration before any window is built; one that overlaps is kept and its window is still computed from `start_offset`/`end_offset` exactly as before, unclipped. Kept as separate columns from `start_offset`/`end_offset` (which already shift the episode's own start/end and can be positive) rather than reusing them, since a positive `start_offset` would otherwise push the anchor-relative bound past `T0`, which a by-definition-prior episode could never satisfy.
@@ -31,9 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `get_anchor_result()`'s "`population` contains multiple rows for the same `person_id` and `T0`" error now names the conflicting column(s) (e.g. `match_id`) instead of leaving the caller to hunt for which column made the key non-unique.
-- `anchor()`/`anchor_by_variable()`/`anchor_by_selector()` write their parquet output with `OVERWRITE_OR_IGNORE` instead of `APPEND`. Previously, `anchor()` (and anything writing directly to `anchor_hive_path`) appended a new file on every call, so rerunning it for a `variable_id` already present at `anchor_hive_path` silently duplicated rows -- the docs' workaround was "use a fresh `anchor_hive_path` per run". `OVERWRITE_OR_IGNORE` instead replaces only the `variable_id` partition(s) a call actually produces and leaves every other partition untouched; verified (empirically, against DuckDB 1.5.4) to be precise per-partition across multiple variables and separate connections, and to leave existing data untouched if the query itself fails partway through.
 - Clarified `Tutorial_pregnancy_windows.md` and `examples/Pregnancy Window Worked Example.md`: `start_look_back`/`end_look_back` (episode eligibility filter, `IN_PRIOR_PREG` only) and `OUTSIDE_ALL_PREG`'s own `start_offset`/`end_offset` (its anchor-relative search range) are two different mechanisms that happen to both express "an anchor-relative range" -- setting `start_look_back`/`end_look_back` on an `OUTSIDE_ALL_PREG` row has no effect, a case that came up in practice.
-- `anchor()`/`anchor_by_variable()`/`anchor_by_selector()` write their parquet output with `OVERWRITE_OR_IGNORE` instead of `APPEND`. Previously, `anchor()` (and anything writing directly to `anchor_hive_path`) appended a new file on every call, so rerunning it for a `variable_id` already present at `anchor_hive_path` silently duplicated rows -- the docs' workaround was "use a fresh `anchor_hive_path` per run". `OVERWRITE_OR_IGNORE` instead replaces only the `variable_id` partition(s) a call actually produces and leaves every other partition untouched; verified (empirically, against DuckDB 1.5.4) to be precise per-partition across multiple variables and separate connections, and to leave existing data untouched if the query itself fails partway through.
+- `anchor()`/`anchor_by_variable()`/`anchor_by_selector()` write their parquet output with `OVERWRITE_OR_IGNORE` instead of `APPEND`. Previously, `anchor()` (and anything writing directly to `anchor_hive_path`) appended a new file on every call. `OVERWRITE_OR_IGNORE` instead replaces only the `variable_id` partition(s) a call actually produces and leaves every other partition untouched; verified (empirically, against DuckDB 1.5.4) to be precise per-partition across multiple variables and separate connections, and to leave existing data untouched if the query itself fails partway through.
 
 ### Future Work
 
@@ -46,4 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # List of releases
 - unreleased: https://github.com/UMC-Utrecht-RWE/anchoR@main
-- v1.4 https://github.com/UMC-Utrecht-RWE/anchoR@1.4
+- v1.4.2 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.2
+- v1.4.1.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1.1
+- v1.4.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1
+- v1.4 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4

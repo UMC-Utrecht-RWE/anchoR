@@ -1,6 +1,5 @@
 WITH candidate_rows AS (
     SELECT
-        w.anchor_row_id,
         w.person_id,
         w.T0,
         w.variable_id,
@@ -18,7 +17,6 @@ WITH candidate_rows AS (
     WHERE w.selector = 'ALL'
 )
 SELECT
-    anchor_row_id,
     person_id,
     T0,
     variable_id,
