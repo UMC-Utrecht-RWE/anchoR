@@ -394,8 +394,13 @@ anchor_impl <- function(
   )
 
   # Clear each target variable_id's existing partition before writing so a
-  # rerun always fully replaces it, rather than trusting
-  clear_anchor_partitions(anchor_hive_path, unique(valid_windows$variable_id))
+  # rerun always fully replaces it, rather than trusting OVERWRITE_OR_IGNORE
+  # to remove stale rows. Skipped when `anchor_hive_path` is NULL (memory
+  # staging mode), where results land in `accumulate_table` instead of a
+  # local parquet hive and there is nothing on disk yet to clear.
+  if (!is.null(anchor_hive_path)) {
+    clear_anchor_partitions(anchor_hive_path, unique(valid_windows$variable_id))
+  }
 
   selector_names <- unique(valid_windows$selector)
   run_selector_queries(
