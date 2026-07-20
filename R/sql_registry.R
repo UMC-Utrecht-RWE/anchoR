@@ -145,18 +145,46 @@ add_parquet_export <- function(sql_query, anchor_hive_path) {
   export_query
 }
 
-add_table_accumulation <- function(sql_query, table_name, table_exists) {
+ensure_accumulate_table <- function(con, table_name) {
+  # Selector templates don't all select the same columns. For example LATEST and
+  # EARLIEST need `anchor_row_id` (to break ties among candidate rows),
+  # ALL/COUNT/RANGE_COUNT/COUNT_MORE_THAN_1 don't. Rather than forcing every
+  # template to carry a column most of them have no use for, the
+  # accumulator table is created upfront with a full column set
+  # `anchor_row_id`, `person_id`, `T0`, `variable_id`, `window_name`,
+  # plus the fixed `value`/`date`/`n` types and every insert below matches
+  # columns by name, leaving `anchor_row_id` NULL for selectors that don't
+  # provide it.
+  DBI::dbExecute(
+    con,
+    sprintf(
+      "CREATE TABLE IF NOT EXISTS %s AS (
+        SELECT
+          anchor_row_id,
+          person_id,
+          T0,
+          variable_id,
+          window_name,
+          CAST(NULL AS VARCHAR) AS value,
+          CAST(NULL AS DATE) AS date,
+          CAST(NULL AS BIGINT) AS n
+        FROM population_windows
+        LIMIT 0
+      );",
+      table_name
+    )
+  )
+}
+
+add_table_accumulation <- function(sql_query, table_name) {
   # Used by `anchor_by_variable()`'s "memory" staging mode: every selector,
-  # from every chunk in the run, lands in the same table instead of its own
-  # parquet write, so the whole run's output can be exported to
-  # `anchor_hive_path` in one final `COPY` instead of one per chunk. The
-  # first selector to run creates the table (its column types come straight
-  # from that query); every later one just adds its rows.
-  if (table_exists) {
-    sprintf("INSERT INTO %s (%s);", table_name, sql_query)
-  } else {
-    sprintf("CREATE TABLE %s AS (%s);", table_name, sql_query)
-  }
+  # from every chunk in the run, lands in the same table (see
+  # `ensure_accumulate_table()`) instead of its own parquet write, so the
+  # whole run's output can be exported to `anchor_hive_path` in one final
+  # `COPY` instead of one per chunk. `BY NAME` matches each selector's
+  # columns to the table by name instead of position, since not every
+  # selector produces the same columns.
+  sprintf("INSERT INTO %s BY NAME (%s);", table_name, sql_query)
 }
 
 read_selector_sql_query <- function(selector) {
@@ -178,8 +206,8 @@ run_selector_query <- function(
   sql <- if (is.null(accumulate_table)) {
     add_parquet_export(query, anchor_hive_path)
   } else {
-    table_exists <- accumulate_table %in% DBI::dbListTables(con)
-    add_table_accumulation(query, accumulate_table, table_exists)
+    ensure_accumulate_table(con, accumulate_table)
+    add_table_accumulation(query, accumulate_table)
   }
 
   DBI::dbExecute(con, sql)
