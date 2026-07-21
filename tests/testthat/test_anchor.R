@@ -147,6 +147,56 @@ testthat::test_that(
 )
 
 testthat::test_that(
+  "anchor keeps every selector's rows when one variable_id mixes selectors",
+  {
+    # Regression test: a single variable_id with a lookback window on LATEST
+    # and induction/risk windows on EARLIEST used to lose the LATEST window's
+    # rows entirely, because both selectors' `COPY ... PARTITION_BY
+    # (variable_id)` writes landed on the same default filename inside that
+    # variable_id's partition, and the second selector to run silently
+    # overwrote the first's output file.
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    population <- data.table::data.table(
+      person_id = "1", T0 = as.Date("2024-01-01")
+    )
+    metadata <- data.table::data.table(
+      variable_id = c("mixed_selector", "mixed_selector"),
+      concept_id  = c("MIX", "MIX"),
+      constructor = "GENERIC",
+      window_name = c("lookback", "risk"),
+      selector    = c("LATEST", "EARLIEST"),
+      start_offset = c(-30L, 1L),
+      end_offset   = c(-1L, 30L)
+    )
+    concepts <- data.table::data.table(
+      person_id = c("1", "1"),
+      concept_id = c("MIX", "MIX"),
+      date = as.Date(c("2023-12-15", "2024-01-10")),
+      value = c("PRIOR", "AFTER")
+    )
+
+    anchor(
+      population = population,
+      metadata = metadata,
+      concepts = concepts,
+      anchor_hive_path = hive_path
+    )
+
+    anchored <- read_anchor_hive(hive_path)
+    data.table::setorder(anchored, window_name)
+
+    testthat::expect_equal(anchored$window_name, c("lookback", "risk"))
+    testthat::expect_equal(anchored$value, c("PRIOR", "AFTER"))
+    testthat::expect_equal(
+      anchored$date, as.Date(c("2023-12-15", "2024-01-10"))
+    )
+  }
+)
+
+testthat::test_that(
   "anchor ignores unrelated population covariates",
   {
     hive_path <- tempfile(pattern = "anchor-hive-")
