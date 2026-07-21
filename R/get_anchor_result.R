@@ -100,35 +100,9 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
+    # Multiple rows can legitimately share a person_id/T0 key
     population_dt <- unique(population_dt)
-    duplicate_population_keys <- population_dt[
-      ,
-      .N,
-      by = .(person_id, T0)
-    ][N > 1L]
-    if (nrow(duplicate_population_keys) > 0L) {
-      # Matching with replacement can legitimately assign the same control to
-      # multiple exposed persons, so a repeated person_id/T0 key is not an
-      # error. Keep the first row per key and tell the caller which
-      # column(s) disagreed, rather than halting the whole pipeline.
-      conflicting_cols <- population_conflict_columns(
-        population_dt,
-        duplicate_population_keys[, ..required_population_cols],
-        required_population_cols
-      )
-      msg <- paste(
-        "`population` contains multiple rows for the same `person_id` and `T0`.", # nolint
-        "Keeping the first row per key. Conflicting column(s):",
-        paste(conflicting_cols, collapse = ", ")
-      )
-      logger::log_warn(msg)
-      warning(msg, call. = FALSE)
-      population_dt <- unique(population_dt, by = required_population_cols)
-    }
-
     population_dt[, T0 := as.Date(T0)]
-    # Wide output cardinality is defined by the anchor key, but callers may
-    # need the rest of the population columns carried into the final result.
     population_keys_dt <- unique(population_dt[, .(person_id, T0)])
   }
 
