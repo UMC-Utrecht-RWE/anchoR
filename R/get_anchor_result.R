@@ -395,11 +395,13 @@ get_anchor_result <- function(
     }
 
     if (!is.null(population_dt)) {
-      # Reattach the remaining population columns once the wide result shape is
-      # stable, so they do not interfere with filtering, casting, or imputation.
-      wide_anchored <- population_dt[
-        wide_anchored,
-        on = .(person_id, T0)
+      # Left-join the anchored results onto the *full* population once the wide
+      # result shape is stable, so a person_id/T0 that appears more than once in
+      # `population` keeps every row
+      wide_anchored <- wide_anchored[
+        population_dt,
+        on = .(person_id, T0),
+        allow.cartesian = TRUE
       ]
     }
 
