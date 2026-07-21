@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `get_anchor_result(result_shape = "wide")` no longer collapses `population` rows that share the same `person_id`/`T0` key but differ on other columns. Every such row used to be silently dropped down to one (with a warning) because the anchored results were joined onto the deduplicated key set; the join direction is now reversed so the full `population` drives the output, and the anchored results are left-joined onto it instead.
+
 ## [v1.4.2]
 
 ### Added
