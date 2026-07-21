@@ -13,10 +13,13 @@
 #' @param population Optional data frame with population rows to be represented
 #'   in wide output. When provided, it must contain person_id and
 #'   T0 columns. Additional population columns are carried into the
-#'   wide result. When multiple rows share the same person_id/T0
-#'   key but disagree on other columns (e.g. matching with replacement), the
-#'   first row per key is kept, a warning names the conflicting column(s),
-#'   and processing continues.
+#'   wide result. Multiple rows may legitimately share the same
+#'   person_id/T0 key while disagreeing on other columns
+#'   every such row is kept. The anchored results (which are computed once per
+#'   person_id/T0) are left-joined onto the full population, so
+#'   result_shape = "wide" output always has one row per
+#'   population row (times the number of distinct window_name
+#'   values when cast_window = FALSE), never fewer.
 #' @param result_shape A character string specifying the desired shape of the
 #'   output. Must be either "wide" or "long".
 #' @param impute_missing Logical; when TRUE and
