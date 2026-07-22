@@ -126,20 +126,24 @@ selector_sql_path <- function(selector) {
   sql_path
 }
 
-add_parquet_export <- function(sql_query, anchor_hive_path) {
+add_parquet_export <- function(sql_query, anchor_hive_path, selector) {
   # This helper is for SQL templates that export concept subsets to Parquet
   # files instead of returning them as query results.
   # The `anchor_hive_path` parameter is a path in the SQL environment's
   # filesystem where the template can write Parquet files, and the caller is
   # responsible for making sure the path is accessible and writable by
   # the database backend.
+  # `FILENAME_PATTERN` is keyed on the selector so that when a single
+  # `variable_id` has windows using more than one selector
   export_query <- sprintf(
     "COPY (%s) TO '%s'
     (FORMAT 'parquet',
     PARTITION_BY (variable_id),
+    FILENAME_PATTERN '%s_{i}',
       OVERWRITE_OR_IGNORE TRUE);",
     sql_query,
-    anchor_hive_path
+    anchor_hive_path,
+    tolower(normalize_selector_name(selector))
   )
 
   export_query
@@ -152,7 +156,7 @@ read_selector_sql <- function(selector, anchor_hive_path) {
     readLines(selector_sql_path(selector), warn = FALSE),
     collapse = "\n"
   )
-  add_parquet_export(query, anchor_hive_path)
+  add_parquet_export(query, anchor_hive_path, selector)
 }
 
 run_selector_query <- function(con, selector, anchor_hive_path) {

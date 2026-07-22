@@ -19,10 +19,10 @@ required metadata columns are missing.
 }
 \description{
 Imputes missing value_<variable_id> cells in a wide anchored result
-using metadata rules for is_expected_missing and
-variable_type. For non-expected-missing variables, logical/TF types
-are imputed as FALSE and categorical types as 0. If required
-metadata columns are only partially available, a warning is raised and
+using metadata rules for is_expected_missing and variable_type.
+For non-expected-missing variables, logical/TF types are imputed as FALSE
+and categorical types as 0. If required metadata columns are only partially
+available, a warning is raised and
 imputation is skipped.
 }
 \keyword{internal}

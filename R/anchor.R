@@ -210,6 +210,7 @@ order_variable_ids_by_selector <- function(metadata_dt) {
 #' @param anchor_col Column in `population_dt` used as the index date when
 #'   metadata does not specify an anchor column.
 #' @param anchor_hive_path Existing, normalized path to write selector output.
+#' @param clear_existing_partitions Whether to clear partitions before writing.
 #' @return Invisibly `NULL` on success, or (only when no window was valid) the
 #'   same empty typed table `anchor()` has always returned in that case.
 #' @keywords internal
@@ -219,7 +220,8 @@ anchor_impl <- function(
   population_dt,
   metadata_dt,
   anchor_col,
-  anchor_hive_path
+  anchor_hive_path,
+  clear_existing_partitions = TRUE
 ) {
   # Define windows for all person-variable combinations.
   # Impossible anchors will be marked and filtered out later.
@@ -284,7 +286,12 @@ anchor_impl <- function(
 
   # Clear each target variable_id's existing partition before writing so a
   # rerun always fully replaces it, rather than trusting
-  clear_anchor_partitions(anchor_hive_path, unique(valid_windows$variable_id))
+  if (clear_existing_partitions) {
+    clear_anchor_partitions(
+      anchor_hive_path,
+      unique(valid_windows$variable_id)
+    )
+  }
 
   selector_names <- unique(valid_windows$selector)
   run_selector_queries(
@@ -620,18 +627,14 @@ anchor_by_variable <- function(
 
 #' Anchor Study Variables Grouped by Selector
 #'
-#' Runs [anchor()] once per unique \code{selector} value in \code{metadata},
-#' so a single selector query (and its join against \code{concepts}) covers
-#' every variable that uses that selector, however many there are -- no
-#' \code{chunk_size} cap splits a selector's variables across more than one
-#' query the way [anchor_by_variable()] can. This is the cheapest option in
-#' terms of \code{concepts} scans (at most one per distinct selector in
-#' \code{metadata}). Each call to [anchor()] safely replaces only the
-#' \code{variable_id} partitions it computes and leaves the rest of
-#' \code{anchor_hive_path} untouched, so rerunning \code{anchor_by_selector()}
-#' with the same or a smaller \code{metadata} is safe; it just does not give
-#' you [anchor_by_variable()]'s \code{chunk_size}-bounded blast radius --
-#' every variable sharing a selector is recomputed together in one query.
+#' Processes metadata once per unique \code{selector}, so each selector query
+#' covers every variable using that selector without a \code{chunk_size} cap.
+#' Affected \code{variable_id} partitions are cleared once before selector
+#' processing begins. The calls leave the rest of \code{anchor_hive_path}
+#' untouched, so rerunning \code{anchor_by_selector()} with the same or a
+#' smaller \code{metadata} is safe; it just does not give you
+#' [anchor_by_variable()]'s \code{chunk_size}-bounded blast radius every
+#' variable sharing a selector is recomputed together in one query.
 #'
 #' @inheritParams anchor
 #'
@@ -666,6 +669,20 @@ anchor_by_selector <- function(
     )
   )
 
+  # Cleaning partition paths at the beginning of a new selector loop.
+  clear_anchor_partitions(
+    anchor_hive_path,
+    unique(as.character(metadata_dt$variable_id))
+  )
+
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  load_concepts_table(
+    con,
+    validated$concepts,
+    concept_ids = unique(as.character(metadata_dt$concept_id))
+  )
+
   for (current_selector in selectors) {
     selector_start_time <- Sys.time()
     selector_metadata <- metadata_dt[selector == current_selector]
@@ -677,12 +694,13 @@ anchor_by_selector <- function(
       )
     )
 
-    anchor(
-      population = validated$population,
-      metadata = selector_metadata,
-      concepts = validated$concepts,
+    anchor_impl(
+      con = con,
+      population_dt = validated$population,
+      metadata_dt = selector_metadata,
       anchor_col = anchor_col,
-      anchor_hive_path = anchor_hive_path
+      anchor_hive_path = anchor_hive_path,
+      clear_existing_partitions = FALSE
     )
 
     logger::log_info(
