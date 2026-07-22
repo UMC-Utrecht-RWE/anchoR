@@ -392,16 +392,20 @@ anchor_impl <- function(
     anchor_col = anchor_col
   )
 
+  window_variable_ids <- unique(valid_windows$variable_id)
+  selector_names <- unique(valid_windows$selector)
+  rm(window_population, window_dt, valid_windows)
+  gc()
+
   # Clear each target variable_id's existing partition before writing so a
   # rerun always fully replaces it, rather than trusting
   if (clear_existing_partitions) {
     clear_anchor_partitions(
       anchor_hive_path,
-      unique(valid_windows$variable_id)
+      window_variable_ids
     )
   }
 
-  selector_names <- unique(valid_windows$selector)
   run_selector_queries(
     con = con,
     selectors = selector_names,
@@ -522,7 +526,7 @@ anchor <- function(
 #' \code{publish} controls when that held output actually gets written to
 #' \code{anchor_hive_path}. With \code{publish = "once"} (the default),
 #' nothing is written until every batch in the call has finished
-#' successfully, and if any batch fails, nothing is written at all --
+#' successfully, and if any batch fails, nothing is written at all,
 #' \code{anchor_hive_path} is left exactly as it was before the call, and
 #' the error is raised, so you never end up with some variables refreshed
 #' and others not. With \code{publish = "per_chunk"}, each batch's results
