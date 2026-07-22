@@ -309,19 +309,17 @@ order_variable_ids_by_selector <- function(metadata_dt) {
 #' and running the selector queries that turn those windows into anchored
 #' values.
 #'
-#' @param con An open database connection with `concepts` already loaded.
-#' @param population_dt The population data.
-#' @param metadata_dt The variable(s) to process in this call.
-#' @param anchor_col Which column in `population_dt` to use as the index
-#'   date when a variable doesn't specify its own.
-#' @param anchor_hive_path Where to write the results. Ignored when
-#'   `accumulate_table` is set.
-#' @param accumulate_table If set, results are appended to this DuckDB
-#'   table (creating it on the first call) instead of being written to
-#'   `anchor_hive_path` used by [anchor_by_variable()]'s "memory"
-#'   staging mode so several calls can share one growing table.
-#' @return Invisibly `NULL` on success. If none of the variables had a
-#'   valid window, an empty result table is returned instead.
+#' @param con An open DBI connection with `concepts` already loaded.
+#' @param population_dt Validated population `data.table` (not yet trimmed to
+#'   window columns).
+#' @param metadata_dt Validated metadata `data.table` for the variable(s) to
+#'   process in this call.
+#' @param anchor_col Column in `population_dt` used as the index date when
+#'   metadata does not specify an anchor column.
+#' @param anchor_hive_path Existing, normalized path to write selector output.
+#' @param clear_existing_partitions Whether to clear partitions before writing.
+#' @return Invisibly `NULL` on success, or (only when no window was valid) the
+#'   same empty typed table `anchor()` has always returned in that case.
 #' @keywords internal
 #' @noRd
 anchor_impl <- function(
@@ -331,6 +329,8 @@ anchor_impl <- function(
   anchor_col,
   anchor_hive_path = NULL,
   accumulate_table = NULL
+  anchor_hive_path,
+  clear_existing_partitions = TRUE
 ) {
   # Define windows for all person-variable combinations.
   # Impossible anchors will be marked and filtered out later.
@@ -394,12 +394,12 @@ anchor_impl <- function(
   )
 
   # Clear each target variable_id's existing partition before writing so a
-  # rerun always fully replaces it, rather than trusting OVERWRITE_OR_IGNORE
-  # to remove stale rows. Skipped when `anchor_hive_path` is NULL (memory
-  # staging mode), where results land in `accumulate_table` instead of a
-  # local parquet hive and there is nothing on disk yet to clear.
-  if (!is.null(anchor_hive_path)) {
-    clear_anchor_partitions(anchor_hive_path, unique(valid_windows$variable_id))
+  # rerun always fully replaces it, rather than trusting
+  if (clear_existing_partitions) {
+    clear_anchor_partitions(
+      anchor_hive_path,
+      unique(valid_windows$variable_id)
+    )
   }
 
   selector_names <- unique(valid_windows$selector)
@@ -842,13 +842,14 @@ anchor_by_variable <- function(
 #' \code{chunk_size} limit splitting a selector's variables across more
 #' than one query.
 #'
-#' This is the cheapest option in terms of how many times \code{concepts}
-#' gets scanned (at most once per distinct selector in \code{metadata}).
-#' Each call to [anchor()] only replaces the variables it just computed and
-#' leaves the rest of \code{anchor_hive_path} untouched, so re-running this
-#' with the same or a smaller \code{metadata} is safe. The trade-off is
-#' that you don't get [anchor_by_variable()]'s smaller batch sizes: every
-#' variable sharing a selector is always recomputed together in one go.
+#' Processes metadata once per unique \code{selector}, so each selector query
+#' covers every variable using that selector without a \code{chunk_size} cap.
+#' Affected \code{variable_id} partitions are cleared once before selector
+#' processing begins. The calls leave the rest of \code{anchor_hive_path}
+#' untouched, so rerunning \code{anchor_by_selector()} with the same or a
+#' smaller \code{metadata} is safe; it just does not give you
+#' [anchor_by_variable()]'s \code{chunk_size}-bounded blast radius every
+#' variable sharing a selector is recomputed together in one query.
 #'
 #' @inheritParams anchor
 #'
@@ -883,6 +884,20 @@ anchor_by_selector <- function(
     )
   )
 
+  # Cleaning partition paths at the beginning of a new selector loop.
+  clear_anchor_partitions(
+    anchor_hive_path,
+    unique(as.character(metadata_dt$variable_id))
+  )
+
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  load_concepts_table(
+    con,
+    validated$concepts,
+    concept_ids = unique(as.character(metadata_dt$concept_id))
+  )
+
   for (current_selector in selectors) {
     selector_start_time <- Sys.time()
     selector_metadata <- metadata_dt[selector == current_selector]
@@ -894,12 +909,13 @@ anchor_by_selector <- function(
       )
     )
 
-    anchor(
-      population = validated$population,
-      metadata = selector_metadata,
-      concepts = validated$concepts,
+    anchor_impl(
+      con = con,
+      population_dt = validated$population,
+      metadata_dt = selector_metadata,
       anchor_col = anchor_col,
-      anchor_hive_path = anchor_hive_path
+      anchor_hive_path = anchor_hive_path,
+      clear_existing_partitions = FALSE
     )
 
     logger::log_info(

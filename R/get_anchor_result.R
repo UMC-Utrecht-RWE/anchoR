@@ -1,29 +1,8 @@
-# Which population columns disagree across rows sharing the same
-# person_id/T0, so get_anchor_result()'s error can name them directly.
-population_conflict_columns <- function(
-  population_dt, duplicate_keys, required_columns
-) {
-  conflicting_rows <- population_dt[duplicate_keys, on = required_columns]
-  other_cols <- setdiff(names(population_dt), required_columns)
-
-  varying <- conflicting_rows[
-    ,
-    lapply(.SD, data.table::uniqueN),
-    .SDcols = other_cols,
-    by = required_columns
-  ]
-  is_varying <- vapply(
-    varying[, ..other_cols], function(x) any(x > 1L), logical(1)
-  )
-  other_cols[is_varying]
-}
-
 #' Retrieve and Reshape Anchored Variable Results
 #'
 #' Reads parquet files from an anchor hive directory via DuckDB, filters to the
 #' requested variables, and pivots the long-format result into a wide
-#' data.table with one column per variable for both value and
-#' date.
+#' data.table with one column per variable for both value and date.
 #'
 #' @param metadata A data frame describing the study variables. Must contain at
 #'   least a variable_id column.
@@ -31,29 +10,29 @@ population_conflict_columns <- function(
 #'   that contains the anchored parquet hive. Must be a valid existing
 #'   directory.
 #' @param population Optional data frame with population rows to be represented
-#'   in wide output. When provided, it must contain person_id and
-#'   T0 columns. Additional population columns are carried into the
-#'   wide result. When multiple rows share the same person_id/T0
-#'   key but disagree on other columns (e.g. matching with replacement), the
-#'   first row per key is kept, a warning names the conflicting column(s),
-#'   and processing continues.
+#'   in wide output. When provided, it must contain person_id and T0 columns.
+#'   Additional population columns are carried into the wide result. Multiple
+#'   rows may legitimately share the same person_id/T0 key while disagreeing
+#'   on other columns every such row is kept.
+#'   The anchored results are left-joined onto the full population, so
+#'   result_shape = "wide" output always has one row per population row
+#'   (times the number of distinct window_name values when cast_window = FALSE).
 #' @param result_shape A character string specifying the desired shape of the
 #'   output. Must be either "wide" or "long".
-#' @param impute_missing Logical; when TRUE and
-#'   result_shape = "wide", missing value_<variable_id> cells are
-#'   imputed using metadata columns is_expected_missing and
-#'   variable_type via imputing_missing().
+#' @param impute_missing Logical; when TRUE and result_shape = "wide", missing
+#'   value_<variable_id> cells are imputed using metadata columns
+#'   is_expected_missing and variable_type via imputing_missing().
 #' @param cast_window Logical; controls wide reshaping formula. When
 #'   \code{FALSE} (default), results are cast by
-#'   \code{person_id + T0 + window_name ~ variable_id}. When \code{TRUE},
-#'   results are cast by \code{person_id + T0 ~ window_name + variable_id}.
-#' @param only_date Logical; when \code{TRUE} and
-#'   result_shape = "wide", only date columns are cast (no
-#'   \code{value_<...>} columns). When \code{FALSE}, both value and date
-#'   columns are cast.
+#'   \code{person_id + T0 + window_name ~ variable_id}.
+#'   When \code{TRUE}, results are cast by
+#'   \code{person_id + T0 ~ window_name + variable_id}.
+#' @param only_date Logical; when \code{TRUE} and result_shape = "wide", only
+#'   date columns are cast (no \code{value_<...>} columns). When \code{FALSE},
+#'   both value and date columns are cast.
 #' @param required_population_cols Character vector of column names that must
-#' be present in the population data frame when provided.
-#' Defaults to \code{c("person_id", "T0")}.
+#'   be present in the population data frame when provided. Defaults to
+#'   \code{c("person_id", "T0")}.
 #'
 #' @return A data.table with anchored variable results in the specified shape.
 #' @export
@@ -67,11 +46,11 @@ get_anchor_result <- function(
   only_date = FALSE,
   required_population_cols = c("person_id", "T0")
 ) {
-  # Different selectors may return slightly different columns, so the combined
-  # result needs a forgiving row bind instead of assuming one rigid shape.
+  # Connecting to an in-memory DuckDB instance that is cleaned up on exit
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
+  # Validating metadata and population inputs
   metadata_dt <- as_data_table(metadata, "metadata")
   assert_has_columns(
     metadata_dt,
@@ -100,38 +79,13 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
+    # Multiple rows can legitimately share a person_id/T0 key
     population_dt <- unique(population_dt)
-    duplicate_population_keys <- population_dt[
-      ,
-      .N,
-      by = .(person_id, T0)
-    ][N > 1L]
-    if (nrow(duplicate_population_keys) > 0L) {
-      # Matching with replacement can legitimately assign the same control to
-      # multiple exposed persons, so a repeated person_id/T0 key is not an
-      # error. Keep the first row per key and tell the caller which
-      # column(s) disagreed, rather than halting the whole pipeline.
-      conflicting_cols <- population_conflict_columns(
-        population_dt,
-        duplicate_population_keys[, ..required_population_cols],
-        required_population_cols
-      )
-      msg <- paste(
-        "`population` contains multiple rows for the same `person_id` and `T0`.", # nolint
-        "Keeping the first row per key. Conflicting column(s):",
-        paste(conflicting_cols, collapse = ", ")
-      )
-      logger::log_warn(msg)
-      warning(msg, call. = FALSE)
-      population_dt <- unique(population_dt, by = required_population_cols)
-    }
-
     population_dt[, T0 := as.Date(T0)]
-    # Wide output cardinality is defined by the anchor key, but callers may
-    # need the rest of the population columns carried into the final result.
     population_keys_dt <- unique(population_dt[, .(person_id, T0)])
   }
 
+  # Validating anchor_hive_path input
   if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
     msg <- sprintf("`anchor_hive_path` must be a valid path!")
     logger::log_error(msg)
@@ -144,6 +98,8 @@ get_anchor_result <- function(
       normalizePath(anchor_hive_path, winslash = "/", mustWork = TRUE)
     )
   )
+
+  # Creating a DuckDB view for the anchored variables from the parquet hive
   DBI::dbExecute(
     con,
     paste(
@@ -178,6 +134,8 @@ get_anchor_result <- function(
       )
     )
   )
+  # Ensuring date columns are of type Date, since DuckDB may return them as
+  # character
   if ("date" %in% names(anchored_dt)) {
     # DBI can round-trip DATE columns as character depending on the source, so
     # coerce back here to keep the public output type stable.
@@ -188,6 +146,8 @@ get_anchor_result <- function(
   }
 
   data.table::setorder(anchored_dt, variable_id, person_id, T0, window_name)
+  # Validating the anchored results and reshaping based on the
+  # requested result_shape
   if (result_shape == "long") {
     required_long_cols <- c(
       "person_id",
@@ -395,11 +355,13 @@ get_anchor_result <- function(
     }
 
     if (!is.null(population_dt)) {
-      # Reattach the remaining population columns once the wide result shape is
-      # stable, so they do not interfere with filtering, casting, or imputation.
-      wide_anchored <- population_dt[
-        wide_anchored,
-        on = .(person_id, T0)
+      # Left-join the anchored results onto the *full* population once the wide
+      # result shape is stable, so a person_id/T0 that appears more than once in
+      # `population` keeps every row
+      wide_anchored <- wide_anchored[
+        population_dt,
+        on = .(person_id, T0),
+        allow.cartesian = TRUE
       ]
     }
 
@@ -415,10 +377,10 @@ get_anchor_result <- function(
 #' Impute Missing Values in Wide Anchor Output
 #'
 #' Imputes missing value_<variable_id> cells in a wide anchored result
-#' using metadata rules for is_expected_missing and
-#' variable_type. For non-expected-missing variables, logical/TF types
-#' are imputed as FALSE and categorical types as 0. If required
-#' metadata columns are only partially available, a warning is raised and
+#' using metadata rules for is_expected_missing and variable_type.
+#' For non-expected-missing variables, logical/TF types are imputed as FALSE
+#' and categorical types as 0. If required metadata columns are only partially
+#' available, a warning is raised and
 #' imputation is skipped.
 #'
 #' @param wide_anchored A wide data.table from get_anchor_result
