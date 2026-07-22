@@ -1,6 +1,6 @@
 # Using anchoR for Standard (Single-Anchor) Study Variables
 
-This is the usage guide for anchoR's core workflow: a study variable anchored to one fixed date per person (usually called `T0`), with a window defined as a fixed offset around it. If you need a window that depends on a *recurring* event instead (e.g. pregnancy, or any condition that can start and stop multiple times), see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows), everything on this page is the `GENERIC` special case of that same machinery.
+This is the usage guide for anchoR's core workflow: a study variable anchored to one fixed date per person (usually called `T0`), with a window defined as a fixed offset around it. If you need a window that depends on a *recurring* event instead (e.g. pregnancy, or any condition that can start and stop multiple times), see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md), everything on this page is the `GENERIC` special case of that same machinery.
 
 ## The three inputs
 
@@ -12,7 +12,7 @@ This is the usage guide for anchoR's core workflow: a study variable anchored to
 
 `anchor()` cross-joins population with metadata, builds a window per person-variable pair, filters `concepts` to whichever records fall in that window, and collapses the matches with the requested selector.
 
-## Step 1: [[Population]]
+## Step 1: [Population](definitions/Population.md)
 
 ```r
 library(data.table)
@@ -25,7 +25,7 @@ population <- data.table(
 
 Only `person_id` and the anchor column (`T0` by default) are required. Extra columns are fine and are simply ignored by the anchoring step itself.
 
-## Step 2: [[Metadata]]
+## Step 2: [Metadata](definitions/Metadata.md)
 
 Each row says: for this `variable_id`, look for `concept_id` in a window built from `start_offset`/`end_offset` days around the anchor, and collapse whatever matches with `selector`.
 
@@ -40,9 +40,9 @@ metadata <- data.table(
 )
 ```
 
-`constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow. (`start_offset`/`end_offset` are not aliased to anything else -- `start_look_back`/`end_look_back` are a separate, unrelated pair of columns used only by `IN_PRIOR_PREG`, see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows).)
+`constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow. (`start_offset`/`end_offset` are not aliased to anything else -- `start_look_back`/`end_look_back` are a separate, unrelated pair of columns used only by `IN_PRIOR_PREG`, see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md).)
 
-## Step 3: [[Concepts]]
+## Step 3: [Concepts](definitions/Concepts.md)
 
 ```r
 concepts <- data.table(
@@ -295,4 +295,4 @@ read_anchor_hive(hive_path)[, .(person_id, T0, value, date)]
 
 ## Extending beyond a fixed offset
 
-`GENERIC` covers "the window is always N days around one anchor date." If a study variable instead needs a window built from a *recurring* event (multiple pregnancies, repeated hospitalizations, ...), that's what the episode-based constructors in [pregnancy_windows_usage.md](pregnancy_windows_usage.md) are for, same `population`/`metadata`/`concepts`/`anchor()` workflow, just a different `constructor` value and one extra population column. For anything else entirely bespoke, `make_constructor()` lets you build and register a new window shape without editing anchoR itself.
+`GENERIC` covers "the window is always N days around one anchor date." If a study variable instead needs a window built from a *recurring* event (multiple pregnancies, repeated hospitalizations, ...), that's what the episode-based constructors in [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) are for, same `population`/`metadata`/`concepts`/`anchor()` workflow, just a different `constructor` value and one extra population column. For anything else entirely bespoke, `make_constructor()` lets you build and register a new window shape without editing anchoR itself.

@@ -1,4 +1,4 @@
-# [[Metadata|METADATA]]
+# [METADATA](definitions/Metadata.md)
 
 | Table name                | study_variables / windows_metadata                                                                                                                                                         |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -32,7 +32,7 @@ Optional columns supported by the package, even when absent from the current met
 | `anchor_date_end`    | chr    | Population column used as the end anchor for the window. If missing, `anchoR` uses the `anchor_col` argument.                                                                       |
 | `range_min`          | num    | Lower bound used by `RANGE_COUNT`.                                                                                                                                                   |
 | `range_max`          | num    | Upper bound used by `RANGE_COUNT`.                                                                                                                                                   |
-| `start_look_back`    | num    | `IN_PRIOR_PREG` only: restricts which prior episodes are eligible to those overlapping `[anchor + start_look_back, anchor + end_look_back]`. NA (the default) applies no filter. See [[IN_PRIOR_PREG]]. |
+| `start_look_back`    | num    | `IN_PRIOR_PREG` only: restricts which prior episodes are eligible to those overlapping `[anchor + start_look_back, anchor + end_look_back]`. NA (the default) applies no filter. See [IN_PRIOR_PREG](definitions/IN_PRIOR_PREG.md). |
 | `end_look_back`      | num    | `IN_PRIOR_PREG` only, paired with `start_look_back` above.                                                                                                                            |
 
 

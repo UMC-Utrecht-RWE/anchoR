@@ -1,4 +1,4 @@
-A single numerical example run through all four [[Episode-Based Window Engine|episode-based]] constructors, computed by calling `event_window_engine()` / `outside_all_event_gaps()` directly rather than hand-derived, so the arithmetic is trustworthy.
+A single numerical example run through all four [episode-based](<../definitions/Episode-Based Window Engine.md>) constructors, computed by calling `event_window_engine()` / `outside_all_event_gaps()` directly rather than hand-derived, so the arithmetic is trustworthy.
 
 ## Setup
 
@@ -40,7 +40,7 @@ row <- function(
 }
 ```
 
-## [[IN_PRIOR_PREG|IN_PRIOR_PREG]]
+## [IN_PRIOR_PREG](../definitions/IN_PRIOR_PREG.md)
 
 `start_offset = 0, end_offset = 30, end_cap_offset = 90`  both A and B ended before `T0`, so both produce a window, each capped to the episode's own first 90 days:
 
@@ -78,7 +78,7 @@ event_window_engine(
 
 Compare to the unfiltered row above: episode A's window (`2023-01-01`/`2023-10-01`) is simply gone, not clipped to `2024-01-01`. If you want the OUTSIDE_ALL_PREG-style behavior of clipping a *search range* rather than filtering episodes, that's what `OUTSIDE_ALL_PREG`'s own `start_offset`/`end_offset` already does, see below, it is a different mechanism for a different constructor, not the same feature under a different name.
 
-## [[SINCE_START_CURRENT_PREG|SINCE_START_CURRENT_PREG]]
+## [SINCE_START_CURRENT_PREG](../definitions/SINCE_START_CURRENT_PREG.md)
 
 `start_offset = 0, end_offset = 0`  episode C contains `T0`; the window stops exactly at the anchor:
 
@@ -94,7 +94,7 @@ event_window_engine(
 
 ![SINCE_START_CURRENT_PREG worked example|1000](img/since-start-current-preg.svg)
 
-## [[ANYTIME_CURRENT_PREG|ANYTIME_CURRENT_PREG]]
+## [ANYTIME_CURRENT_PREG](../definitions/ANYTIME_CURRENT_PREG.md)
 
 `start_offset = 0, end_offset = 14`  same episode C, but bounded by its own end plus a 14-day grace period:
 
@@ -110,7 +110,7 @@ event_window_engine(
 
 ![ANYTIME_CURRENT_PREG worked example|1000](img/anytime-current-preg.svg)
 
-## [[OUTSIDE_ALL_PREG|OUTSIDE_ALL_PREG]]
+## [OUTSIDE_ALL_PREG](../definitions/OUTSIDE_ALL_PREG.md)
 
 `start_offset = -1172, end_offset = 0`  search range `[2022-12-01, 2026-02-15]`. Three gaps come back, fenced by A, B, and C; none touches `T0` since it sits inside the still-ongoing episode C:
 

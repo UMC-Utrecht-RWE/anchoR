@@ -4,7 +4,7 @@
 
 It is built for a common epidemiology workflow:
 
-- define a time window around an anchor date such as `T0`documentation/standard_windows_usage.md
+- define a time window around an anchor date such as `T0`
 - find matching concept records for each person inside that window
 - reduce those matches to one anchored value using a selector such as `LATEST`, `EARLIEST`, `COUNT`, or `RANGE_COUNT`
 
@@ -80,6 +80,7 @@ appear in the (sparse) result.
 
 ## Documentation
 
-- [documentation/standard_windows_usage.md](documentation/standard_windows_usage.md) -- the core workflow above in full: every selector, multiple windows per variable, `anchor()` vs `anchor_by_variable()`, custom anchor columns.
-- [documentation/pregnancy_windows_usage.md](documentation/pregnancy_windows_usage.md) -- windows anchored to a *recurring* event (pregnancy today, any repeatable start/end episode in general) instead of a single fixed date.
+- [documentation/Tutorial_standard_windows.md](documentation/Tutorial_standard_windows.md) -- the core workflow above in full: every selector, multiple windows per variable, `anchor()` vs `anchor_by_variable()`, custom anchor columns.
+- [documentation/Tutorial_pregnancy_windows.md](documentation/Tutorial_pregnancy_windows.md) -- windows anchored to a *recurring* event (pregnancy today, any repeatable start/end episode in general) instead of a single fixed date.
+- [documentation/get_anchor_result_walkthrough.md](documentation/get_anchor_result_walkthrough.md) -- reading anchored results back out, long vs wide format.
 - Input/output reference: [Input_population.md](documentation/Input_population.md), [Input_metadata.md](documentation/Input_metadata.md), [Input_concepts.md](documentation/Input_concepts.md), [Output_D4_StudyVariablesAnchored.md](documentation/Output_D4_StudyVariablesAnchored.md).

@@ -10,7 +10,7 @@
 
 # LONG OUTPUT
 
-The [[Long Output|long-format]] public result is returned by:
+The [long-format](<definitions/Long Output.md>) public result is returned by:
 
 ```r
 get_anchor_result(
@@ -40,7 +40,7 @@ Current behaviour:
 
 # WIDE OUTPUT
 
-[[Wide Output]] is returned by:
+[Wide Output](<definitions/Wide Output.md>) is returned by:
 
 ```r
 get_anchor_result(
