@@ -40,11 +40,11 @@ testthat::test_that(
     )
     metadata <- data.table::data.table(
       variable_id = c("latest_tie", "earliest_tie"),
-      concept_id  = c("TIE_LATEST", "TIE_EARLIEST"),
+      concept_id = c("TIE_LATEST", "TIE_EARLIEST"),
       constructor = "GENERIC",
-      selector    = c("LATEST", "EARLIEST"),
+      selector = c("LATEST", "EARLIEST"),
       start_offset = -3650L,
-      end_offset   = 0L
+      end_offset = 0L
     )
     concepts <- data.table::data.table(
       person_id = "1",
@@ -164,12 +164,12 @@ testthat::test_that(
     )
     metadata <- data.table::data.table(
       variable_id = c("mixed_selector", "mixed_selector"),
-      concept_id  = c("MIX", "MIX"),
+      concept_id = c("MIX", "MIX"),
       constructor = "GENERIC",
       window_name = c("lookback", "risk"),
-      selector    = c("LATEST", "EARLIEST"),
+      selector = c("LATEST", "EARLIEST"),
       start_offset = c(-30L, 1L),
-      end_offset   = c(-1L, 30L)
+      end_offset = c(-1L, 30L)
     )
     concepts <- data.table::data.table(
       person_id = c("1", "1"),
@@ -323,7 +323,8 @@ testthat::test_that(
     one_at_a_time_path <- tempfile(pattern = "anchor-hive-")
     dir.create(one_at_a_time_path)
     on.exit(
-      unlink(one_at_a_time_path, recursive = TRUE, force = TRUE), add = TRUE
+      unlink(one_at_a_time_path, recursive = TRUE, force = TRUE),
+      add = TRUE
     )
     anchor_by_variable(
       population = minimal_population(),
@@ -582,7 +583,8 @@ testthat::test_that(
     by_selector_path <- tempfile(pattern = "anchor-hive-")
     dir.create(by_selector_path)
     on.exit(
-      unlink(by_selector_path, recursive = TRUE, force = TRUE), add = TRUE
+      unlink(by_selector_path, recursive = TRUE, force = TRUE),
+      add = TRUE
     )
     processed_selectors <- anchor_by_selector(
       population = minimal_population(),
@@ -602,5 +604,32 @@ testthat::test_that(
     data.table::setorder(by_selector, variable_id, person_id)
 
     testthat::expect_equal(by_selector, reference)
+  }
+)
+
+testthat::test_that(
+  "anchor_by_selector preserves two selectors for one variable_id",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    population <- minimal_population()
+    metadata <- minimal_metadata()[selector %in% c("LATEST", "COUNT")]
+    metadata[, variable_id := "mixed"]
+    concepts <- minimal_concepts()
+
+    anchor_by_selector(
+      population = population,
+      metadata = metadata,
+      concepts = concepts,
+      anchor_hive_path = hive_path
+    )
+
+    partition_path <- file.path(hive_path, "variable_id=mixed")
+    testthat::expect_setequal(
+      list.files(partition_path),
+      c("latest_0.parquet", "count_0.parquet")
+    )
   }
 )
