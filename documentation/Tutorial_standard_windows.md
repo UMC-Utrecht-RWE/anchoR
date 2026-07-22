@@ -15,6 +15,7 @@ This is the usage guide for anchoR's core workflow: a study variable anchored to
 ## Step 1: [Population](definitions/Population.md)
 
 ```r
+library(anchoR)
 library(data.table)
 
 population <- data.table(
@@ -130,7 +131,9 @@ concepts <- data.table(
 )
 
 anchor(population, metadata, concepts, anchor_hive_path = hive_path)
-result <- get_anchor_result(metadata, hive_path, result_shape = "long")
+result <- get_anchor_result(metadata, hive_path, result_shape = "long")[
+  , .(person_id, T0, variable_id, date, value)
+]
 setorder(result, variable_id, person_id)
 result
 #>    person_id         T0               variable_id       date value
@@ -205,7 +208,7 @@ Passing `population` to `get_anchor_result()` also backfills a row for every pop
 
 ## `anchor()` vs `anchor_by_variable()`
 
-`anchor()` computes every variable in `metadata` in one pass and writes one parquet hive. `anchor_by_variable()` does the same thing but one `variable_id` at a time, replacing (not appending to) only that variable's own partition of the hive. Use `anchor_by_variable()` when you expect to re-run individual variables later (e.g. a corrected concept source for one variable) without recomputing everything else:
+`anchor()` computes every variable in `metadata` in one pass and writes one parquet hive. `anchor_by_variable()` processes variable IDs in bounded chunks (`chunk_size = 10` by default) and replaces each variable's own partition rather than appending. A call with metadata for one variable therefore touches only that partition. Use it when you want a bounded processing/failure scope or expect to re-run selected variables without recomputing everything else:
 
 ```r
 hive_path <- tempfile(pattern = "anchor-hive-")
@@ -230,7 +233,9 @@ concepts <- data.table(
 )
 
 anchor_by_variable(population, metadata, concepts, anchor_hive_path = hive_path)
-read_anchor_hive(hive_path)[, .(variable_id, person_id, value, date)]
+get_anchor_result(metadata, hive_path, result_shape = "long")[
+  , .(variable_id, person_id, value, date)
+]
 #>           variable_id person_id  value       date
 #> 1: flu_vaccine_recent         1   TRUE 2023-10-01
 #> 2:  recent_hosp_count         2      1 2023-11-01
@@ -251,13 +256,15 @@ anchor_by_variable(
   anchor_hive_path = hive_path
 )
 
-read_anchor_hive(hive_path)[, .(variable_id, person_id, value, date)]
+get_anchor_result(metadata, hive_path, result_shape = "long")[
+  , .(variable_id, person_id, value, date)
+]
 #>           variable_id person_id  value       date
 #> 1: flu_vaccine_recent         1   TRUE 2023-12-01
 #> 2:  recent_hosp_count         2      1 2023-11-01
 ```
 
-Only `flu_vaccine_recent`'s partition changed (now reflecting the 2023-12-01 record); `recent_hosp_count`, untouched by the second call, kept its original value. (`read_anchor_hive()` is a small helper for reading a hive back with DuckDB, see its definition in the test suite's `helper-fixtures.R` if you want the equivalent query yourself.)
+Only `flu_vaccine_recent`'s partition changed (now reflecting the 2023-12-01 record); `recent_hosp_count`, untouched by the second call, kept its original value.
 
 ## A non-default anchor column
 
@@ -288,7 +295,9 @@ anchor(
   population, metadata, concepts,
   anchor_col = "index_date", anchor_hive_path = hive_path
 )
-read_anchor_hive(hive_path)[, .(person_id, T0, value, date)]
+get_anchor_result(metadata, hive_path, result_shape = "long")[
+  , .(person_id, T0, value, date)
+]
 #>    person_id         T0  value       date
 #> 1:         1 2024-01-01   TRUE 2023-10-01
 ```

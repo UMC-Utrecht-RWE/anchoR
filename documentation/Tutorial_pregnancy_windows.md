@@ -1,7 +1,6 @@
 # Using Episode-Based (Pregnancy) Windows
 
-This is a usage guide for the feature described in [pregnancy_examples.md](examples/pregnancy_examples.md):
-anchoring study variables to a *recurring* event (pregnancy today; anything with repeatable start/end episodes tomorrow) instead of a single fixed anchor date. It shows the metadata shape actually implemented in `R/pregnancy_window.R`, which is a deliberate simplification of the free-text `other_arguments` sketched in `pregnancy_examples.md`, a small, fixed set of metadata columns rather than expression strings.
+This guide shows how to anchor study variables to a *recurring* event—pregnancy here, or any repeatable start/end episode—instead of a single fixed anchor date. It documents the metadata shape implemented in `R/pregnancy_window.R`. The earlier free-text design is retained only as a clearly labeled [historical sketch](examples/pregnancy_examples.md).
 
 ## The idea
 
@@ -14,14 +13,14 @@ Every constructor in this family answers the same two questions about a person's
 2. **Where do the window boundaries sit, relative to the selected episode(s)?**
    - An offset (`start_offset`/`end_offset`), optionally capped against a second boundary (`end_cap_offset`).
 
-There is one shared engine underneath (`episode_window_engine()`); the four constructor names below are just that engine pre-configured with a selection rule. Adding a new named shape later means adding one more five-line wrapper, not a new bespoke implementation.
+There is one shared internal engine underneath (`event_window_engine()`); the four public constructor names below are that engine pre-configured with a selection rule. Users interact with it through `define_window()` or `anchor()`, rather than calling the internal engine directly.
 
 | `constructor`                | Selects                         | Window                                                       |
 | ---------------------------- | ------------------------------- | ------------------------------------------------------------ |
-| [IN_PRIOR_PREG](definitions/IN_PRIOR_PREG.md)            | every episode ending before`T0` | `episode_start + start_offset` to `episode_end + end_offset` |
-| [SINCE_START_CURRENT_PREG](definitions/SINCE_START_CURRENT_PREG.md) | the episode containing`T0`      | `episode_start + start_offset` to `T0 + end_offset`          |
-| [ANYTIME_CURRENT_PREG](definitions/ANYTIME_CURRENT_PREG.md)     | the episode containing`T0`      | `episode_start + start_offset` to `episode_end + end_offset` |
-| [OUTSIDE_ALL_PREG](definitions/OUTSIDE_ALL_PREG.md)         | gaps between*all* episodes      | each gap within`[T0 + start_offset, T0 + end_offset]`        |
+| [IN_PRIOR_PREG](definitions/IN_PRIOR_PREG.md) | every episode ending before `T0` | `episode_start + start_offset` to `episode_end + end_offset` |
+| [SINCE_START_CURRENT_PREG](definitions/SINCE_START_CURRENT_PREG.md) | the episode containing `T0` | `episode_start + start_offset` to `T0 + end_offset` |
+| [ANYTIME_CURRENT_PREG](definitions/ANYTIME_CURRENT_PREG.md) | the episode containing `T0` | `episode_start + start_offset` to `episode_end + end_offset` |
+| [OUTSIDE_ALL_PREG](definitions/OUTSIDE_ALL_PREG.md) | gaps between *all* episodes | each gap within `[T0 + start_offset, T0 + end_offset]` |
 
 `IN_PRIOR_PREG` can produce more than one candidate window per person (one per prior episode); `OUTSIDE_ALL_PREG` can too (one per gap). `anchoR` handles that automatically, see "Multiple candidate windows" below.
 
@@ -74,6 +73,7 @@ Unlike `T0`, episodes are a *list* per person (a person can have any number of p
 The nested table's columns must be named `event_start`/`event_end` (whatever your source data calls them, rename them to this on the way in).
 
 ```r
+library(anchoR)
 library(data.table)
 
 # Your own long-format episode source, one row per pregnancy.
@@ -156,7 +156,7 @@ Person 1 has two prior pregnancies (ending 2020-09-01 and 2021-05-20, both befor
 
 ## Multiple candidate windows for one variable
 
-`IN_PRIOR_PREG` and `OUTSIDE_ALL_PREG` can generate several candidate windows per person for the same variable (one per prior episode, or one per gap). You don't need to do anything about this, the selector runs across *all* of a person's candidate windows for that variable and still returns one answer, exactly as shown above (`LATEST` picked the single latest `GEST_DIAB` record across both of person 1's prior-pregnancy windows).
+`IN_PRIOR_PREG` and `OUTSIDE_ALL_PREG` can generate several candidate windows per person for the same variable (one per prior episode, or one per gap). The selector aggregates matches across all candidate window rows for that output key, exactly as shown above (`LATEST` picked the latest `GEST_DIAB` record across both of person 1's prior-pregnancy windows). Candidate windows are not deduplicated before the concepts join: overlapping episodes can make one concept event match more than once, so keep episodes/windows non-overlapping when using `COUNT` or `ALL` and distinct-event semantics matter.
 
 ## Constructor-by-constructor reference
 
@@ -251,7 +251,7 @@ Only 3 of the 5 variables produce a result here, and that's expected, not a bug:
 
 ## Extending beyond pregnancy
 
-Nothing here is pregnancy-specific, `episode_window_engine()` only knows about `event_start`/`event_end` and an anchor date. A recurring obesity or cancer diagnosis reuses the same constructors unchanged: build an episode table for that condition (deciding, upstream, how a run of diagnoses collapses into discrete episodes), nest it onto the population under a new `event_col` name (e.g. `obesity_episodes`), and point new metadata rows at it with the constructor that matches the question you're asking (`IN_PRIOR_PREG`, `ANYTIME_CURRENT_PREG`, ...).
+The internal `event_window_engine()` only knows about `event_start`/`event_end` and an anchor date, so the mechanics are not pregnancy-specific. The currently exposed constructor names are pregnancy-oriented, however. A recurring obesity or cancer diagnosis can reuse them unchanged: build an episode table for that condition (deciding upstream how diagnoses collapse into episodes), nest it onto the population under a new `event_col` name, and point metadata at it. If the pregnancy-oriented names would be misleading in your project, wrap the same behavior in a clearly named custom constructor made with `make_constructor()`.
 
 ## Things worth validating on real data before relying on this
 

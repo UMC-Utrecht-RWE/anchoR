@@ -1,103 +1,71 @@
-# OUTPUT
+# Anchored output
 
-| Table name                | anchored result /`D4_StudyVariablesAnchored`                                                                                                                              |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Description               | Output of`anchoR`. Concept records are filtered to metadata-defined windows and collapsed with the selected selector.                                                     |
-| Source                    | Concepts source + population + metadata +`anchor_col`.                                                                                                                    |
-| Content                   | Anchored variable values returned in long or wide format by`get_anchor_result()`.                                                                                         |
-| Population                | Subset of the input population with at least one anchored result among the requested variables.                                                                           |
-| Unit of Observation (UoO) | In long format: one row per matched`person_id x T0 x variable_id x window_name`. In wide format: one row per `person_id x T0` combination present in the anchored result. |
+`anchor()` writes sparse selector results to a parquet Hive partitioned by `variable_id`. `get_anchor_result()` reads selected variables and returns either long or wide output.
 
-# LONG OUTPUT
+The persisted anchor field is always named `T0`, even when anchoring used a differently named `anchor_col`.
 
-The [long-format](<definitions/Long Output.md>) public result is returned by:
+## Long output
 
 ```r
-get_anchor_result(
-  metadata = metadata,
-  anchor_hive_path = anchor_hive_path,
-  result_shape = "long"
-)
+get_anchor_result(metadata, anchor_hive_path, result_shape = "long")
 ```
 
-Codebook:
+| column | type | meaning |
+| --- | --- | --- |
+| `person_id` | character | Person identifier. |
+| `T0` | `Date` | Anchor date used for the output row. |
+| `variable_id` | character | Metadata variable identifier. |
+| `window_name` | character | Metadata window label, possibly `NA`. |
+| `date` | `Date` | Date selected by the selector. |
+| `value` | character | Value or aggregate returned by the selector. |
 
-| column        | format | description                                                                                            |
-| ------------- | ------ | ------------------------------------------------------------------------------------------------------ |
-| `person_id`   | chr    | Person identifier from the population input.                                                           |
-| `T0`          | Date   | Anchor value used during output. The current implementation writes the anchor column to output as`T0`. |
-| `variable_id` | chr    | Variable identifier from metadata.                                                                     |
-| `window_name` | chr    | Window label from metadata.                                                                            |
-| `date`        | Date   | Anchored event date returned by the selector.                                                          |
-| `value`       | chr    | Anchored value returned by the selector.                                                               |
+Long output is sparse: a window with no matching concept record contributes no row. All built-in selectors except `ALL` return at most one row per key.
 
-Current behaviour:
+Passing `population` affects only wide output. It does not backfill or filter long output.
 
-- The long result is sparse.
-- Rows with no matching concept record in the requested window are omitted.
-- The public result includes `T0`, not a generic `anchor_type` / `anchor_date`
-  pair.
+## Wide output
 
-# WIDE OUTPUT
-
-[Wide Output](<definitions/Wide Output.md>) is returned by:
+With the defaults (`cast_window = FALSE`, `only_date = FALSE`):
 
 ```r
 get_anchor_result(
-  metadata = metadata,
-  anchor_hive_path = anchor_hive_path,
+  metadata,
+  anchor_hive_path,
+  population = population,
   result_shape = "wide"
 )
 ```
 
-This yields one row per `person_id x T0` combination present in the anchored
-result and creates columns of the form:
+The row key is `person_id + T0 + window_name`; columns are `value_<variable_id>` and `date_<variable_id>`.
 
-- `value_<variable_id>`
-- `date_<variable_id>`
+With `cast_window = TRUE`, the row key is `person_id + T0`, and window names move into columns: `value_<window_name>_<variable_id>` and `date_<window_name>_<variable_id>`.
 
-Codebook:
+With `only_date = TRUE`, value columns are omitted and the `date_` prefix is also omitted by the current implementation. Columns are `<variable_id>` or `<window_name>_<variable_id>`.
 
-| column                | format | description                                                                                                                        |
-| --------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `person_id`           | chr    | Person identifier from the population input.                                                                                       |
-| `T0`                  | Date   | Anchor value written to output.                                                                                                    |
-| `value_<variable_id>` | chr    | Anchored value for the corresponding study variable.`NA` means that variable did not produce an anchored result for that row.      |
-| `date_<variable_id>`  | Date   | Anchored event date for the corresponding study variable.`NA` means that variable did not produce an anchored result for that row. |
+### Population completion
 
-Example wide output shape:
+When `population` is supplied, wide output is restricted to its `person_id/T0` keys, missing keys are backfilled, and additional population columns are reattached. Without `population`, only keys found in persisted selector results can appear.
 
-| `person_id`      | `T0`         | `value_COD_ACUTE_ENCEPHALOMYELITIS` | `value_COD_GBSYNDROME` | `value_COD_NARCOLEPSY` | `value_SV_OBESITY` | `date_COD_ACUTE_ENCEPHALOMYELITIS` | `date_COD_GBSYNDROME` | `date_COD_NARCOLEPSY` | `date_SV_OBESITY` |
-| :--------------- | :----------- | :---------------------------------- | :--------------------- | :--------------------- | :----------------- | :--------------------------------- | :-------------------- | :-------------------- | :---------------- |
-| `#ID-000000853#` | `2022-10-12` | `TRUE`                              | `NA`                   | `NA`                   | `NA`               | `2022-08-07`                       | `NA`                  | `NA`                  | `NA`              |
-| `#ID-000001103#` | `2023-03-21` | `NA`                                | `NA`                   | `NA`                   | `TRUE`             | `NA`                               | `NA`                  | `NA`                  | `2022-12-09`      |
-| `#ID-000001161#` | `2022-10-12` | `NA`                                | `NA`                   | `TRUE`                 | `NA`               | `NA`                               | `NA`                  | `2022-08-20`          | `NA`              |
+For `cast_window = FALSE`, population completion produces one row per known population key and requested/discovered window name—not necessarily exactly one row per population member.
 
-Current behavior:
+### Ambiguous wide results
 
-- `NA` in a `value_<variable_id>` or `date_<variable_id>` column means that
-  variable did not produce an anchored result for that `person_id x T0` row.
-- Rows for which none of the requested variables produced an anchored result
-  are absent from the wide result.
-- In current `data.table` output, the result is keyed by `person_id` and `T0`.
-- `window_name` is not retained in wide output.
+Wide output stops when anchored data contains more than one row for a `person_id + T0 + window_name + variable_id` cell. This normally occurs with `ALL`. Use `result_shape = "long"` rather than allowing an arbitrary aggregation.
 
-Wide output is appropriate when all of the following are true:
+Repeating a `variable_id` for distinct `window_name` values is supported and is not by itself ambiguous.
 
-- `metadata$variable_id` is unique in the requested metadata
-- the anchored result contains no duplicate `person_id + T0 + variable_id`
-  combinations
+### Missing-value imputation
 
-If the same `variable_id` is repeated for several windows, wide output is
-ambiguous and long output is preferred.
+`impute_missing = TRUE` applies only to wide value columns. Metadata must include:
 
-# NOTES
+- `variable_id`;
+- `is_expected_missing`; and
+- `variable_type`.
 
-- The current result returned by `get_anchor_result()` does not carry through
-  `match_id`, `boot_id`, `group`, or other extra columns from the population
-  input.
-- The current result uses `window_name` rather than `window`.
-- The output column is currently named `T0` even when a different `anchor_col`
-  was used during anchoring.
-- `keep_all = TRUE` does not currently force a full persisted design matrix in
-  normal runs; unmatched rows are still absent from the parquet-backed result.
+Rows with `is_expected_missing = TRUE` remain missing. Other boolean types (`TF`, `BOOL`, `BOOLEAN`, `LOGICAL`) are imputed to `FALSE`; categorical types (`CAT`, `FACTOR`) are imputed to `0`. Dates and other variable types are not imputed. When required metadata fields are only partly supplied, anchoR warns and skips imputation.
+
+## Empty and sparse hives
+
+Recomputing a variable replaces its partition. If it produces no matches, its old partition is removed. `get_anchor_result()` currently requires the hive to contain readable parquet data; a completely empty hive raises a DuckDB `read_parquet()` error rather than returning an empty table. Pipelines should treat this case explicitly.
+
+See [get_anchor_result_walkthrough.md](get_anchor_result_walkthrough.md) for implementation detail and [definitions/Wide Output.md](<definitions/Wide Output.md>) for a compact definition.

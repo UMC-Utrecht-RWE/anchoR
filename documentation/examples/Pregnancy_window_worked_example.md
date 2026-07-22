@@ -1,4 +1,4 @@
-A single numerical example run through all four [episode-based](<../definitions/Episode-Based Window Engine.md>) constructors, computed by calling `event_window_engine()` / `outside_all_event_gaps()` directly rather than hand-derived, so the arithmetic is trustworthy.
+A single numerical example run through all four [episode-based](<../definitions/Episode-Based Window Engine.md>) constructors using the exported `define_window()` interface.
 
 ## Setup
 
@@ -13,6 +13,7 @@ One person with three episodes and an anchor (`T0`) inside the third:
 `T0 = 2026-02-15` (falls inside episode C).
 
 ```r
+library(anchoR)
 library(data.table)
 
 episodes <- data.table(
@@ -21,22 +22,32 @@ episodes <- data.table(
 )
 anchor <- as.Date("2026-02-15")
 
-row <- function(
-  start_offset, end_offset, end_cap_offset = NA_real_,
+make_windows <- function(
+  constructor, start_offset, end_offset, end_cap_offset = NA_real_,
   start_look_back = NA_real_, end_look_back = NA_real_
 ) {
-  data.table(
-    variable_id = "demo",
-    anchor_start_col = "anchor",
+  population <- data.table(
+    person_id = "1",
     anchor = anchor,
-    event_col = "episodes",
-    episodes = list(episodes),
+    episodes = list(episodes)
+  )
+  metadata <- data.table(
+    variable_id = "demo",
+    concept_id = "DEMO",
+    constructor = constructor,
+    selector = "ALL",
     start_offset = start_offset,
     end_offset = end_offset,
+    anchor_start_col = "anchor",
+    event_col = "episodes",
     end_cap_offset = end_cap_offset,
     start_look_back = start_look_back,
     end_look_back = end_look_back
   )
+  define_window(population, metadata, anchor_col = "anchor")[
+    window_valid == TRUE,
+    .(window_start, window_end)
+  ]
 }
 ```
 
@@ -45,9 +56,7 @@ row <- function(
 `start_offset = 0, end_offset = 30, end_cap_offset = 90`  both A and B ended before `T0`, so both produce a window, each capped to the episode's own first 90 days:
 
 ```r
-event_window_engine(
-  row(0L, 30L, 90), event_select = "PRIOR", end_boundary = "event_END"
-)[, .(window_start, window_end)]
+make_windows("IN_PRIOR_PREG", 0L, 30L, end_cap_offset = 90)
 ```
 
 | window_start | window_end | note                                 |
@@ -64,10 +73,10 @@ event_window_engine(
 With `start_look_back` set to `2024-01-01 - T0` (`-776` days) and `end_look_back = 0`, the lookback range is `[2024-01-01, 2026-02-15]`. Episode A (`2023-01-01`/`2023-09-01`) ended before that range starts, so it is dropped entirely; not truncated, just absent. Episode B overlaps the range, so it survives with the *same* window as the row above (`start_offset = 0, end_offset = 30`, no lookback):
 
 ```r
-event_window_engine(
-  row(0L, 30L, start_look_back = -776, end_look_back = 0L),
-  event_select = "PRIOR", end_boundary = "event_END"
-)[, .(window_start, window_end)]
+make_windows(
+  "IN_PRIOR_PREG", 0L, 30L,
+  start_look_back = -776, end_look_back = 0L
+)
 ```
 
 | window_start | window_end | note                                       |
@@ -83,9 +92,7 @@ Compare to the unfiltered row above: episode A's window (`2023-01-01`/`2023-10-0
 `start_offset = 0, end_offset = 0`  episode C contains `T0`; the window stops exactly at the anchor:
 
 ```r
-event_window_engine(
-  row(0L, 0L), event_select = "CURRENT", end_boundary = "ANCHOR"
-)[, .(window_start, window_end)]
+make_windows("SINCE_START_CURRENT_PREG", 0L, 0L)
 ```
 
 | window_start | window_end |
@@ -99,9 +106,7 @@ event_window_engine(
 `start_offset = 0, end_offset = 14`  same episode C, but bounded by its own end plus a 14-day grace period:
 
 ```r
-event_window_engine(
-  row(0L, 14L), event_select = "CURRENT", end_boundary = "event_END"
-)[, .(window_start, window_end)]
+make_windows("ANYTIME_CURRENT_PREG", 0L, 14L)
 ```
 
 | window_start | window_end |
@@ -117,7 +122,7 @@ event_window_engine(
 > **`OUTSIDE_ALL_PREG` does not read `start_look_back`/`end_look_back`.** Its own `start_offset`/`end_offset` already are the anchor-relative range (there is no separate "shift the episode" role for them here, unlike `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/`ANYTIME_CURRENT_PREG`), so setting `start_look_back`/`end_look_back` on an `OUTSIDE_ALL_PREG` row has no effect at all. If you set them expecting to control the search range, that's the bug to look for, use `start_offset`/`end_offset` instead.
 
 ```r
-event_window_engine(row(-1172L, 0L), event_select = "OUTSIDE_ALL")[, .(window_start, window_end)]
+make_windows("OUTSIDE_ALL_PREG", -1172L, 0L)
 ```
 
 | window_start | window_end | gap             |

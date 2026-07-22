@@ -1,5 +1,5 @@
-> `get_anchor_result(..., result_shape = "long")`: one row per matched `person_id x T0 x variable_id x window_name`, with columns `date` and `value`.
+# Long output
 
-This is the least ambiguous shape of the anchored result every row is one match, so there's no reshaping to reconcile duplicates. It's the shape to prefer whenever a `variable_id` can legitimately produce more than one row per person (e.g. the `ALL` [Selector](Selector.md), or multiple windows per variable that you don't want folded into columns).
+`get_anchor_result(..., result_shape = "long")` returns the persisted sparse selector results with columns `person_id`, `T0`, `variable_id`, `window_name`, `date`, and `value`.
 
-Columns: `person_id`, `T0`, `variable_id`, `window_name`, `date`, `value`. Rows with no matching concept record in the requested window are simply absent.
+There is no row when a window has no matching concept record. All built-in selectors except `ALL` return at most one row per output key. Supplying `population` does not filter, complete, or enrich long output; population handling applies only to wide output.

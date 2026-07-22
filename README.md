@@ -23,7 +23,9 @@ From those inputs, `anchoR` builds one person-variable window, queries the conce
 ## Main functions
 
 - `define_window()`: build one anchoring window per person and per variable
-- `anchor()` / `anchor_by_variable()`: run the selector SQL and write anchored results to a parquet hive (`anchor_by_variable()` does it one `variable_id` at a time, so re-running a single variable doesn't touch the others)
+- `anchor()`: compute all requested variables in one pass and replace only their parquet partitions
+- `anchor_by_variable()`: process variables in bounded chunks while still replacing each variable's partition independently
+- `anchor_by_selector()`: group all variables using the same selector into one query
 - `get_anchor_result()`: read the anchored parquet hive back as a long or wide `data.table`
 - `make_constructor()`: build a custom window-construction rule without editing anchoR itself
 - `filter_supported_metadata()`: drop metadata rows whose selectors are not implemented in the package
@@ -80,7 +82,10 @@ appear in the (sparse) result.
 
 ## Documentation
 
-- [documentation/Tutorial_standard_windows.md](documentation/Tutorial_standard_windows.md) -- the core workflow above in full: every selector, multiple windows per variable, `anchor()` vs `anchor_by_variable()`, custom anchor columns.
-- [documentation/Tutorial_pregnancy_windows.md](documentation/Tutorial_pregnancy_windows.md) -- windows anchored to a *recurring* event (pregnancy today, any repeatable start/end episode in general) instead of a single fixed date.
-- [documentation/get_anchor_result_walkthrough.md](documentation/get_anchor_result_walkthrough.md) -- reading anchored results back out, long vs wide format.
-- Input/output reference: [Input_population.md](documentation/Input_population.md), [Input_metadata.md](documentation/Input_metadata.md), [Input_concepts.md](documentation/Input_concepts.md), [Output_D4_StudyVariablesAnchored.md](documentation/Output_D4_StudyVariablesAnchored.md).
+- Installed introductory vignettes: `vignette("standard-windows", package = "anchoR")` and `vignette("episode-windows", package = "anchoR")`.
+- Practical vignettes: `multiple-windows`, `metadata-migration`, `production-sources`, `troubleshooting`, `selector-cookbook`, `custom-constructors`, and `imputation` (open one with `vignette("<name>", package = "anchoR")`).
+- [Standard-window tutorial](documentation/Tutorial_standard_windows.md): selectors, multiple windows, batching, and custom anchors.
+- [Episode-window tutorial](documentation/Tutorial_pregnancy_windows.md): recurring start/end episodes and pregnancy-oriented constructors.
+- [Result walkthrough](documentation/get_anchor_result_walkthrough.md): long/wide retrieval and imputation internals.
+- Canonical schemas: [population](documentation/Input_population.md), [metadata](documentation/Input_metadata.md), [concepts](documentation/Input_concepts.md), and [output](documentation/Output_D4_StudyVariablesAnchored.md).
+- [Documentation index](documentation/README.md): choose a guide by task.

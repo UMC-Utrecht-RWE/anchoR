@@ -6,5 +6,4 @@ Unlike `T0`, episodes are a *list* per person, so they don't fit as a plain [Pop
 
 For `"PRIOR"` / `"CURRENT"`, the engine selects matching episodes (`event_end < anchor`, or `event_start <= anchor <= event_end`), then computes `window_start = episode_start + start_offset` and `window_end` as either `episode_end + end_offset` or `anchor + end_offset` depending on `end_boundary`, optionally capped by [`end_cap_offset`](<End Cap Offset.md>). For `"OUTSIDE_ALL"`, it instead finds the gaps *between* all of a person's episodes inside `[anchor + start_offset, anchor + end_offset]`, an episode always fences the gaps around it, even the one containing the anchor itself.
 
-`IN_PRIOR_PREG` and `OUTSIDE_ALL_PREG` can produce more than one candidate [Window](Window.md) per person for the same variable (one per prior episode, or one per gap); anchoR handles this automatically, the [Selector](Selector.md) runs across all of a person's candidate windows for that variable and still returns one answer.
-
+`IN_PRIOR_PREG` and `OUTSIDE_ALL_PREG` can produce more than one candidate [Window](Window.md) per person for the same variable. The [Selector](Selector.md) aggregates joined matches under the same output key; `ALL` can return several rows. Candidate windows are not deduplicated, so overlapping windows can match one concept event more than once.

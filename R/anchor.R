@@ -385,7 +385,7 @@ anchor <- function(
   result
 }
 
-#' Anchor study variables in chunks of variable_ids
+#' Anchor study variables in bounded chunks of variable IDs
 #'
 #' Runs the anchoring pipeline over \code{metadata} in chunks of
 #' \code{chunk_size} \code{variable_id} values at a time (default 20) instead

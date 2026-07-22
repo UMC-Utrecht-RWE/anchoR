@@ -2,7 +2,7 @@
 % Please edit documentation in R/anchor.R
 \name{anchor_by_variable}
 \alias{anchor_by_variable}
-\title{Anchor study variables in chunks of variable_ids}
+\title{Anchor study variables in bounded chunks of variable IDs}
 \usage{
 anchor_by_variable(
   population,
