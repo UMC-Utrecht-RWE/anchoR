@@ -24,37 +24,34 @@ that contains the anchored parquet hive. Must be a valid existing
 directory.}
 
 \item{population}{Optional data frame with population rows to be represented
-in wide output. When provided, it must contain person_id and
-T0 columns. Additional population columns are carried into the
-wide result. Multiple rows may legitimately share the same
-person_id/T0 key while disagreeing on other columns
-every such row is kept. The anchored results (which are computed once per
-person_id/T0) are left-joined onto the full population, so
-result_shape = "wide" output always has one row per
-population row (times the number of distinct window_name
-values when cast_window = FALSE), never fewer.}
+in wide output. When provided, it must contain person_id and T0 columns.
+Additional population columns are carried into the wide result. Multiple
+rows may legitimately share the same person_id/T0 key while disagreeing
+on other columns every such row is kept.
+The anchored results are left-joined onto the full population, so
+result_shape = "wide" output always has one row per population row
+(times the number of distinct window_name values when cast_window = FALSE).}
 
 \item{result_shape}{A character string specifying the desired shape of the
 output. Must be either "wide" or "long".}
 
-\item{impute_missing}{Logical; when TRUE and
-result_shape = "wide", missing value_<variable_id> cells are
-imputed using metadata columns is_expected_missing and
-variable_type via imputing_missing().}
+\item{impute_missing}{Logical; when TRUE and result_shape = "wide", missing
+value_<variable_id> cells are imputed using metadata columns
+is_expected_missing and variable_type via imputing_missing().}
 
 \item{cast_window}{Logical; controls wide reshaping formula. When
 \code{FALSE} (default), results are cast by
-\code{person_id + T0 + window_name ~ variable_id}. When \code{TRUE},
-results are cast by \code{person_id + T0 ~ window_name + variable_id}.}
+\code{person_id + T0 + window_name ~ variable_id}.
+When \code{TRUE}, results are cast by
+\code{person_id + T0 ~ window_name + variable_id}.}
 
-\item{only_date}{Logical; when \code{TRUE} and
-result_shape = "wide", only date columns are cast (no
-\code{value_<...>} columns). When \code{FALSE}, both value and date
-columns are cast.}
+\item{only_date}{Logical; when \code{TRUE} and result_shape = "wide", only
+date columns are cast (no \code{value_<...>} columns). When \code{FALSE},
+both value and date columns are cast.}
 
 \item{required_population_cols}{Character vector of column names that must
-be present in the population data frame when provided.
-Defaults to \code{c("person_id", "T0")}.}
+be present in the population data frame when provided. Defaults to
+\code{c("person_id", "T0")}.}
 }
 \value{
 A data.table with anchored variable results in the specified shape.
@@ -62,6 +59,5 @@ A data.table with anchored variable results in the specified shape.
 \description{
 Reads parquet files from an anchor hive directory via DuckDB, filters to the
 requested variables, and pivots the long-format result into a wide
-data.table with one column per variable for both value and
-date.
+data.table with one column per variable for both value and date.
 }
