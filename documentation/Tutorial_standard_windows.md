@@ -41,7 +41,7 @@ metadata <- data.table(
 )
 ```
 
-`constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow. (`start_offset`/`end_offset` are not aliased to anything else -- `start_look_back`/`end_look_back` are a separate, unrelated pair of columns used only by `IN_PRIOR_PREG`, see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md).)
+`constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow. (`start_offset`/`end_offset` are not aliased to anything else, `start_look_back`/`end_look_back` are a separate, unrelated pair of columns used only by `IN_PRIOR_PREG`, see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md).)
 
 ## Step 3: [Concepts](definitions/Concepts.md)
 
