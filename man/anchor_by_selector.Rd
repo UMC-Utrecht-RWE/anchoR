@@ -36,12 +36,15 @@ hive. Must not be \code{NULL}.}
 Invisibly returns the selector values that were processed.
 }
 \description{
-Processes metadata once per unique \code{selector}, so each selector query
-covers every variable using that selector without a \code{chunk_size} cap.
-Affected \code{variable_id} partitions are cleared once before selector
-processing begins. The calls leave the rest of \code{anchor_hive_path}
-untouched, so rerunning \code{anchor_by_selector()} with the same or a
-smaller \code{metadata} is safe; it just does not give you
-\code{\link[=anchor_by_variable]{anchor_by_variable()}}'s \code{chunk_size}-bounded blast radius every
-variable sharing a selector is recomputed together in one query.
+Runs \code{\link[=anchor]{anchor()}} once for each distinct \code{selector} value found in
+\code{metadata}, so every variable that shares a selector is covered by
+a single query (and a single join against \code{concepts}), no matter
+how many variables share it; unlike \code{\link[=anchor_by_variable]{anchor_by_variable()}}, there is no
+\code{chunk_size} limit splitting a selector's variables across more
+than one query. Affected \code{variable_id} partitions are cleared once
+before selector processing begins. The calls leave the rest of
+\code{anchor_hive_path} untouched, so rerunning \code{anchor_by_selector()}
+with the same or a smaller \code{metadata} is safe; it just does not give
+you \code{\link[=anchor_by_variable]{anchor_by_variable()}}'s \code{chunk_size}-bounded blast radius, since
+every variable sharing a selector is recomputed together in one query.
 }

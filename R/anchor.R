@@ -328,8 +328,7 @@ anchor_impl <- function(
   metadata_dt,
   anchor_col,
   anchor_hive_path = NULL,
-  accumulate_table = NULL
-  anchor_hive_path,
+  accumulate_table = NULL,
   clear_existing_partitions = TRUE
 ) {
   # Define windows for all person-variable combinations.
@@ -767,7 +766,8 @@ anchor_by_variable <- function(
           metadata_dt = chunk_metadata,
           anchor_col = anchor_col,
           anchor_hive_path = local_hive_path,
-          accumulate_table = accumulate_table
+          accumulate_table = accumulate_table,
+          clear_existing_partitions = FALSE
         )
         NULL
       },
@@ -838,18 +838,14 @@ anchor_by_variable <- function(
 #' Runs [anchor()] once for each distinct \code{selector} value found in
 #' \code{metadata}, so every variable that shares a selector is covered by
 #' a single query (and a single join against \code{concepts}), no matter
-#' how many variables that is unlike [anchor_by_variable()], there's no
+#' how many variables share it; unlike [anchor_by_variable()], there is no
 #' \code{chunk_size} limit splitting a selector's variables across more
-#' than one query.
-#'
-#' Processes metadata once per unique \code{selector}, so each selector query
-#' covers every variable using that selector without a \code{chunk_size} cap.
-#' Affected \code{variable_id} partitions are cleared once before selector
-#' processing begins. The calls leave the rest of \code{anchor_hive_path}
-#' untouched, so rerunning \code{anchor_by_selector()} with the same or a
-#' smaller \code{metadata} is safe; it just does not give you
-#' [anchor_by_variable()]'s \code{chunk_size}-bounded blast radius every
-#' variable sharing a selector is recomputed together in one query.
+#' than one query. Affected \code{variable_id} partitions are cleared once
+#' before selector processing begins. The calls leave the rest of
+#' \code{anchor_hive_path} untouched, so rerunning \code{anchor_by_selector()}
+#' with the same or a smaller \code{metadata} is safe; it just does not give
+#' you [anchor_by_variable()]'s \code{chunk_size}-bounded blast radius, since
+#' every variable sharing a selector is recomputed together in one query.
 #'
 #' @inheritParams anchor
 #'
