@@ -2,8 +2,7 @@
 #'
 #' Reads parquet files from an anchor hive directory via DuckDB, filters to the
 #' requested variables, and pivots the long-format result into a wide
-#' data.table with one column per variable for both value and
-#' date.
+#' data.table with one column per variable for both value and date.
 #'
 #' @param metadata A data frame describing the study variables. Must contain at
 #'   least a variable_id column.
@@ -11,32 +10,29 @@
 #'   that contains the anchored parquet hive. Must be a valid existing
 #'   directory.
 #' @param population Optional data frame with population rows to be represented
-#'   in wide output. When provided, it must contain person_id and
-#'   T0 columns. Additional population columns are carried into the
-#'   wide result. Multiple rows may legitimately share the same
-#'   person_id/T0 key while disagreeing on other columns
-#'   every such row is kept. The anchored results (which are computed once per
-#'   person_id/T0) are left-joined onto the full population, so
-#'   result_shape = "wide" output always has one row per
-#'   population row (times the number of distinct window_name
-#'   values when cast_window = FALSE), never fewer.
+#'   in wide output. When provided, it must contain person_id and T0 columns.
+#'   Additional population columns are carried into the wide result. Multiple
+#'   rows may legitimately share the same person_id/T0 key while disagreeing
+#'   on other columns every such row is kept.
+#'   The anchored results are left-joined onto the full population, so
+#'   result_shape = "wide" output always has one row per population row
+#'   (times the number of distinct window_name values when cast_window = FALSE).
 #' @param result_shape A character string specifying the desired shape of the
 #'   output. Must be either "wide" or "long".
-#' @param impute_missing Logical; when TRUE and
-#'   result_shape = "wide", missing value_<variable_id> cells are
-#'   imputed using metadata columns is_expected_missing and
-#'   variable_type via imputing_missing().
+#' @param impute_missing Logical; when TRUE and result_shape = "wide", missing
+#'   value_<variable_id> cells are imputed using metadata columns
+#'   is_expected_missing and variable_type via imputing_missing().
 #' @param cast_window Logical; controls wide reshaping formula. When
 #'   \code{FALSE} (default), results are cast by
-#'   \code{person_id + T0 + window_name ~ variable_id}. When \code{TRUE},
-#'   results are cast by \code{person_id + T0 ~ window_name + variable_id}.
-#' @param only_date Logical; when \code{TRUE} and
-#'   result_shape = "wide", only date columns are cast (no
-#'   \code{value_<...>} columns). When \code{FALSE}, both value and date
-#'   columns are cast.
+#'   \code{person_id + T0 + window_name ~ variable_id}.
+#'   When \code{TRUE}, results are cast by
+#'   \code{person_id + T0 ~ window_name + variable_id}.
+#' @param only_date Logical; when \code{TRUE} and result_shape = "wide", only
+#'   date columns are cast (no \code{value_<...>} columns). When \code{FALSE},
+#'   both value and date columns are cast.
 #' @param required_population_cols Character vector of column names that must
-#' be present in the population data frame when provided.
-#' Defaults to \code{c("person_id", "T0")}.
+#'   be present in the population data frame when provided. Defaults to
+#'   \code{c("person_id", "T0")}.
 #'
 #' @return A data.table with anchored variable results in the specified shape.
 #' @export
@@ -50,11 +46,11 @@ get_anchor_result <- function(
   only_date = FALSE,
   required_population_cols = c("person_id", "T0")
 ) {
-  # Different selectors may return slightly different columns, so the combined
-  # result needs a forgiving row bind instead of assuming one rigid shape.
+  # Connecting to an in-memory DuckDB instance that is cleaned up on exit
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
+  # Validating metadata and population inputs
   metadata_dt <- as_data_table(metadata, "metadata")
   assert_has_columns(
     metadata_dt,
@@ -89,6 +85,7 @@ get_anchor_result <- function(
     population_keys_dt <- unique(population_dt[, .(person_id, T0)])
   }
 
+  # Validating anchor_hive_path input
   if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
     msg <- sprintf("`anchor_hive_path` must be a valid path!")
     logger::log_error(msg)
@@ -101,6 +98,8 @@ get_anchor_result <- function(
       normalizePath(anchor_hive_path, winslash = "/", mustWork = TRUE)
     )
   )
+
+  # Creating a DuckDB view for the anchored variables from the parquet hive
   DBI::dbExecute(
     con,
     paste(
@@ -135,6 +134,8 @@ get_anchor_result <- function(
       )
     )
   )
+  # Ensuring date columns are of type Date, since DuckDB may return them as
+  # character
   if ("date" %in% names(anchored_dt)) {
     # DBI can round-trip DATE columns as character depending on the source, so
     # coerce back here to keep the public output type stable.
@@ -145,6 +146,8 @@ get_anchor_result <- function(
   }
 
   data.table::setorder(anchored_dt, variable_id, person_id, T0, window_name)
+  # Validating the anchored results and reshaping based on the
+  # requested result_shape
   if (result_shape == "long") {
     required_long_cols <- c(
       "person_id",
@@ -374,10 +377,10 @@ get_anchor_result <- function(
 #' Impute Missing Values in Wide Anchor Output
 #'
 #' Imputes missing value_<variable_id> cells in a wide anchored result
-#' using metadata rules for is_expected_missing and
-#' variable_type. For non-expected-missing variables, logical/TF types
-#' are imputed as FALSE and categorical types as 0. If required
-#' metadata columns are only partially available, a warning is raised and
+#' using metadata rules for is_expected_missing and variable_type.
+#' For non-expected-missing variables, logical/TF types are imputed as FALSE
+#' and categorical types as 0. If required metadata columns are only partially
+#' available, a warning is raised and
 #' imputation is skipped.
 #'
 #' @param wide_anchored A wide data.table from get_anchor_result
