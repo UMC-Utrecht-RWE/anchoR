@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `get_anchor_result(result_shape = "wide")` no longer collapses `population` rows that share the same `person_id`/`T0` key but differ on other columns. Every such row used to be silently dropped down to one (with a warning) because the anchored results were joined onto the deduplicated key set; the join direction is now reversed so the full `population` drives the output, and the anchored results are left-joined onto it instead.
 - `add_parquet_export()` now takes in input the `selector` name and uses it as name for for the files within in the partion name. Prior to that if a `variable_id` had two selectors connected to it, it would overwrite the results.
-
+- `anchor_by_selector()` had a bug in which it'd overwrite a partition if a second selector is present in the metadata. Now, `anchor_by_selector()` goes directly to `anchor_impl()` skipping `anchor()`. It creates its own connection and deletes folder if it finds them. `anchor_impl(`) has now `clear_existing_partitions` to still ensure it delete folders in other functions
 ## [v1.4.2]
 
 ### Added
