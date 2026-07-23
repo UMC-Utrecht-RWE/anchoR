@@ -1,8 +1,9 @@
 ---
 title: "Parquet and DuckDB concept sources"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Parquet and DuckDB concept sources}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 

@@ -1,8 +1,9 @@
 ---
 title: "Designing multiple windows"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Designing multiple windows}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 

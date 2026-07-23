@@ -1,8 +1,9 @@
 ---
 title: "Selector cookbook"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Selector cookbook}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 

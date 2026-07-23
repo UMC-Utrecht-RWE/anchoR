@@ -1,8 +1,9 @@
 ---
 title: "Migrating legacy metadata"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Migrating legacy metadata}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 

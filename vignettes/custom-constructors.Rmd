@@ -1,8 +1,9 @@
 ---
 title: "Custom window constructors"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Custom window constructors}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 

@@ -1,8 +1,9 @@
 ---
 title: "Standard anchoring windows"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Standard anchoring windows}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 

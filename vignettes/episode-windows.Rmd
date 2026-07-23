@@ -1,8 +1,9 @@
 ---
 title: "Episode-based windows"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Episode-based windows}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 

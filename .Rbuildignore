@@ -12,3 +12,6 @@
 ^\.DS_Store$
 ^\.obsidian$
 ^\.\.Rcheck$
+^_pkgdown\.yml$
+^pkgdown$
+^docs$

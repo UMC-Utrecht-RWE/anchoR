@@ -1,8 +1,9 @@
 ---
 title: "Troubleshooting and validation"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Troubleshooting and validation}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 

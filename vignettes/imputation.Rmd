@@ -1,8 +1,9 @@
 ---
 title: "Completing and imputing wide results"
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Completing and imputing wide results}
-  %\VignetteEngine{knitr::knitr}
+  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
