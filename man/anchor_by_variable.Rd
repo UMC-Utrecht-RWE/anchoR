@@ -2,7 +2,7 @@
 % Please edit documentation in R/anchor.R
 \name{anchor_by_variable}
 \alias{anchor_by_variable}
-\title{Anchor study variables in bounded chunks of variable IDs}
+\title{Anchor study variables in batches}
 \usage{
 anchor_by_variable(
   population,
@@ -10,7 +10,10 @@ anchor_by_variable(
   concepts,
   anchor_col = "T0",
   anchor_hive_path = NULL,
-  chunk_size = 20L
+  chunk_size = 20L,
+  staging_dir = NULL,
+  staging_mode = c("memory", "disk"),
+  publish = c("once", "per_chunk")
 )
 }
 \arguments{
@@ -33,28 +36,71 @@ Defaults to \code{"T0"}.}
 directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
 
-\item{chunk_size}{Number of \code{variable_id} values to process per pass.
-Larger chunks mean fewer (and cheaper) \code{concepts} scans, but a
-larger \code{population_windows} working table per pass and a bigger
-unit of "all swapped or none swapped" if a chunk errors partway through.
-Set to \code{1} to process strictly one variable at a time.}
+\item{chunk_size}{How many variables to process per batch. Bigger
+batches mean fewer (and cheaper) scans of \code{concepts}, but (with
+\code{publish = "once"}) also means more work is thrown away if a
+batch fails partway through, since nothing is saved until the whole
+call succeeds. Use \code{1} to process one variable at a time.}
+
+\item{staging_dir}{Folder to use for DuckDB's own temporary files, and
+(only when \code{staging_mode = "disk"}) for the local scratch hive
+every batch writes into. Defaults to \code{tempdir()}. Only change
+this if your machine's default temporary folder is itself slow or on
+a network drive.}
+
+\item{staging_mode}{Where each batch's results are held before being
+published: \code{"memory"} (default) accumulates them in one DuckDB
+table; \code{"disk"} writes them to a local scratch parquet hive
+instead. See Details.}
+
+\item{publish}{When to write results to \code{anchor_hive_path}:
+\code{"once"} (default) after the whole call succeeds, all together;
+\code{"per_chunk"} after each batch, incrementally. See Details.}
 }
 \value{
-Invisibly returns the processed \code{variable_id} values.
+Invisibly returns the variable ids that were processed.
 }
 \description{
-Runs the anchoring pipeline over \code{metadata} in chunks of
-\code{chunk_size} \code{variable_id} values at a time (default 20) instead
-of computing every variable in one pass like \code{\link[=anchor]{anchor()}}. Each chunk is
-first written to a temporary parquet hive and then swapped into the target
-hive one \code{variable_id} partition at a time, so rerunning a subset of
-variables replaces only their partitions and leaves the rest of the hive
-untouched. Batching several variables per chunk lets one selector query
-(and its join against \code{concepts}) cover all of them at once, which is
-far cheaper than one query per variable when \code{concepts} is a large
-parquet or DuckDB source. Variables are ordered by selector before being
-sliced into chunks, so each chunk is as selector-homogeneous as
-\code{chunk_size} allows (see \code{\link[=anchor_by_selector]{anchor_by_selector()}} for the case where you
-want every same-selector variable processed in one uncapped query instead
-of bounding the blast radius with \code{chunk_size}).
+Does the same job as \code{\link[=anchor]{anchor()}}, but works through \code{metadata} in
+batches of \code{chunk_size} variables at a time (default 20) instead of
+all at once.
+}
+\details{
+Every batch's results are held somewhere other than
+\code{anchor_hive_path} until they're ready to publish either in one
+growing DuckDB table (\code{staging_mode = "memory"}, the default), or
+in a scratch folder on local disk (\code{staging_mode = "disk"}, under
+\code{staging_dir}). Either way, this keeps the repeated reading and
+writing that happens while batches are being computed off
+\code{anchor_hive_path}, which matters when it points at slow or
+network storage. \code{"memory"} avoids an extra local write-then-read
+round trip that \code{"disk"} needs, but holds the whole run's output in
+memory (DuckDB spills to local disk on its own if that gets too big);
+\code{"disk"} bounds memory use to one batch at a time instead.
+
+\code{publish} controls when that held output actually gets written to
+\code{anchor_hive_path}. With \code{publish = "once"} (the default),
+nothing is written until every batch in the call has finished
+successfully, and if any batch fails, nothing is written at all --
+\code{anchor_hive_path} is left exactly as it was before the call, and
+the error is raised, so you never end up with some variables refreshed
+and others not. With \code{publish = "per_chunk"}, each batch's results
+are written as soon as that batch finishes, so a later batch's failure
+doesn't discard earlier batches' already-published results useful if
+\code{anchor_hive_path} is fast enough that the extra writes don't
+matter and you'd rather keep whatever progress you can.
+
+Whichever combination is used, publishing only ever replaces the
+\code{variable_id} partitions that were actually computed and leaves
+the rest of \code{anchor_hive_path} untouched, so re-running for just a
+few variables is always safe.
+
+Grouping several variables into one batch also means a single query
+(and a single join against \code{concepts}) can cover all of them at
+once, which is much cheaper than running one query per variable.
+Variables are sorted by selector before being split into batches, so
+each batch groups same-selector variables together as much as
+\code{chunk_size} allows (see \code{\link[=anchor_by_selector]{anchor_by_selector()}} if you'd rather
+always process every variable sharing a selector together, with no
+batch-size limit).
 }

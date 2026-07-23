@@ -5,6 +5,58 @@ testthat::test_that("selector_sql_path resolves SQL resources", {
   testthat::expect_match(basename(sql_path), "^latest\\.sql$")
 })
 
+testthat::test_that(
+  "add_parquet_export writes one file per selector instead of overwriting",
+  {
+    hive_path <- withr::local_tempdir()
+
+    con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    withr::defer(DBI::dbDisconnect(con, shutdown = TRUE))
+
+    DBI::dbExecute(
+      con,
+      "CREATE TABLE latest_rows AS
+       SELECT 'mixed_selector' AS variable_id, 'PRIOR' AS value"
+    )
+    DBI::dbExecute(
+      con,
+      "CREATE TABLE earliest_rows AS
+       SELECT 'mixed_selector' AS variable_id, 'AFTER' AS value"
+    )
+
+    DBI::dbExecute(
+      con,
+      add_parquet_export("SELECT * FROM latest_rows", hive_path, "LATEST")
+    )
+    DBI::dbExecute(
+      con,
+      add_parquet_export(
+        "SELECT * FROM earliest_rows", hive_path, " earliest "
+      )
+    )
+
+    partition_path <- file.path(hive_path, "variable_id=mixed_selector")
+
+    testthat::expect_setequal(
+      list.files(partition_path),
+      c("latest_0.parquet", "earliest_0.parquet")
+    )
+
+    anchored <- data.table::as.data.table(
+      DBI::dbGetQuery(
+        con,
+        sprintf(
+          "SELECT * FROM read_parquet('%s/**/*.parquet', hive_partitioning = true)", # nolint
+          hive_path
+        )
+      )
+    )
+    data.table::setorder(anchored, value)
+
+    testthat::expect_equal(anchored$value, c("AFTER", "PRIOR"))
+  }
+)
+
 mocked_selector_sql_root <- function(system_file) {
   root_fn <- selector_sql_root
   environment(root_fn) <- list2env(
@@ -88,7 +140,9 @@ testthat::test_that("run_selector_queries reports selector context on error", {
   query_fn <- run_selector_queries
   environment(query_fn) <- list2env(
     list(
-      run_selector_query = function(con, selector, anchor_hive_path) {
+      run_selector_query = function(
+        con, selector, anchor_hive_path = NULL, accumulate_table = NULL
+      ) {
         stop("boom", call. = FALSE)
       }
     ),
