@@ -1,0 +1,75 @@
+---
+title: "Standard anchoring windows"
+vignette: >
+  %\VignetteIndexEntry{Standard anchoring windows}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, message=FALSE}
+library(anchoR)
+library(data.table)
+```
+
+anchoR combines a population, variable metadata, and concept events. A generic window is an inclusive date range obtained by adding day offsets to an anchor date.
+
+```{r inputs}
+population <- data.table(
+  person_id = c("1", "2"),
+  T0 = as.Date(c("2024-01-01", "2024-01-01")),
+  group = c("EXPOSED", "CONTROL")
+)
+
+metadata <- data.table(
+  variable_id = "recent_flu_vaccine",
+  concept_id = "FLU_VAX",
+  constructor = "GENERIC",
+  selector = "LATEST",
+  window_name = "one_year",
+  start_offset = -365L,
+  end_offset = 0L
+)
+
+concepts <- data.table(
+  person_id = "1",
+  concept_id = "FLU_VAX",
+  date = as.Date("2023-10-01"),
+  value = "TRUE"
+)
+```
+
+`define_window()` is useful for inspecting the design before reading any concepts.
+
+```{r windows}
+define_window(population, metadata)[
+  , .(person_id, T0, variable_id, window_name, window_start, window_end)
+]
+```
+
+`anchor()` persists sparse matches in a parquet Hive. Long output contains only matches.
+
+```{r anchor}
+hive_path <- tempfile("anchor-hive-")
+anchor(population, metadata, concepts, anchor_hive_path = hive_path)
+
+get_anchor_result(metadata, hive_path, result_shape = "long")
+```
+
+Supplying the population to wide output completes missing population keys and reattaches its additional columns.
+
+```{r wide}
+get_anchor_result(
+  metadata,
+  hive_path,
+  population = population,
+  result_shape = "wide"
+)
+```
+
+For multiple windows, repeat `variable_id` with distinct `window_name` values. The default wide form retains one row per `person_id`, `T0`, and `window_name`; `cast_window = TRUE` folds the window into each result column name. Use long output for `ALL`, which can put several records into one wide cell. `LATEST` and `EARLIEST` break date ties with the lexicographically largest normalized character value.
+
+Available selectors are returned by `available_selectors()`. Their complete semantics, including inclusive boundaries and tie behavior, are documented in the selector reference on the package website.
+
+```{r cleanup, include=FALSE}
+unlink(hive_path, recursive = TRUE)
+```

@@ -1,0 +1,106 @@
+---
+title: "Parquet and DuckDB concept sources"
+vignette: >
+  %\VignetteIndexEntry{Parquet and DuckDB concept sources}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, message=FALSE}
+library(anchoR)
+library(data.table)
+```
+
+Production concept stores can remain on disk. anchoR queries parquet directly and attaches DuckDB databases read-only, filtering to metadata concept IDs before selector execution.
+
+```{r inputs}
+population <- data.table(
+  person_id = c("1", "2"),
+  T0 = as.Date(c("2024-01-01", "2024-01-01")),
+  group = c("EXPOSED", "CONTROL")
+)
+metadata <- data.table(
+  variable_id = c("recent_vaccine", "hospital_count"),
+  concept_id = c("VACCINE", "HOSP"),
+  constructor = "GENERIC",
+  selector = c("LATEST", "COUNT"),
+  start_offset = -365L,
+  end_offset = 0L
+)
+concepts <- data.table(
+  person_id = c("1", "2", "2"),
+  concept_id = c("VACCINE", "HOSP", "HOSP"),
+  date = as.Date(c("2023-10-01", "2023-08-01", "2023-11-01")),
+  value = "TRUE"
+)
+```
+
+## Hive-partitioned parquet
+
+```{r parquet}
+parquet_dir <- tempfile("concept-parquet-")
+dir.create(parquet_dir)
+con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+DBI::dbWriteTable(con, "concept_table", concepts)
+quoted_parquet <- as.character(DBI::dbQuoteString(con, parquet_dir))
+DBI::dbExecute(
+  con,
+  sprintf(
+    "COPY concept_table TO %s (FORMAT PARQUET, PARTITION_BY (concept_id))",
+    quoted_parquet
+  )
+)
+DBI::dbDisconnect(con, shutdown = TRUE)
+
+hive <- tempfile("production-hive-")
+anchor_by_variable(
+  population, metadata, parquet_dir,
+  anchor_hive_path = hive,
+  chunk_size = 1L
+)
+get_anchor_result(
+  metadata, hive, population = population,
+  result_shape = "wide", cast_window = TRUE
+)
+```
+
+Directories, individual parquet files, vectors of files, and glob patterns are accepted. Hive partitioning by `concept_id` lets DuckDB prune irrelevant partitions.
+
+## DuckDB database
+
+The database must contain a table named `concept_table` with `person_id`, `concept_id`, `date`, and `value`.
+
+```{r duckdb}
+duckdb_path <- tempfile(fileext = ".duckdb")
+updated_concepts <- rbind(
+  concepts,
+  data.table(
+    person_id = "1", concept_id = "VACCINE",
+    date = as.Date("2023-12-15"), value = "TRUE"
+  )
+)
+con <- DBI::dbConnect(duckdb::duckdb(), dbdir = duckdb_path)
+DBI::dbWriteTable(con, "concept_table", updated_concepts)
+DBI::dbDisconnect(con, shutdown = TRUE)
+
+anchor_by_variable(
+  population,
+  metadata[variable_id == "recent_vaccine"],
+  duckdb_path,
+  anchor_hive_path = hive,
+  chunk_size = 1L
+)
+get_anchor_result(metadata, hive, result_shape = "long")
+```
+
+The second run replaces only `recent_vaccine`; the existing `hospital_count` partition remains. A recomputed variable with no matches has its previous partition removed. If that leaves the entire hive without parquet files, check for the empty directory before retrieval.
+
+Choose batching based on scale:
+
+- `anchor()` minimizes orchestration and handles all requested variables together.
+- `anchor_by_variable()` bounds working-set and replacement scope with `chunk_size`.
+- `anchor_by_selector()` minimizes selector scans by grouping all variables using each selector.
+
+```{r cleanup, include=FALSE}
+unlink(c(parquet_dir, duckdb_path, hive), recursive = TRUE)
+```

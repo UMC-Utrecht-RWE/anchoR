@@ -1,0 +1,37 @@
+url: https://umc-utrecht-rwe.github.io/anchoR/
+
+template:
+  bootstrap: 5
+
+articles:
+  - title: Get started
+    contents:
+      - standard-windows
+      - episode-windows
+      - multiple-windows
+  - title: Data preparation and operations
+    contents:
+      - metadata-migration
+      - production-sources
+      - troubleshooting
+  - title: Advanced use
+    contents:
+      - selector-cookbook
+      - custom-constructors
+      - imputation
+
+reference:
+  - title: Main workflow
+    contents:
+      - anchor
+      - anchor_by_variable
+      - anchor_by_selector
+      - define_window
+      - get_anchor_result
+  - title: Metadata and extensibility
+    contents:
+      - validate_anchor_inputs
+      - available_selectors
+      - filter_supported_metadata
+      - selector_sql_path
+      - make_constructor
