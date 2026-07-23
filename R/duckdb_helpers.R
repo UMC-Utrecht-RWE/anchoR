@@ -29,7 +29,7 @@ concept_id_filter_sql <- function(con, concept_ids) {
 #' @param concepts A concept table, DuckDB path, or parquet source (see
 #'   [anchor()]).
 #' @param concept_ids Optional character vector. When supplied, `concepts` is
-#'   restricted to these `concept_id` values -- the selector SQL only ever
+#'   restricted to these `concept_id` values. The selector SQL only ever
 #'   joins on `concept_id` values that come from `metadata`, so anything else
 #'   in `concepts` can never match and is safe (and cheaper) to exclude
 #'   upfront rather than relying on the query planner to prune it later.

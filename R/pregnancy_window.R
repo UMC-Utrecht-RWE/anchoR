@@ -68,7 +68,7 @@ outside_all_event_gaps <- function(
 #' Each `window_dt` row references, via its `event_col` value, a
 #' population list-column holding that person's events (a data.table with
 #' `event_start`/`event_end` columns, one row per event). One input
-#' row can expand into zero, one, or many output rows -- one per candidate
+#' row can expand into zero, one, or many output rows, one per candidate
 #' window.
 #'
 #' @param window_dt A data.table produced by `cross_join_population_metadata()`.
@@ -187,10 +187,10 @@ event_window_engine <- function(
   data.table::rbindlist(non_empty, use.names = TRUE, fill = TRUE)[]
 }
 
-# Look for records during (parts) of prior pregnancies,
-# defined here only by start and end pregnancy. Optional start_look_back/
-# end_look_back additionally restrict which prior episodes are eligible at
-# all, see event_window_engine()'s docs.
+# Look for records inside prior pregnancies (or parts of them), defined
+# only by each pregnancy's start and end date. Optional start_look_back/
+# end_look_back further restrict which prior episodes are eligible at all;
+# see event_window_engine()'s docs.
 in_prior_preg_window <- make_constructor(
   transform_fn = function(window_dt) {
     event_window_engine(

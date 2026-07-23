@@ -1,0 +1,77 @@
+---
+title: "Designing multiple windows"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Designing multiple windows}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, message=FALSE}
+library(anchoR)
+library(data.table)
+```
+
+A variable can have several clinically meaningful windows. Repeat `variable_id`, assign a unique `window_name`, and choose offsets and selectors independently.
+
+```{r inputs}
+population <- data.table(
+  person_id = c("1", "2"),
+  T0 = as.Date(c("2024-01-01", "2024-01-01"))
+)
+metadata <- data.table(
+  variable_id = "outcome",
+  concept_id = "OUTCOME",
+  constructor = "GENERIC",
+  selector = "EARLIEST",
+  window_name = c("lookback", "index", "risk", "control"),
+  start_offset = c(-365L, 0L, 1L, 43L),
+  end_offset = c(-1L, 0L, 42L, 84L)
+)
+concepts <- data.table(
+  person_id = c("1", "1", "1", "1"),
+  concept_id = "OUTCOME",
+  date = as.Date(c("2023-12-20", "2024-01-01", "2024-01-20", "2024-03-01")),
+  value = "TRUE"
+)
+```
+
+Inspecting windows makes gaps and boundary choices explicit.
+
+```{r windows}
+define_window(population, metadata)[
+  person_id == "1",
+  .(window_name, window_start, window_end)
+]
+```
+
+```{r outputs}
+hive <- tempfile("window-hive-")
+anchor(population, metadata, concepts, anchor_hive_path = hive)
+
+get_anchor_result(metadata, hive, result_shape = "long")
+get_anchor_result(
+  metadata, hive, population = population,
+  result_shape = "wide"
+)
+get_anchor_result(
+  metadata, hive, population = population,
+  result_shape = "wide", cast_window = TRUE
+)
+```
+
+Metadata can request a subset after anchoring. Supplying one explicit `window_name` restricts retrieval to that variable/window pair; an `NA` window name acts as a wildcard for that variable.
+
+```{r subset}
+get_anchor_result(
+  metadata[window_name == "risk"],
+  hive,
+  result_shape = "long"
+)
+```
+
+Use the default wide form when windows are naturally rows and `cast_window = TRUE` when downstream modeling requires one row per population key.
+
+```{r cleanup, include=FALSE}
+unlink(hive, recursive = TRUE)
+```

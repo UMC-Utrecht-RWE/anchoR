@@ -4,7 +4,7 @@
 
 It is built for a common epidemiology workflow:
 
-- define a time window around an anchor date such as `T0`documentation/standard_windows_usage.md
+- define a time window around an anchor date such as `T0`
 - find matching concept records for each person inside that window
 - reduce those matches to one anchored value using a selector such as `LATEST`, `EARLIEST`, `COUNT`, or `RANGE_COUNT`
 
@@ -23,7 +23,9 @@ From those inputs, `anchoR` builds one person-variable window, queries the conce
 ## Main functions
 
 - `define_window()`: build one anchoring window per person and per variable
-- `anchor()` / `anchor_by_variable()`: run the selector SQL and write anchored results to a parquet hive (`anchor_by_variable()` does it one `variable_id` at a time, so re-running a single variable doesn't touch the others)
+- `anchor()`: compute all requested variables in one pass and replace only their parquet partitions
+- `anchor_by_variable()`: process variables in bounded chunks while still replacing each variable's partition independently
+- `anchor_by_selector()`: group all variables using the same selector into one query
 - `get_anchor_result()`: read the anchored parquet hive back as a long or wide `data.table`
 - `make_constructor()`: build a custom window-construction rule without editing anchoR itself
 - `filter_supported_metadata()`: drop metadata rows whose selectors are not implemented in the package
@@ -74,12 +76,14 @@ get_anchor_result(
 #> 1:         1 2024-01-01 flu_vaccine_recent        <NA> 2023-10-01  TRUE
 ```
 
-Person 1's window is 365 days before `T0` through `T0` itself, which covers
-the 2023-10-01 record; person 2 has no matching record and simply doesn't
-appear in the (sparse) result.
+Person 1's window is 365 days before `T0` through `T0` itself, which covers the 2023-10-01 record; person 2 has no matching record and doesn't appear in the (sparse) result.
 
 ## Documentation
 
-- [documentation/standard_windows_usage.md](documentation/standard_windows_usage.md) -- the core workflow above in full: every selector, multiple windows per variable, `anchor()` vs `anchor_by_variable()`, custom anchor columns.
-- [documentation/pregnancy_windows_usage.md](documentation/pregnancy_windows_usage.md) -- windows anchored to a *recurring* event (pregnancy today, any repeatable start/end episode in general) instead of a single fixed date.
-- Input/output reference: [Input_population.md](documentation/Input_population.md), [Input_metadata.md](documentation/Input_metadata.md), [Input_concepts.md](documentation/Input_concepts.md), [Output_D4_StudyVariablesAnchored.md](documentation/Output_D4_StudyVariablesAnchored.md).
+- Installed introductory vignettes: `vignette("standard-windows", package = "anchoR")` and `vignette("episode-windows", package = "anchoR")`.
+- Practical vignettes: `multiple-windows`, `metadata-migration`, `production-sources`, `troubleshooting`, `selector-cookbook`, `custom-constructors`, and `imputation` (open one with `vignette("<name>", package = "anchoR")`).
+- [Standard-window tutorial](documentation/Tutorial_standard_windows.md): selectors, multiple windows, batching, and custom anchors.
+- [Episode-window tutorial](documentation/Tutorial_pregnancy_windows.md): recurring start/end episodes and pregnancy-oriented constructors.
+- [Result walkthrough](documentation/get_anchor_result_walkthrough.md): long/wide retrieval and imputation internals.
+- Canonical schemas: [population](documentation/Input_population.md), [metadata](documentation/Input_metadata.md), [concepts](documentation/Input_concepts.md), and [output](documentation/Output_D4_StudyVariablesAnchored.md).
+- [Documentation index](documentation/README.md): choose a guide by task.

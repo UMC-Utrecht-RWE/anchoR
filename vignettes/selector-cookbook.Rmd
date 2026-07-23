@@ -1,0 +1,56 @@
+---
+title: "Selector cookbook"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Selector cookbook}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, message=FALSE}
+library(anchoR)
+library(data.table)
+```
+
+Selectors reduce concept matches after inclusive window filtering. This example applies every bundled selector to the same person.
+
+```{r inputs}
+population <- data.table(person_id = "1", T0 = as.Date("2024-01-10"))
+selectors <- available_selectors()
+metadata <- data.table(
+  variable_id = paste0("example_", tolower(selectors)),
+  concept_id = "MEASURE",
+  constructor = "GENERIC",
+  selector = selectors,
+  start_offset = -30L,
+  end_offset = 0L,
+  range_min = 2,
+  range_max = 10
+)
+concepts <- data.table(
+  person_id = "1",
+  concept_id = "MEASURE",
+  date = as.Date(c("2024-01-01", "2024-01-05", "2024-01-05")),
+  value = c("1", "9", "10")
+)
+
+hive <- tempfile("selector-hive-")
+anchor(population, metadata, concepts, anchor_hive_path = hive)
+result <- get_anchor_result(metadata, hive, result_shape = "long")
+result[, .(variable_id, date, value)]
+```
+
+Important details:
+
+- `LATEST` and `EARLIEST` return one row. Date ties use the lexicographically largest normalized character value, so `"9"` sorts after `"10"`.
+- `COUNT` persists only when at least one record matches; it does not write zero rows.
+- `COUNT_MORE_THAN_1` writes `TRUE` only for two or more joined matches.
+- `RANGE_COUNT` uses inclusive numeric bounds and ignores values that cannot be converted to numbers.
+- `ALL` returns every joined match and normally requires long output.
+- Overlapping candidate windows can join the same concept record multiple times.
+
+Selector output `value` is character in persisted/public long results. Convert it to the type you need after retrieval rather than assuming the source type survives every SQL selector.
+
+```{r cleanup, include=FALSE}
+unlink(hive, recursive = TRUE)
+```

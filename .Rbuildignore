@@ -6,3 +6,12 @@
 ^codemeta\.json$
 ^documentation$
 ^trial_run\.R$
+^anchoR_input$
+^tests/testthat/data$
+^\.vscode$
+^\.DS_Store$
+^\.obsidian$
+^\.\.Rcheck$
+^_pkgdown\.yml$
+^pkgdown$
+^docs$

@@ -1,6 +1,6 @@
 #' Generic checks for window constructors
 #'
-#' @description a helper function to perform common checks
+#' Runs the checks every window constructor needs before it builds windows.
 #'
 #' @param window_dt A data.table
 #' @return TRUE if the checks pass, otherwise an error is raised.
@@ -73,8 +73,9 @@ generic_window <- make_constructor(
     window_dt[, window_start := as.Date(NA)]
     window_dt[, window_end := as.Date(NA)]
 
-    # We loop by anchor column name so one metadata table can mix different
-    # anchors, such as T0 and pregnancy dates, without falling back to row-wise
+    # Loop by anchor column name so one metadata table can mix different
+    # anchors, such as T0 and pregnancy dates, without falling back to
+    # row-by-row evaluation.
     for (col in unique(window_dt$anchor_start_col)) {
       window_dt[
         anchor_start_col == col,
@@ -172,13 +173,10 @@ apply_window_constructors <- function(window_dt, constructor_env) {
       constructor_name, constructor_env
     )
 
-    # Get only the rows of window_dt that match this constructor name,
-    # so we can apply the function to them.
+    # Rows that match this constructor name.
     row_idx <- window_dt[, which(constructor == constructor_name)]
 
-    # Now we apply the actual constructor function to the subset of rows.
-    # We wrap this in a tryCatch to provide a clear error message
-    # if something goes wrong.
+    # Wrapped in tryCatch for a clear error message if the constructor fails.
     constructor_outputs[[i]] <- tryCatch(
       constructor_fn(window_dt[row_idx]),
       error = function(e) {
@@ -226,20 +224,18 @@ finalize_windows <- function(window_dt) {
   window_dt[]
 }
 
-#' Cross-join population and metadata for window definition.
-#' This helper function performs a cross join between the population and
-#' metadata data tables, which is necessary for defining windows for each
-#' person-variable combination.
+#' Cross-join population and metadata, one row per person-variable pair.
+#'
 #' A merge on a constant dummy key is data.table's fastest cartesian-join
 #' mechanism (benchmarked against row-index replication, which was
 #' consistently slower); the real cost at scale is `population_dt` carrying
 #' unrelated covariate columns into the join, which callers should trim before
 #' calling `define_window()` (see `population_columns_for_window()`).
+#'
 #' @param population_dt A data.table containing the study population.
 #' @param metadata_dt A data.table containing the metadata for the variables.
-#' @return A data.table resulting from the cross join of population_dt and
-#' metadata_dt, with an additional column .window_row_id to preserve the
-#' original order of rows.
+#' @return The cross join of `population_dt` and `metadata_dt`, with an added
+#'   `.window_row_id` column that preserves the original row order.
 #' @keywords internal
 #' @noRd
 cross_join_population_metadata <- function(population_dt, metadata_dt) {
@@ -256,13 +252,13 @@ cross_join_population_metadata <- function(population_dt, metadata_dt) {
 
   population_dt[, .anchor_join_key := 1L]
   metadata_dt[, .anchor_join_key := 1L]
-  # addeding on.exit() so .anchor_join_key scratch column no longer lingers
-  # on the caller's population_dt/metadata_dt
+  # on.exit() removes the .anchor_join_key scratch column so it doesn't
+  # linger on the caller's population_dt/metadata_dt.
   on.exit(population_dt[, .anchor_join_key := NULL], add = TRUE)
   on.exit(metadata_dt[, .anchor_join_key := NULL], add = TRUE)
 
-  # Sorting the cartesian join is wasted work because downstream code keeps its
-  # own row id to preserve the original person-major expansion order.
+  # Sorting the cartesian join would be wasted work: downstream code keeps
+  # its own row id to preserve the original person-major expansion order.
   base::merge(
     population_dt,
     metadata_dt,
@@ -316,12 +312,9 @@ define_window <- function(
       nrow(metadata_dt)
     )
   )
-  # here we want to build one row for every person-variable combination,
-  # because later the package computes:
-  ## the window start/end for that combination
-  ## whether a concept matched in that window
-  ## the final value for that variable for that person
-  # Basically we match each person with each variable_id.
+  # Build one row per person-variable combination: later steps compute the
+  # window start/end for that combination, whether a concept matched inside
+  # it, and the final value for that variable and person.
   window_dt <- cross_join_population_metadata(
     validated$population, validated$metadata
   )
@@ -335,8 +328,8 @@ define_window <- function(
   # into several candidate windows, so the result replaces `window_dt`).
   window_dt <- apply_window_constructors(window_dt, constructor_env)
 
-  # Finalize the windows by restoring the original order, marking valid windows,
-  # and assigning a stable row ID for downstream processing.
-  # In short, a window valid only when start <= end and neither is missing
+  # Restore the original row order, mark which windows are valid, and assign
+  # a stable row ID for downstream processing. A window is valid only when
+  # start <= end and neither bound is missing.
   finalize_windows(window_dt)
 }

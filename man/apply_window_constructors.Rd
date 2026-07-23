@@ -20,9 +20,9 @@ carrying \code{window_start}/\code{window_end}.
 \description{
 Runs one constructor per unique \code{constructor} value in \code{window_dt} and
 combines their outputs. A constructor may return a different number of
-rows than it was given -- an event-based constructor (see
+rows than it was given, an event-based constructor (see
 \code{R/pregnancy_window.R}) turns one input row into zero, one, or many
-candidate windows -- so outputs are combined by row-binding rather than
+candidate windows, so outputs are combined by row-binding rather than
 assigned back into fixed row positions.
 }
 \keyword{internal}

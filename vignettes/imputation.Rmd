@@ -1,0 +1,76 @@
+---
+title: "Completing and imputing wide results"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Completing and imputing wide results}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, message=FALSE}
+library(anchoR)
+library(data.table)
+```
+
+Imputation occurs during wide retrieval, after population keys and requested result columns have been completed. It does not modify persisted parquet or long output.
+
+```{r inputs}
+population <- data.table(
+  person_id = c("1", "2"),
+  T0 = as.Date(c("2024-01-01", "2024-01-01")),
+  group = c("EXPOSED", "CONTROL")
+)
+metadata <- data.table(
+  variable_id = c("diagnosis", "category", "expected_unknown"),
+  concept_id = c("DIAGNOSIS", "CATEGORY", "UNKNOWN"),
+  constructor = "GENERIC",
+  selector = "LATEST",
+  window_name = "lookback",
+  start_offset = -365L,
+  end_offset = 0L,
+  is_expected_missing = c(FALSE, FALSE, TRUE),
+  variable_type = c("BOOL", "CAT", "BOOL")
+)
+concepts <- data.table(
+  person_id = "1",
+  concept_id = "DIAGNOSIS",
+  date = as.Date("2023-10-01"),
+  value = "TRUE"
+)
+hive <- tempfile("imputation-hive-")
+anchor(population, metadata, concepts, anchor_hive_path = hive)
+```
+
+Without imputation, completed cells are `NA`.
+
+```{r without-imputation}
+get_anchor_result(
+  metadata, hive, population = population,
+  result_shape = "wide"
+)
+```
+
+```{r with-imputation}
+imputed <- get_anchor_result(
+  metadata, hive, population = population,
+  result_shape = "wide",
+  impute_missing = TRUE
+)
+imputed
+```
+
+Rules are intentionally narrow:
+
+- `BOOL`, `BOOLEAN`, `LOGICAL`, and `TF` become logical and missing cells become `FALSE`.
+- `CAT` and `FACTOR` missing cells become `0`.
+- `is_expected_missing = TRUE` prevents imputation for that variable.
+- Date columns and unsupported variable types remain missing.
+- If required imputation metadata is partly supplied, anchoR warns and skips imputation.
+
+These defaults encode domain assumptions, not generic missing-data methodology. Use them only when a missing concept record means false or the categorical zero level, not just "unknown." Otherwise keep `NA` and handle missingness downstream.
+
+Imputation currently targets columns named `value_<variable_id>`. When `cast_window = TRUE` produces `value_<window_name>_<variable_id>`, those columns are not matched by the current imputation helper; impute them downstream or use the default non-window-cast shape.
+
+```{r cleanup, include=FALSE}
+unlink(hive, recursive = TRUE)
+```
