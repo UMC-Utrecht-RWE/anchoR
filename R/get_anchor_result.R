@@ -13,7 +13,7 @@
 #'   in wide output. When provided, it must contain person_id and T0 columns.
 #'   Additional population columns are carried into the wide result. Multiple
 #'   rows may legitimately share the same person_id/T0 key while disagreeing
-#'   on other columns every such row is kept.
+#'   on other columns; every such row is kept.
 #'   The anchored results are left-joined onto the full population, so
 #'   result_shape = "wide" output always has one row per population row
 #'   (times the number of distinct window_name values when cast_window = FALSE).
@@ -46,11 +46,11 @@ get_anchor_result <- function(
   only_date = FALSE,
   required_population_cols = c("person_id", "T0")
 ) {
-  # Connecting to an in-memory DuckDB instance that is cleaned up on exit
+  # Connect to an in-memory DuckDB instance and clean it up on exit.
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
-  # Validating metadata and population inputs
+  # Validate metadata and population inputs.
   metadata_dt <- as_data_table(metadata, "metadata")
   assert_has_columns(
     metadata_dt,
@@ -85,7 +85,7 @@ get_anchor_result <- function(
     population_keys_dt <- unique(population_dt[, .(person_id, T0)])
   }
 
-  # Validating anchor_hive_path input
+  # Validate anchor_hive_path.
   if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
     msg <- sprintf("`anchor_hive_path` must be a valid path!")
     logger::log_error(msg)
@@ -99,7 +99,7 @@ get_anchor_result <- function(
     )
   )
 
-  # Creating a DuckDB view for the anchored variables from the parquet hive
+  # Create a DuckDB view over the anchored variables in the parquet hive.
   DBI::dbExecute(
     con,
     paste(
@@ -134,8 +134,7 @@ get_anchor_result <- function(
       )
     )
   )
-  # Ensuring date columns are of type Date, since DuckDB may return them as
-  # character
+  # Make sure date columns are Date, since DuckDB may return them as character.
   if ("date" %in% names(anchored_dt)) {
     # DBI can round-trip DATE columns as character depending on the source, so
     # coerce back here to keep the public output type stable.
@@ -146,8 +145,7 @@ get_anchor_result <- function(
   }
 
   data.table::setorder(anchored_dt, variable_id, person_id, T0, window_name)
-  # Validating the anchored results and reshaping based on the
-  # requested result_shape
+  # Validate the anchored results and reshape to the requested result_shape.
   if (result_shape == "long") {
     required_long_cols <- c(
       "person_id",
@@ -379,9 +377,8 @@ get_anchor_result <- function(
 #' Imputes missing value_<variable_id> cells in a wide anchored result
 #' using metadata rules for is_expected_missing and variable_type.
 #' For non-expected-missing variables, logical/TF types are imputed as FALSE
-#' and categorical types as 0. If required metadata columns are only partially
-#' available, a warning is raised and
-#' imputation is skipped.
+#' and categorical types as 0. If required metadata columns are only
+#' partially available, the function warns and skips imputation.
 #'
 #' @param wide_anchored A wide data.table from get_anchor_result
 #'   with value_<variable_id> columns.
@@ -393,7 +390,6 @@ get_anchor_result <- function(
 #' @keywords internal
 #'
 imputing_missing <- function(wide_anchored, metadata) {
-  # Imputing missing values, we will need metadata for this task
   required_imputation_cols <- c(
     "variable_id",
     "is_expected_missing",
@@ -404,7 +400,7 @@ imputing_missing <- function(wide_anchored, metadata) {
   )
   missing_imputation_cols <- setdiff(required_imputation_cols, names(metadata))
 
-  # Checking if any requiered imputation column is missing
+  # Check whether any required imputation column is missing.
   if (length(missing_imputation_cols) > 0L) {
     if (length(present_imputation_cols) > 0L) {
       warning(
@@ -421,7 +417,6 @@ imputing_missing <- function(wide_anchored, metadata) {
       )
     }
   } else {
-    # Imputing values
     for (i in seq_len(nrow(metadata))) {
       i_variable_id <- metadata$variable_id[[i]]
       i_is_expected_missing <- isTRUE(metadata$is_expected_missing[[i]])
@@ -432,11 +427,10 @@ imputing_missing <- function(wide_anchored, metadata) {
         next
       }
 
-      # Decision logic:
-      # If variable is an boolean, then value = FALSE. Outcomes or boolean are
-      # by default false since the subject never had an diagnostic of that
-      # variable. If variables is a categorical, then value = 0 We use 0 as
-      # category for missingness. If variable is an integer, then ignore
+      # Decision logic: a boolean variable defaults to FALSE, since a missing
+      # record means the subject never had that diagnosis. A categorical
+      # variable defaults to 0, used as the category for missingness. An
+      # integer variable is left as is.
 
       if (i_variable_type %in% c("TF", "BOOL", "BOOLEAN", "LOGICAL")) {
         wide_anchored[is.na(get(value_col)), (value_col) := FALSE]
