@@ -355,6 +355,139 @@ testthat::test_that(
   }
 )
 
+testthat::test_that(
+  "a failed chunk discards the whole run instead of publishing earlier chunks",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    # `lab_range`'s selector (RANGE_COUNT) sorts last among the three
+    # selectors in `minimal_metadata()`, so with `chunk_size = 1` it lands in
+    # the final chunk -- `cov_count` and `cov_latest` succeed in earlier
+    # chunks before this one fails.
+    metadata <- minimal_metadata()
+    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+
+    testthat::expect_error(
+      anchor_by_variable(
+        population = minimal_population(),
+        metadata = metadata,
+        concepts = minimal_concepts(),
+        anchor_hive_path = hive_path,
+        chunk_size = 1
+      ),
+      "Window function does not exist"
+    )
+
+    # Even though cov_count and cov_latest were computed successfully before
+    # the failing chunk, nothing should have been published.
+    testthat::expect_length(list.files(hive_path, recursive = TRUE), 0L)
+  }
+)
+
+testthat::test_that(
+  "staging_mode = 'disk' produces the same output as the default 'memory'",
+  {
+    metadata <- minimal_metadata()
+
+    memory_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(memory_path)
+    on.exit(unlink(memory_path, recursive = TRUE, force = TRUE), add = TRUE)
+    anchor_by_variable(
+      population = minimal_population(),
+      metadata = metadata,
+      concepts = minimal_concepts(),
+      anchor_hive_path = memory_path,
+      chunk_size = 1,
+      staging_mode = "memory"
+    )
+
+    disk_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(disk_path)
+    on.exit(unlink(disk_path, recursive = TRUE, force = TRUE), add = TRUE)
+    anchor_by_variable(
+      population = minimal_population(),
+      metadata = metadata,
+      concepts = minimal_concepts(),
+      anchor_hive_path = disk_path,
+      chunk_size = 1,
+      staging_mode = "disk"
+    )
+
+    result_cols <- c("person_id", "T0", "variable_id", "value", "date", "n")
+    memory_result <- read_anchor_hive(memory_path)[, ..result_cols]
+    disk_result <- read_anchor_hive(disk_path)[, ..result_cols]
+    data.table::setorder(memory_result, variable_id, person_id)
+    data.table::setorder(disk_result, variable_id, person_id)
+
+    testthat::expect_equal(memory_result, disk_result)
+  }
+)
+
+testthat::test_that(
+  "publish = 'per_chunk' keeps earlier chunks when a later one fails",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    # Same setup as the all-or-nothing test above (lab_range fails and sorts
+    # into the final chunk), but with publish = "per_chunk" the opposite is
+    # expected: cov_count and cov_latest should already be on disk by the
+    # time lab_range's chunk fails.
+    metadata <- minimal_metadata()
+    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+
+    testthat::expect_error(
+      anchor_by_variable(
+        population = minimal_population(),
+        metadata = metadata,
+        concepts = minimal_concepts(),
+        anchor_hive_path = hive_path,
+        chunk_size = 1,
+        publish = "per_chunk"
+      ),
+      "Window function does not exist"
+    )
+
+    anchored <- read_anchor_hive(hive_path)
+    testthat::expect_setequal(
+      unique(anchored$variable_id), c("cov_count", "cov_latest")
+    )
+  }
+)
+
+testthat::test_that(
+  "staging_mode = 'disk' and publish = 'per_chunk' also keep earlier chunks",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    metadata <- minimal_metadata()
+    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+
+    testthat::expect_error(
+      anchor_by_variable(
+        population = minimal_population(),
+        metadata = metadata,
+        concepts = minimal_concepts(),
+        anchor_hive_path = hive_path,
+        chunk_size = 1,
+        staging_mode = "disk",
+        publish = "per_chunk"
+      ),
+      "Window function does not exist"
+    )
+
+    anchored <- read_anchor_hive(hive_path)
+    testthat::expect_setequal(
+      unique(anchored$variable_id), c("cov_count", "cov_latest")
+    )
+  }
+)
+
 testthat::test_that("reshapes variable-by-variable hive output", {
   hive_path <- tempfile(pattern = "anchor-hive-")
   dir.create(hive_path)

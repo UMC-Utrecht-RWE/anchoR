@@ -126,7 +126,7 @@ selector_sql_path <- function(selector) {
   sql_path
 }
 
-add_parquet_export <- function(sql_query, anchor_hive_path, selector) {
+add_parquet_export <- function(sql_query, anchor_hive_path, selector = NULL) {
   # This helper is for SQL templates that export concept subsets to Parquet
   # files instead of returning them as query results.
   # The `anchor_hive_path` parameter is a path in the SQL environment's
@@ -134,7 +134,16 @@ add_parquet_export <- function(sql_query, anchor_hive_path, selector) {
   # responsible for making sure the path is accessible and writable by
   # the database backend.
   # `FILENAME_PATTERN` is keyed on the selector so that when a single
-  # `variable_id` has windows using more than one selector
+  # `variable_id` has windows using more than one selector, the two COPY
+  # calls don't collide on the same `{i}`-numbered filename. Callers that
+  # export an already-combined, multi-selector result in one COPY (e.g.
+  # `publish_accumulated_table()`) have no single selector to key on, so
+  # `selector` is optional there.
+  filename_prefix <- if (is.null(selector)) {
+    "part"
+  } else {
+    tolower(normalize_selector_name(selector))
+  }
   export_query <- sprintf(
     "COPY (%s) TO '%s'
     (FORMAT 'parquet',
@@ -143,28 +152,101 @@ add_parquet_export <- function(sql_query, anchor_hive_path, selector) {
       OVERWRITE_OR_IGNORE TRUE);",
     sql_query,
     anchor_hive_path,
-    tolower(normalize_selector_name(selector))
+    filename_prefix
   )
 
   export_query
 }
 
-read_selector_sql <- function(selector, anchor_hive_path) {
+ensure_accumulate_table <- function(con, table_name) {
+  # Selector templates don't all select the same columns. For example LATEST and
+  # EARLIEST need `anchor_row_id` (to break ties among candidate rows),
+  # ALL/COUNT/RANGE_COUNT/COUNT_MORE_THAN_1 don't. Rather than forcing every
+  # template to carry a column most of them have no use for, the
+  # accumulator table is created upfront with a full column set
+  # `anchor_row_id`, `person_id`, `T0`, `variable_id`, `window_name`,
+  # plus the fixed `value`/`date`/`n` types and every insert below matches
+  # columns by name, leaving `anchor_row_id` NULL for selectors that don't
+  # provide it.
+  DBI::dbExecute(
+    con,
+    sprintf(
+      "CREATE TABLE IF NOT EXISTS %s AS (
+        SELECT
+          anchor_row_id,
+          person_id,
+          T0,
+          variable_id,
+          window_name,
+          CAST(NULL AS VARCHAR) AS value,
+          CAST(NULL AS DATE) AS date,
+          CAST(NULL AS BIGINT) AS n
+        FROM population_windows
+        LIMIT 0
+      );",
+      table_name
+    )
+  )
+}
+
+add_table_accumulation <- function(sql_query, table_name) {
+  # Used by `anchor_by_variable()`'s "memory" staging mode: every selector,
+  # from every chunk in the run, lands in the same table (see
+  # `ensure_accumulate_table()`) instead of its own parquet write, so the
+  # whole run's output can be exported to `anchor_hive_path` in one final
+  # `COPY` instead of one per chunk. `BY NAME` matches each selector's
+  # columns to the table by name instead of position, since not every
+  # selector produces the same columns.
+  sprintf("INSERT INTO %s BY NAME (%s);", table_name, sql_query)
+}
+
+read_selector_sql_query <- function(selector) {
   # Keeping SQL in separate template files makes the selector logic inspectable
   # and editable without embedding large query strings inside R functions.
-  query <- paste(
+  paste(
     readLines(selector_sql_path(selector), warn = FALSE),
     collapse = "\n"
   )
-  add_parquet_export(query, anchor_hive_path, selector)
 }
 
-run_selector_query <- function(con, selector, anchor_hive_path) {
-  DBI::dbExecute(con, read_selector_sql(selector, anchor_hive_path))
+run_selector_query <- function(
+  con,
+  selector,
+  anchor_hive_path = NULL,
+  accumulate_table = NULL
+) {
+  query <- read_selector_sql_query(selector)
+  sql <- if (is.null(accumulate_table)) {
+    add_parquet_export(query, anchor_hive_path, selector)
+  } else {
+    ensure_accumulate_table(con, accumulate_table)
+    add_table_accumulation(query, accumulate_table)
+  }
+
+  DBI::dbExecute(con, sql)
 }
 
-run_selector_queries <- function(con, selectors, anchor_hive_path) {
-  if (is.null(anchor_hive_path) || !dir.exists(anchor_hive_path)) {
+#' @param con An open DBI connection.
+#' @param selectors Selector names to run, in order.
+#' @param anchor_hive_path Where to write parquet output directly. Ignored
+#'   when `accumulate_table` is set.
+#' @param accumulate_table If set, every selector's rows are inserted into
+#'   this table instead of being written to `anchor_hive_path` -- the
+#'   caller is then responsible for exporting the table to parquet itself
+#'   (see `add_parquet_export()`).
+#' @keywords internal
+#' @noRd
+run_selector_queries <- function(
+  con,
+  selectors,
+  anchor_hive_path = NULL,
+  accumulate_table = NULL
+) {
+  if (
+    is.null(accumulate_table) &&
+      (is.null(anchor_hive_path) ||
+        !dir.exists(anchor_hive_path))
+  ) {
     msg <- "`anchor_hive_path` must be a valid path!"
     logger::log_error(msg)
     base::stop(msg, call. = FALSE)
@@ -183,7 +265,12 @@ run_selector_queries <- function(con, selectors, anchor_hive_path) {
         # Warnings are logged and muffled so one noisy backend message does not
         # interrupt a full selector batch that still produced usable results.
         withCallingHandlers(
-          run_selector_query(con, selector_name, anchor_hive_path),
+          run_selector_query(
+            con,
+            selector_name,
+            anchor_hive_path = anchor_hive_path,
+            accumulate_table = accumulate_table
+          ),
           warning = function(w) {
             logger::log_warn(
               sprintf(

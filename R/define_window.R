@@ -150,9 +150,9 @@ resolve_window_constructor <- function(constructor_name, constructor_env) {
 #'
 #' Runs one constructor per unique `constructor` value in `window_dt` and
 #' combines their outputs. A constructor may return a different number of
-#' rows than it was given -- an event-based constructor (see
+#' rows than it was given, an event-based constructor (see
 #' `R/pregnancy_window.R`) turns one input row into zero, one, or many
-#' candidate windows -- so outputs are combined by row-binding rather than
+#' candidate windows, so outputs are combined by row-binding rather than
 #' assigned back into fixed row positions.
 #'
 #' @param window_dt A data.table with a `constructor` column, such as one
@@ -256,6 +256,10 @@ cross_join_population_metadata <- function(population_dt, metadata_dt) {
 
   population_dt[, .anchor_join_key := 1L]
   metadata_dt[, .anchor_join_key := 1L]
+  # addeding on.exit() so .anchor_join_key scratch column no longer lingers
+  # on the caller's population_dt/metadata_dt
+  on.exit(population_dt[, .anchor_join_key := NULL], add = TRUE)
+  on.exit(metadata_dt[, .anchor_join_key := NULL], add = TRUE)
 
   # Sorting the cartesian join is wasted work because downstream code keeps its
   # own row id to preserve the original person-major expansion order.
