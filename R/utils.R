@@ -112,16 +112,17 @@ normalize_parquet_sources <- function(concepts) {
   as.character(parquet_sources)
 }
 
-#' Takes a data frame x, a target column name (new standard name), and aliases
-#' (vector of old possible names). If the target column already exists
-#' it returns data unchanged (no rename needed).
-#' If matching aliases found → renames the first matching one to the target name
-#' @param x data frame or data table to rename columns in
-#' @param target the new standard column name to rename to
-#' @param aliases vector of old possible column names that should be renamed
-#' to the target if the target doesn't already exist
-#' @return x with the first matching alias renamed to target, or unchanged if
-#' target already exists or no aliases found
+#' Rename the first matching alias column to a standard name
+#'
+#' If `target` already exists in `x`, this returns `x` unchanged. Otherwise
+#' it renames the first of `aliases` found in `x` to `target`.
+#'
+#' @param x A data frame or data.table to rename columns in.
+#' @param target The standard column name to rename to.
+#' @param aliases Old column names to check for, in order, used only when
+#'   `target` doesn't already exist.
+#' @return `x`, with the first matching alias renamed to `target`, or
+#'   unchanged if `target` already exists or no alias matches.
 #' @keywords internal
 #' @noRd
 rename_first_matching_column <- function(x, target, aliases) {
@@ -164,9 +165,8 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   # offsets, and anchor columns without special cases.
   metadata_dt <- as_data_table(metadata, "metadata")
 
-  # If metadata is missing required columns add them with NA values
-  # For now only window_name needs to be added if missing,
-  # Because in targe that is possible
+  # Fill in missing required columns with NA. For now only window_name needs
+  # this, since older (BRIDGE-style) metadata can omit it.
   add_column_if_missing(metadata_dt, "window_name", NA_character_)
 
   rename_first_matching_column(
