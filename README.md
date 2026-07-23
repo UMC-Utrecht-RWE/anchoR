@@ -76,9 +76,7 @@ get_anchor_result(
 #> 1:         1 2024-01-01 flu_vaccine_recent        <NA> 2023-10-01  TRUE
 ```
 
-Person 1's window is 365 days before `T0` through `T0` itself, which covers
-the 2023-10-01 record; person 2 has no matching record and simply doesn't
-appear in the (sparse) result.
+Person 1's window is 365 days before `T0` through `T0` itself, which covers the 2023-10-01 record; person 2 has no matching record and doesn't appear in the (sparse) result.
 
 ## Documentation
 
