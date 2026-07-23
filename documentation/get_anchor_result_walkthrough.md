@@ -1,6 +1,6 @@
-# `get_anchor_result()` — Block-by-Block Walkthrough
+# `get_anchor_result()`: a block-by-block walkthrough
 
-This document explains `R/get_anchor_result.R` block by block: what each piece does, and — more importantly — *why* it's written the way it is. Line numbers refer to the file as of this writing.
+This document explains `R/get_anchor_result.R` block by block: what each piece does, and, more importantly, *why* it's written the way it is. Line numbers refer to the file as of this writing.
 
 ## The big picture
 
@@ -37,7 +37,7 @@ column takes. If a column has more than one distinct value within a group, it
 **Why it exists as a separate function:** The main function needs to warn the
 caller *which* columns disagree (see below), not just that a duplicate
 exists. Splitting this out keeps that "which columns diverge" logic testable
-in isolation — and indeed it has its own dedicated unit tests
+in isolation, and it has its own dedicated unit tests
 (`test_get-anchor-result.R`), separate from the full `get_anchor_result()`
 integration test.
 
@@ -55,7 +55,7 @@ because they explain choices later in the function body:
   rows share the same `person_id`/`T0` key but disagree on other columns
   (e.g. matching with replacement), the first row per key is kept, a warning
   names the conflicting column(s), and processing continues."* This is a
-  deliberate design choice, not an oversight — see the dedup block below for
+  deliberate design choice, not an oversight; see the dedup block below for
   why.
 
 ---
@@ -76,7 +76,7 @@ forgiving row bind instead of assuming one rigid shape."* The anchor hive is
 a directory of parquet files written independently by different variable
 selectors, which may not all have identical columns. DuckDB's
 `read_parquet(..., union_by_name = true)` (used later) does a
-column-name-aware union across files — something that's fiddly to replicate
+column-name-aware union across files, something that's fiddly to replicate
 correctly by hand with pure R row-binding, especially at scale. Using SQL
 here also means the heavy filtering happens inside DuckDB rather than after
 pulling everything into R memory.
@@ -100,8 +100,8 @@ original object isn't mutated by later in-place `data.table` operations),
 asserts it has a `variable_id` column, and ensures a `window_name` column
 exists (defaulting to `NA`) if the caller didn't supply one.
 
-**Why:** `window_name` is optional from the caller's perspective — you might
-just want "the latest value of X" with no window concept — but the rest of
+**Why:** `window_name` is optional from the caller's perspective; you might
+just want "the latest value of X" with no window concept, but the rest of
 the function's logic (the SQL join condition, the wide-cast formula) needs
 the column to exist unconditionally so it doesn't have to branch on whether
 it's present. Filling in `NA` here means "no specific window requested," which
@@ -111,9 +111,9 @@ the SQL below interprets as a wildcard.
 
 ## The `population` block (lines 83–133)
 
-This is the most involved section, and the one the rest of this
-conversation has focused on. It only runs `if (!is.null(population))` — the
-function is fully usable without a population filter.
+This is the most involved section, and the one most worth understanding in
+detail. It only runs `if (!is.null(population))`; the function is fully
+usable without a population filter.
 
 ### 1. Validate required columns (lines 87–101)
 
@@ -123,7 +123,7 @@ missing_population_cols <- setdiff(required_population_cols, names(population_dt
 if (length(missing_population_cols) > 0L) { ... stop(...) }
 ```
 
-**What/why:** Same defensive pattern as `metadata` — fail loudly and early
+**What/why:** Same defensive pattern as `metadata`: fail loudly and early
 with a specific message if `person_id`/`T0` and any additional
 `required_population_cols` aren't present, rather than failing
 later with a cryptic error deep inside a join or a `dcast`.
@@ -135,7 +135,7 @@ population_dt <- unique(population_dt)
 ```
 
 **Why:** If the caller accidentally passed in exact duplicate rows (same
-`person_id`, `T0`, *and* every other column), those aren't a "conflict" —
+`person_id`, `T0`, *and* every other column), those aren't a "conflict";
 they're just redundant. Removing them here means the duplicate-key check
 right after only reacts to *meaningful* disagreements, not noise. This also
 means: if two rows share a key and survive past this line, they are
@@ -160,7 +160,7 @@ row, it:
 2. Logs and raises a `warning()` naming those columns.
 3. Collapses to one row per key, keeping the first occurrence.
 
-**Why a warning and not an error:** The comment says it directly — *"Matching
+**Why a warning and not an error:** The comment says it directly: *"Matching
 with replacement can legitimately assign the same control to multiple
 exposed persons, so a repeated `person_id`/`T0` key is not an error."* In
 epidemiological matched-cohort designs, the same control subject can be
@@ -171,12 +171,12 @@ pipeline would be the wrong default. A warning lets processing continue while
 still surfacing the ambiguity to the caller.
 
 **Why this still matters / the tradeoff:** The wide output format (built
-later in the function) is keyed on `person_id` + `T0` — it has no way to
+later in the function) is keyed on `person_id` + `T0`; it has no way to
 represent two rows for the same person on the same date. So *some*
 collapsing is unavoidable if you want wide output. The function picks
 "first row wins" as the resolution strategy. That's simple and
 deterministic, but it means whichever column varies (e.g. `match_id`) gets
-silently narrowed down to one value — see the note on the final reattachment
+silently narrowed down to one value; see the note on the final reattachment
 step below for where this actually bites.
 
 ### 4. Normalize `T0` and compute the population's keys (lines 129–132)
@@ -191,7 +191,7 @@ population_keys_dt <- unique(population_dt[, .(person_id, T0)])
 `population_keys_dt`.
 
 **Why keep a separate `population_keys_dt` instead of just using
-`population_dt` everywhere:** The comment explains it — *"Wide output
+`population_dt` everywhere:** The comment explains it: *"Wide output
 cardinality is defined by the anchor key, but callers may need the rest of
 the population columns carried into the final result."* These are two
 different jobs: `population_keys_dt` (just the keys) is used to **filter and
@@ -226,13 +226,13 @@ parquet rather than one big CSV). Pushing the filter down to DuckDB means
 only the relevant rows ever get materialized into R's `anchored_dt`.
 
 **Why `r.window_name IS NULL OR a.window_name = r.window_name`:** This is the
-"wildcard" behavior alluded to earlier — a `NA`/`NULL` `window_name` in the
+"wildcard" behavior alluded to earlier: a `NA`/`NULL` `window_name` in the
 requested metadata means "give me this variable regardless of window,"
 rather than "give me the row where window is missing."
 
 **Why coerce `date`/`T0` back after the round trip (lines 181–188):** The
 comment explains: *"DBI can round-trip DATE columns as character depending
-on the source"* — so the function defensively re-casts them to `Date` to
+on the source,"* so the function defensively re-casts them to `Date` to
 guarantee a stable, predictable output type regardless of quirks in how
 DuckDB's DBI driver serializes dates.
 
@@ -252,7 +252,7 @@ if (result_shape == "long") {
 }
 ```
 
-**What/why:** The simplest branch — just validate the expected columns exist
+**What/why:** The simplest branch: just validate the expected columns exist
 and return a subset. No population filtering happens here at all (notice
 `population_keys_dt` isn't referenced in this branch): long format is
 inherently unambiguous even with duplicate anchor keys, since every
@@ -274,13 +274,13 @@ if (!is.null(population_keys_dt)) {
 }
 ```
 
-**Why:** The comment says it plainly — *"Restricting to the requested
+**Why:** The comment says it plainly: *"Restricting to the requested
 population keeps wide output cardinality anchored to the caller's keys even
 if the hive contains extra rows."* The parquet hive might contain anchored
 values for people who aren't in the caller's population of interest (e.g., a
 shared hive used across multiple studies). Filtering here, before casting,
 ensures the wide table's rows correspond exactly to the population the
-caller asked for — not everyone in the hive.
+caller asked for, not everyone in the hive.
 
 ### 2. Guard against ambiguous wide casts (lines 228–259)
 
@@ -294,7 +294,7 @@ if (nrow(duplicate_rows) > 0L) { ... stop(...) }
 well-defined cell. If the hive itself has more than one row for that exact
 combination (the error message gives a concrete example: a selector like
 `ALL` that returns multiple events instead of one), there's no sensible way
-to pick a single value for that wide cell — so this is a hard `stop()`, not a
+to pick a single value for that wide cell, so this is a hard `stop()`, not a
 warning. This is a deliberate contrast with the `population` duplicate-key
 case above: there, dropping to "first row wins" was a legitimate business
 scenario; here, duplicate anchored values for the same variable/window/date
@@ -316,9 +316,9 @@ and `date_<variable_id>` (or `value_<window_name>_<variable_id>` when
 
 **Why two different formulas:** These serve two different mental models of
 "one row per what." Default (`cast_window = FALSE`): one row per
-person/date/window — useful when a person can have multiple meaningfully
+person/date/window, useful when a person can have multiple meaningfully
 distinct windows you want to keep as separate rows. `cast_window = TRUE`:
-one row per person/date, with window folded into the column name instead —
+one row per person/date, with window folded into the column name instead,
 useful when you want a single flat row per person, with e.g. both a
 "30-day" and "90-day" value of the same variable sitting side by side as
 different columns.
@@ -334,7 +334,7 @@ for (col_name in missing_date_cols) { wide_anchored[, (col_name) := as.Date(NA)]
 
 **Why:** `dcast` only creates columns for combinations that actually appear
 in the data. If a requested variable/window never occurred for *anyone* in
-the filtered data, `dcast` simply won't produce that column at all — even
+the filtered data, `dcast` won't produce that column at all, even
 though the caller explicitly asked for it in `metadata`. Without this step,
 the shape of the output would silently depend on what happened to be present
 in the data, rather than on what was requested. This block guarantees every
@@ -355,12 +355,12 @@ if (nrow(missing_anchored) > 0L) {
 step. It computes the full cross-product of "every population key" × "every
 expected window" (when not `cast_window`), compares it against what's
 actually in `wide_anchored`, and appends blank rows for any combination
-that's missing entirely — e.g., a person in the population who had *no*
+that's missing entirely, e.g., a person in the population who had *no*
 anchored data at all for any requested variable.
 
 **Why it's this elaborate (the `.anchor_join_key` cartesian merge, lines
 361–373):** Without `cast_window`, a "complete" row set isn't just
-`population_keys_dt` — it's every population key crossed with every distinct
+`population_keys_dt`; it's every population key crossed with every distinct
 window that appears anywhere in the request (explicit windows from
 `metadata`, plus any window names actually observed for wildcard variables).
 `data.table` doesn't have a built-in "cross join" verb, so the code
@@ -369,7 +369,7 @@ manufactures one with a dummy `.anchor_join_key = 1` column and
 383–384 states the payoff directly: *"Filling at the cast key guarantees a
 deterministic number of rows for the requested population regardless of
 which variables matched."* In other words: if you ask for 100 people, you
-get 100 people back (times windows, if relevant) — never fewer just because
+get 100 people back (times windows, if relevant), never fewer just because
 some of them happened to have no data.
 
 ### 6. Optional imputation (lines 393–395)
@@ -382,7 +382,7 @@ if (impute_missing == TRUE) {
 
 Delegates to `imputing_missing()` (see below). Deliberately placed *after*
 all the column/row backfilling above, so imputation logic sees a fully
-"square" table — every expected column and row already exists as `NA` where
+"square" table: every expected column and row already exists as `NA` where
 there's no data, and imputation just needs to decide what to do with those
 `NA`s.
 
@@ -397,7 +397,7 @@ if (!is.null(population_dt)) {
 **What:** Joins the caller's original population columns (everything beyond
 `person_id`/`T0`) back onto the now-finalized wide result.
 
-**Why last:** The comment says it directly — *"Reattach the remaining
+**Why last:** The comment says it directly: *"Reattach the remaining
 population columns once the wide result shape is stable, so they do not
 interfere with filtering, casting, or imputation."* None of the earlier
 steps (cast, column backfill, row backfill, imputation) need or want the
@@ -408,16 +408,16 @@ imputation logic having to know to ignore it.
 **Why this is the step where duplicate-key handling actually matters, in
 practice:** `population_dt` was deduplicated earlier (step 3 of the
 population block) to exactly one row per `person_id`/`T0`. That's what makes
-this a safe one-to-one join instead of a fan-out — if `population_dt` still
+this a safe one-to-one join instead of a fan-out: if `population_dt` still
 had two rows for the same key, this join would multiply the corresponding
 row in `wide_anchored` into two rows, silently breaking the "one row per
 person per date" invariant the entire wide-output machinery was built to
 guarantee. This is the concrete, mechanical reason the earlier
 dedup-with-warning exists: not just to tidy the input, but to make this join
-safe. The flip side (discussed earlier in this conversation) is that
-whatever extra information distinguished those duplicate rows — e.g. which
-case a shared control was matched to — is the price paid for that safety;
-only the first match's value survives into the final output.
+safe. The flip side is that whatever extra information distinguished those
+duplicate rows (e.g. which case a shared control was matched to) is the
+price paid for that safety; only the first match's value survives into the
+final output.
 
 ---
 
@@ -431,16 +431,15 @@ imputing_missing <- function(wide_anchored, metadata) { ... }
 `is_expected_missing` flag. If the variable is a boolean/logical type and
 missingness *isn't* expected, missing cells are filled with `FALSE`. If it's
 categorical, missing cells are filled with `0` (used as a "missing" category
-code). Anything else (e.g. plain integers) is left untouched — the comment
-explains why: *"If variable is an integer, then ignore"* — there's no safe
-default numeric fill, so the function declines to guess.
+code). Anything else (e.g. plain integers) is left untouched, since there's
+no safe default numeric fill and the function declines to guess.
 
 **Why `FALSE` specifically for booleans:** The comment states the domain
-assumption — *"Outcomes or boolean are by default false since the subject
-never had a diagnostic of that variable."* This encodes a specific
+assumption: *"a boolean variable defaults to FALSE, since a missing record
+means the subject never had that diagnosis."* This encodes a specific
 epidemiological convention: absence of a record for a diagnosis/outcome
 variable is treated as "didn't happen," not "unknown." That's a meaningful
-modeling choice, not an arbitrary default — it only makes sense because it's
+modeling choice, not an arbitrary default; it only makes sense because it's
 scoped to variables where `is_expected_missing` is *not* set (i.e., the
 metadata author is asserting this variable *should* always have a value, so
 its absence means "no" rather than "no data").
@@ -449,7 +448,7 @@ its absence means "no" rather than "no data").
 erroring (lines 446–460):** If `metadata` has *some* but not all of
 `variable_id`/`is_expected_missing`/`variable_type`, that's very likely a
 caller mistake (e.g. a typo'd column name) rather than "imputation wasn't
-requested for this data" — so it's flagged with a specific message naming
+requested for this data," so it's flagged with a specific message naming
 what's present vs. missing, and imputation is skipped rather than silently
 doing nothing or crashing.
 
@@ -458,18 +457,18 @@ doing nothing or crashing.
 ## Summary: the guiding principles running through the file
 
 1. **Fail fast and specifically** for genuine caller mistakes (missing
-   required columns, invalid `result_shape`, ambiguous wide-cast data) —
+   required columns, invalid `result_shape`, ambiguous wide-cast data):
    these get `stop()` with a message naming exactly what's wrong.
 2. **Warn and continue** for situations that are valid in the domain but
    still require the function to make a judgment call (duplicate population
-   keys from legitimate matching-with-replacement designs) — these get
+   keys from legitimate matching-with-replacement designs): these get
    `warning()` plus a description of the resolution strategy used.
-3. **Guarantee deterministic shape** — the caller should get a predictable
+3. **Guarantee deterministic shape.** The caller should get a predictable
    number of rows/columns based on what they *asked for* (population ×
    metadata), not based on incidental gaps in the underlying hive data. Most
    of the "wide" branch's complexity (backfilling columns, backfilling rows)
    exists to uphold this guarantee.
-4. **Keep concerns separated until the shape is stable** — population keys
+4. **Keep concerns separated until the shape is stable.** Population keys
    vs. population's extra columns, filtering vs. casting vs. imputation vs.
    reattachment all happen in a deliberate order so each step only has to
    reason about one thing at a time.

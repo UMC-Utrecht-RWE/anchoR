@@ -46,7 +46,7 @@ With `only_date = TRUE`, value columns are omitted and the `date_` prefix is als
 
 When `population` is supplied, wide output is restricted to its `person_id/T0` keys, missing keys are backfilled, and additional population columns are reattached. Without `population`, only keys found in persisted selector results can appear.
 
-For `cast_window = FALSE`, population completion produces one row per known population key and requested/discovered window name—not necessarily exactly one row per population member.
+For `cast_window = FALSE`, population completion produces one row per known population key and requested/discovered window name, not necessarily exactly one row per population member.
 
 ### Ambiguous wide results
 

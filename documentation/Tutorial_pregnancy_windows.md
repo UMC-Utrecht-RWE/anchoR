@@ -1,6 +1,6 @@
 # Using Episode-Based (Pregnancy) Windows
 
-This guide shows how to anchor study variables to a *recurring* event—pregnancy here, or any repeatable start/end episode—instead of a single fixed anchor date. It documents the metadata shape implemented in `R/pregnancy_window.R`. The earlier free-text design is retained only as a clearly labeled [historical sketch](examples/pregnancy_examples.md).
+This guide shows how to anchor study variables to a *recurring* event (pregnancy here, or any repeatable start/end episode) instead of a single fixed anchor date. It documents the metadata shape implemented in `R/pregnancy_window.R`. The earlier free-text design is retained only as a clearly labeled [historical sketch](examples/pregnancy_examples.md).
 
 ## The idea
 
@@ -56,7 +56,7 @@ flowchart TD
     Q4 -->|stop at T0| SINCE["SINCE_START_CURRENT_PREG"]
     Q4 -->|whole episode, +/- an offset| ANY["ANYTIME_CURRENT_PREG"]
 
-    Q2 -->|"BOTH prior and current,\ncombined"| COMBO["no single constructor for this --\ntwo metadata rows, same variable_id:\nIN_PRIOR_PREG + ANYTIME_CURRENT_PREG\n(or SINCE_START_CURRENT_PREG)"]
+    Q2 -->|"BOTH prior and current,\ncombined"| COMBO["no single constructor for this:\ntwo metadata rows, same variable_id:\nIN_PRIOR_PREG + ANYTIME_CURRENT_PREG\n(or SINCE_START_CURRENT_PREG)"]
 ```
 
 A few notes to go with the diagram:
@@ -152,7 +152,7 @@ get_anchor_result(
 #> 1:         1 2022-08-16 gest_diabetes_prior        <NA> 2021-03-01   TRUE
 ```
 
-Person 1 has two prior pregnancies (ending 2020-09-01 and 2021-05-20, both before `T0 = 2022-08-16`); both `GEST_DIAB` records (2020-05-01 and 2021-03-01) fall inside one of them, and `LATEST` picks the later one. Person 2 has no prior pregnancy relative to their `T0`, so they produce no row at all,same sparse-output behavior as any other unmatched variable.
+Person 1 has two prior pregnancies (ending 2020-09-01 and 2021-05-20, both before `T0 = 2022-08-16`); both `GEST_DIAB` records (2020-05-01 and 2021-03-01) fall inside one of them, and `LATEST` picks the later one. Person 2 has no prior pregnancy relative to their `T0`, so they produce no row at all, same sparse-output behavior as any other unmatched variable.
 
 ## Multiple candidate windows for one variable
 

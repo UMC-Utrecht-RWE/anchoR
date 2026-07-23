@@ -53,7 +53,7 @@ make_windows <- function(
 
 ## [IN_PRIOR_PREG](../definitions/IN_PRIOR_PREG.md)
 
-`start_offset = 0, end_offset = 30, end_cap_offset = 90`  both A and B ended before `T0`, so both produce a window, each capped to the episode's own first 90 days:
+`start_offset = 0, end_offset = 30, end_cap_offset = 90`: both A and B ended before `T0`, so both produce a window, each capped to the episode's own first 90 days:
 
 ```r
 make_windows("IN_PRIOR_PREG", 0L, 30L, end_cap_offset = 90)
@@ -68,7 +68,7 @@ make_windows("IN_PRIOR_PREG", 0L, 30L, end_cap_offset = 90)
 
 ### IN_PRIOR_PREG with `start_look_back`/`end_look_back`
 
-`start_look_back`/`end_look_back` are a *separate* pair of columns from `start_offset`/`end_offset` (both `NA` unless set), and only `IN_PRIOR_PREG` reads them. They restrict *which episodes are eligible at all* ; an episode not overlapping `[anchor + start_look_back, anchor + end_look_back]` is dropped before any window is built; a survivor's window is still computed from `start_offset`/`end_offset` exactly as above, unaffected by where the lookback range's edges fall.
+`start_look_back`/`end_look_back` are a *separate* pair of columns from `start_offset`/`end_offset` (both `NA` unless set), and only `IN_PRIOR_PREG` reads them. They restrict *which episodes are eligible at all*: an episode not overlapping `[anchor + start_look_back, anchor + end_look_back]` is dropped before any window is built; a survivor's window is still computed from `start_offset`/`end_offset` exactly as above, unaffected by where the lookback range's edges fall.
 
 With `start_look_back` set to `2024-01-01 - T0` (`-776` days) and `end_look_back = 0`, the lookback range is `[2024-01-01, 2026-02-15]`. Episode A (`2023-01-01`/`2023-09-01`) ended before that range starts, so it is dropped entirely; not truncated, just absent. Episode B overlaps the range, so it survives with the *same* window as the row above (`start_offset = 0, end_offset = 30`, no lookback):
 
@@ -85,11 +85,11 @@ make_windows(
 
 ![IN_PRIOR_PREG with start_look_back/end_look_back worked example|1000](img/in-prior-preg-lookback.svg)
 
-Compare to the unfiltered row above: episode A's window (`2023-01-01`/`2023-10-01`) is simply gone, not clipped to `2024-01-01`. If you want the OUTSIDE_ALL_PREG-style behavior of clipping a *search range* rather than filtering episodes, that's what `OUTSIDE_ALL_PREG`'s own `start_offset`/`end_offset` already does, see below, it is a different mechanism for a different constructor, not the same feature under a different name.
+Compare to the unfiltered row above: episode A's window (`2023-01-01`/`2023-10-01`) is gone, not clipped to `2024-01-01`. If you want the OUTSIDE_ALL_PREG-style behavior of clipping a *search range* rather than filtering episodes, that's what `OUTSIDE_ALL_PREG`'s own `start_offset`/`end_offset` already does (see below); it is a different mechanism for a different constructor, not the same feature under a different name.
 
 ## [SINCE_START_CURRENT_PREG](../definitions/SINCE_START_CURRENT_PREG.md)
 
-`start_offset = 0, end_offset = 0`  episode C contains `T0`; the window stops exactly at the anchor:
+`start_offset = 0, end_offset = 0`: episode C contains `T0`; the window stops exactly at the anchor:
 
 ```r
 make_windows("SINCE_START_CURRENT_PREG", 0L, 0L)
@@ -103,7 +103,7 @@ make_windows("SINCE_START_CURRENT_PREG", 0L, 0L)
 
 ## [ANYTIME_CURRENT_PREG](../definitions/ANYTIME_CURRENT_PREG.md)
 
-`start_offset = 0, end_offset = 14`  same episode C, but bounded by its own end plus a 14-day grace period:
+`start_offset = 0, end_offset = 14`: same episode C, but bounded by its own end plus a 14-day grace period:
 
 ```r
 make_windows("ANYTIME_CURRENT_PREG", 0L, 14L)
@@ -117,7 +117,7 @@ make_windows("ANYTIME_CURRENT_PREG", 0L, 14L)
 
 ## [OUTSIDE_ALL_PREG](../definitions/OUTSIDE_ALL_PREG.md)
 
-`start_offset = -1172, end_offset = 0`  search range `[2022-12-01, 2026-02-15]`. Three gaps come back, fenced by A, B, and C; none touches `T0` since it sits inside the still-ongoing episode C:
+`start_offset = -1172, end_offset = 0`: search range `[2022-12-01, 2026-02-15]`. Three gaps come back, fenced by A, B, and C; none touches `T0` since it sits inside the still-ongoing episode C:
 
 > **`OUTSIDE_ALL_PREG` does not read `start_look_back`/`end_look_back`.** Its own `start_offset`/`end_offset` already are the anchor-relative range (there is no separate "shift the episode" role for them here, unlike `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/`ANYTIME_CURRENT_PREG`), so setting `start_look_back`/`end_look_back` on an `OUTSIDE_ALL_PREG` row has no effect at all. If you set them expecting to control the search range, that's the bug to look for, use `start_offset`/`end_offset` instead.
 

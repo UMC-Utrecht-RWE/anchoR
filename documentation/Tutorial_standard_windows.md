@@ -24,7 +24,7 @@ population <- data.table(
 )
 ```
 
-Only `person_id` and the anchor column (`T0` by default) are required. Extra columns are fine and are simply ignored by the anchoring step itself.
+Only `person_id` and the anchor column (`T0` by default) are required. Extra columns are fine; the anchoring step itself ignores them.
 
 ## Step 2: [Metadata](definitions/Metadata.md)
 
@@ -76,7 +76,7 @@ get_anchor_result(
 #> 1:         1 2024-01-01 flu_vaccine_recent        <NA> 2023-10-01  TRUE
 ```
 
-Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 record. Persons 2 and 3 have no matching record, so they simply don't appear, long output is sparse by design.
+Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 record. Persons 2 and 3 have no matching record, so they don't appear; long output is sparse by design.
 
 `anchor()` *replaces* whatever parquet is already at `anchor_hive_path` for each `variable_id` it computes (rather than appending to it), so calling it twice with overlapping `variable_id` values into the same path re-runs cleanly instead of producing duplicate rows. `variable_id`s outside the current `metadata` call are left untouched. See `anchor_by_variable()`/`anchor_by_selector()` (below) if you want to recompute a subset of variables without recomputing everything else in one pass.
 
@@ -149,7 +149,7 @@ result
 
 A few things worth noticing:
 
-- Person 2's `BMI` was `30`, outside `[18.5, 25]`, so   `bmi_in_healthy_range` has no row for them, `RANGE_COUNT`'s `value` is   a *count* of in-range records, not the BMI itself.
+- Person 2's `BMI` was `30`, outside `[18.5, 25]`, so `bmi_in_healthy_range` has no row for them. `RANGE_COUNT`'s `value` is a *count* of in-range records, not the BMI itself.
 - Person 2 has only one `HOSP` record, so `hospitalizations_1y` still reports it (`COUNT` includes everyone with >= 1 match), but `recurrent_hospitalization` (`COUNT_MORE_THAN_1`) correctly excludes them.
 - Person 3 has no concept records at all and never appears.
 
