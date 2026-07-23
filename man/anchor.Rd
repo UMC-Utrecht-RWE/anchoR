@@ -33,7 +33,8 @@ directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
 }
 \value{
-Invisibly, function writes parquet files to anchor_hive_path
+Invisibly \code{NULL}; writes parquet files to \code{anchor_hive_path} as a
+side effect.
 }
 \description{
 Applies metadata-driven windowing and selector rules to a concept table,
