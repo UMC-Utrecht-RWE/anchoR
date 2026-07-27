@@ -27,7 +27,7 @@ directory.}
 in wide output. When provided, it must contain person_id and T0 columns.
 Additional population columns are carried into the wide result. Multiple
 rows may legitimately share the same person_id/T0 key while disagreeing
-on other columns every such row is kept.
+on other columns; every such row is kept.
 The anchored results are left-joined onto the full population, so
 result_shape = "wide" output always has one row per population row
 (times the number of distinct window_name values when cast_window = FALSE).}

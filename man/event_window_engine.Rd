@@ -31,7 +31,7 @@ Shared engine behind every event-based constructor (\code{IN_PRIOR_PREG},
 Each \code{window_dt} row references, via its \code{event_col} value, a
 population list-column holding that person's events (a data.table with
 \code{event_start}/\code{event_end} columns, one row per event). One input
-row can expand into zero, one, or many output rows -- one per candidate
+row can expand into zero, one, or many output rows, one per candidate
 window.
 }
 \keyword{internal}

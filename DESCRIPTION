@@ -10,6 +10,9 @@ Description:
     metadata-driven selector rules to concept records. The package keeps
     reusable anchoring logic separate from study-specific pipelines and
     SQL examples.
+URL: https://github.com/UMC-Utrecht-RWE/anchoR,
+    https://umc-utrecht-rwe.github.io/anchoR/
+BugReports: https://github.com/UMC-Utrecht-RWE/anchoR/issues
 License: file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -27,8 +30,10 @@ Suggests:
     roxygen2 (>= 7.3.2),
     testthat (>= 3.2.3),
     here (>= 1.0.2),
+    knitr (>= 1.45),
     withr (>= 3.0.2)
 Depends:
     R (>= 4.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0

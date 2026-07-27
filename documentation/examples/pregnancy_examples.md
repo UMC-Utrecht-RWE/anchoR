@@ -1,3 +1,7 @@
+# Historical pregnancy design sketch
+
+> This file records the original design inputs and expected tables. It is **not** the current anchoR metadata schema and its tables are not intended to be copied into `anchor()`. In particular, the free-text `other_arguments` expressions are not evaluated, and the offset values reflect the earlier prototype. For supported, runnable metadata use [Tutorial_pregnancy_windows.md](../Tutorial_pregnancy_windows.md); for verified arithmetic use [Pregnancy_window_worked_example.md](Pregnancy_window_worked_example.md).
+
 ## pregnancy_periods
 
 | person_id | T0         |

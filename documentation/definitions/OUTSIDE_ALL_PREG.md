@@ -1,4 +1,4 @@
-> [[Episode-Based Window Engine|Engine]] configured with `event_select = "OUTSIDE_ALL"`: returns the gaps between *all* of a person's episodes, not any single one.
+> [Engine](<Episode-Based Window Engine.md>) configured with `event_select = "OUTSIDE_ALL"`: returns the gaps between *all* of a person's episodes, not any single one.
 
 Searches `[anchor + start_offset, anchor + end_offset]` (order-independent, the engine sorts the two resulting dates into a lower/upper bound) and returns every sub-range of that search window *not* covered by any episode, as zero, one, or several candidate windows. An episode always fences the gaps around it, even the one containing the anchor itself, so there is no gap starting exactly at the anchor if the anchor falls inside an ongoing episode.
 

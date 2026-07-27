@@ -1,6 +1,6 @@
 population_anchor_columns <- function(population_dt, metadata_dt) {
   # Anchor references are stored in metadata, so fail here before window
-  # calculation if the population does not actually contain those columns.
+  # calculation if the population does not contain those columns.
   anchor_cols <- unique(
     c(metadata_dt$anchor_start_col, metadata_dt$anchor_end_col)
   )
@@ -20,14 +20,16 @@ population_anchor_columns <- function(population_dt, metadata_dt) {
 }
 
 #' Trim population to the columns needed for window definition.
+#'
 #' Anchor-only callers (like `anchor()`) never need population covariates
-#' beyond `person_id` and the anchor columns metadata actually references, so
+#' beyond `person_id` and the anchor columns metadata references, so
 #' dropping them here keeps the population x metadata cross join from
 #' replicating unused columns.
+#'
 #' @param population_dt A data.table containing the study population.
 #' @param metadata_dt A data.table containing the metadata for the variables.
 #' @return A data.table subset of population_dt with only `person_id` and the
-#' referenced anchor columns.
+#'   referenced anchor columns.
 #' @keywords internal
 #' @noRd
 population_columns_for_window <- function(population_dt, metadata_dt) {
@@ -100,8 +102,8 @@ validate_population_anchor_col <- function(population_dt, anchor_col) {
   if (inherits(anchor_values, "Date")) {
     return(invisible(population_dt))
   }
-  # TODO: Extend this approach to all the time we do this. why didn't I do this
-  # earlier?
+  # TODO: apply this same Date-coercion check everywhere else the package
+  # accepts a date column, not just here.
   stop_invalid_population <- function(message) {
     msg <- sprintf(message, anchor_col)
     logger::log_error(msg)
@@ -162,8 +164,8 @@ validate_anchor_inputs <- function(
   # Normalization is centralized here so exported functions can stay short and
   # still rely on a consistent metadata schema.
   population_dt <- as_data_table(population, "population")
-  # We want to be really sure that anchor_col is a date otherwise it will create
-  # a lot of downstream problems.
+  # anchor_col must be a Date column; skipping this check would cause
+  # hard-to-trace problems downstream.
   validate_population_anchor_col(population_dt, anchor_col)
 
   metadata_dt <- normalize_metadata(

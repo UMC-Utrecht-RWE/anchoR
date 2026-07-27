@@ -13,6 +13,6 @@ generic_window_check(window_dt)
 TRUE if the checks pass, otherwise an error is raised.
 }
 \description{
-a helper function to perform common checks
+Runs the checks every window constructor needs before it builds windows.
 }
 \keyword{internal}
