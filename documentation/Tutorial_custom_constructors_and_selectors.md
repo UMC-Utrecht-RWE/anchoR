@@ -1,6 +1,6 @@
 # Custom Constructors and Selectors
 
-anchoR ships a fixed set of window shapes (`constructor` values like `GENERIC`, see [Tutorial_standard_windows](Tutorial_standard_windows.md), or `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/etc., see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md)) and a fixed set of window-reduction rules (`selector` values like `LATEST`, `COUNT`, `RANGE_COUNT`, compared in the `selector-cookbook` vignette). Most study variables fit one of those.
+anchoR ships a fixed set of window 'shapes' (`constructor` values like `GENERIC`, see [Tutorial_standard_windows](Tutorial_standard_windows.md), or `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/etc., see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md)) and a fixed set of window-reduction rules (`selector` values like `LATEST`, `COUNT`, `RANGE_COUNT`, compared in the `selector-cookbook` vignette). Most study variables fit one of those.
 
 When one doesn't, you don't need to edit anchoR itself. `make_constructor()` and `make_selector()` let you define your own `constructor`/`selector` value from your own script, and `anchor()` picks it up automatically, the same way it resolves a built-in one.
 
@@ -16,14 +16,14 @@ This is why nothing needs to be registered or passed as an extra argument to `an
 
 The two mechanisms differ in one important way, because a constructor and a selector do fundamentally different jobs:
 
-| | constructor | selector |
-| --- | --- | --- |
-| what it is | a plain R function over a `data.table` | a SQL `SELECT` statement |
-| where it runs | in R, before any database work | inside anchoR's DuckDB connection |
-| input | one row per person-variable-window, with metadata columns (`anchor_start_col`, `start_offset`, ...) | `population_windows` (aliased `w`) joined against `concepts` (aliased `c`) |
-| must produce | the same rows back, plus `window_start`/`window_end` | `person_id`, `T0`, `variable_id`, `window_name`, `value`, `date`, `n` |
-| naming convention | `<CONSTRUCTOR>` metadata value &rarr; `<constructor>_window` function | `<SELECTOR>` metadata value &rarr; `<selector>_selector` object |
-| built with | `make_constructor()` | `make_selector()` |
+|                   | constructor                                                                                         | selector                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| what it is        | a plain R function over a `data.table`                                                              | a SQL `SELECT` statement                                                   |
+| where it runs     | in R, before any database work                                                                      | inside anchoR's DuckDB connection                                          |
+| input             | one row per person-variable-window, with metadata columns (`anchor_start_col`, `start_offset`, ...) | `population_windows` (aliased `w`) joined against `concepts` (aliased `c`) |
+| must produce      | the same rows back, plus `window_start`/`window_end`                                                | `person_id`, `T0`, `variable_id`, `window_name`, `value`, `date`, `n`      |
+| naming convention | `<CONSTRUCTOR>` metadata value &rarr; `<constructor>_window` function                               | `<SELECTOR>` metadata value &rarr; `<selector>_selector` object            |
+| built with        | `make_constructor()`                                                                                | `make_selector()`                                                          |
 
 ## Custom constructors: `make_constructor()`
 
