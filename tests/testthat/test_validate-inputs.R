@@ -19,11 +19,35 @@ testthat::test_that("validate_anchor_inputs standardizes metadata names", {
 
   testthat::expect_equal(validated$metadata$anchor_start_col, rep("T0", 3L))
   testthat::expect_equal(validated$metadata$anchor_end_col, rep("T0", 3L))
-  # minimal_metadata() does not set range_min/range_max, so they default to
-  # NA even for its RANGE_COUNT row (lab_range).
-  testthat::expect_true(is.na(validated$metadata$range_min[3]))
-  testthat::expect_true(is.na(validated$metadata$range_max[3]))
+  testthat::expect_true(is.na(validated$metadata$range_min[1]))
+  testthat::expect_true(is.na(validated$metadata$range_max[1]))
+  testthat::expect_equal(validated$metadata$range_min[3], 0)
+  testthat::expect_equal(validated$metadata$range_max[3], 10)
 })
+
+testthat::test_that(
+  "validate_anchor_inputs warns on RANGE_COUNT rows missing bounds",
+  {
+    metadata <- minimal_metadata()
+    metadata[
+      variable_id == "lab_range",
+      `:=`(range_min = NA_real_, range_max = NA_real_)
+    ]
+
+    testthat::expect_warning(
+      validated <- validate_anchor_inputs(
+        population = minimal_population(),
+        metadata = metadata,
+        concepts = minimal_concepts()
+      ),
+      "RANGE_COUNT row\\(s\\) missing `range_min`/`range_max`: lab_range"
+    )
+
+    # Validation still succeeds and returns the metadata as-is.
+    testthat::expect_equal(nrow(validated$metadata), 3L)
+  }
+)
+
 
 testthat::test_that(
   "validate_anchor_inputs accepts character anchor dates in YYYY-mm-dd format",
