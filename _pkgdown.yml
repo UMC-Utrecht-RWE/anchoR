@@ -18,6 +18,7 @@ articles:
     contents:
       - selector-cookbook
       - custom-constructors
+      - custom-selectors
       - imputation
 
 reference:
@@ -35,3 +36,4 @@ reference:
       - filter_supported_metadata
       - selector_sql_path
       - make_constructor
+      - make_selector
