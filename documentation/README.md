@@ -6,6 +6,7 @@ Choose the shortest guide that matches the task.
 
 - [Standard windows](Tutorial_standard_windows.md): the complete fixed-anchor workflow.
 - [Episode-based windows](Tutorial_pregnancy_windows.md): recurring start/end episodes.
+- [Custom constructors and selectors](Tutorial_custom_constructors_and_selectors.md): define your own window shape or selection rule without editing anchoR.
 - Installed equivalents: `vignette("standard-windows", package = "anchoR")` and `vignette("episode-windows", package = "anchoR")`.
 
 ## Input and output contracts
@@ -20,15 +21,16 @@ Choose the shortest guide that matches the task.
 
 These are installed package vignettes and pkgdown articles:
 
-| task | vignette |
-| --- | --- |
-| Diagnose errors and unexpected cardinality | `troubleshooting` |
-| Convert older BRIDGE-oriented metadata | `metadata-migration` |
-| Compare selector semantics and edge cases | `selector-cookbook` |
-| Design lookback, index, risk, and control windows | `multiple-windows` |
-| Define a project-specific window shape | `custom-constructors` |
-| Query parquet and DuckDB concept stores | `production-sources` |
-| Complete and impute wide results | `imputation` |
+| task                                              | vignette              |
+| ------------------------------------------------- | --------------------- |
+| Diagnose errors and unexpected cardinality        | `troubleshooting`     |
+| Convert older BRIDGE-oriented metadata            | `metadata-migration`  |
+| Compare selector semantics and edge cases         | `selector-cookbook`   |
+| Design lookback, index, risk, and control windows | `multiple-windows`    |
+| Define a project-specific window shape            | `custom-constructors` |
+| Define a project-specific selection rule          | `custom-selectors`    |
+| Query parquet and DuckDB concept stores           | `production-sources`  |
+| Complete and impute wide results                  | `imputation`          |
 
 For example:
 
