@@ -38,7 +38,7 @@ available_selectors <- function() {
 #' warning.
 #'
 #' @param metadata A data frame containing study-variable metadata.
-#' @param selector_col Column in `metadata` that contains selector
+#' @param selector_col Column in `metadata` that contains selector names.
 #'
 #' @return A filtered `data.table` with the same columns as the input.
 #' @export
@@ -261,14 +261,9 @@ run_selector_query <- function(
 #' @param anchor_hive_path Where to write parquet output directly. Ignored
 #'   when `accumulate_table` is set.
 #' @param accumulate_table If set, every selector's rows are inserted into
-#'   this table instead of being written to `anchor_hive_path` -- the
-#'   caller is then responsible for exporting the table to parquet itself
-#'   (see `add_parquet_export()`).
-#' @param selector_env Environment searched for user-defined selectors (see
-#'   `make_selector()`) once the bundled `inst/sql` templates come up empty.
-#'   Defaults to `globalenv()`, the same default `define_window()` uses for
-#'   `constructor_env`, so a selector assigned at the top level of a user's
-#'   script is picked up automatically.
+#'   this table instead of being written to `anchor_hive_path`. The caller
+#'   is then responsible for exporting the table to parquet itself (see
+#'   `add_parquet_export()`).
 #' @keywords internal
 #' @noRd
 run_selector_queries <- function(
@@ -298,7 +293,7 @@ run_selector_queries <- function(
 
     tryCatch(
       {
-        # Warnings are logged and muffled so one noisy backend message does not
+        # Log and muffle warnings here, so one noisy backend message doesn't
         # interrupt a full selector batch that still produced usable results.
         withCallingHandlers(
           run_selector_query(
@@ -321,8 +316,8 @@ run_selector_queries <- function(
         )
       },
       error = function(e) {
-        # Errors are logged with selector context before being rethrown so the
-        # caller still gets a failing run and a useful breadcrumb trail.
+        # Log the error with selector context, then rethrow it, so the
+        # caller still gets a failing run and enough context to debug it.
         msg <- sprintf(
           "Error while processing selector %s: %s",
           selector_name,

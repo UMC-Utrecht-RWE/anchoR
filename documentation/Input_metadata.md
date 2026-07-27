@@ -1,78 +1,83 @@
-# [[Metadata|METADATA]]
+# Metadata input
 
-| Table name                | study_variables / windows_metadata                                                                                                                                                         |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Description               | Input metadata file for `anchoR`. In the current workflow this is a wide study-variable table with one row per variable-window specification.                                              |
-| Source                    | User-supplied. In practice this often comes from BRIDGE `study_variables` metadata, optionally extended with extra window rows for AESIs, censoring variables, or other follow-up windows. |
-| Content                   | Variable definitions, window definitions, selectors, and descriptive study metadata.                                                                                                       |
-| Population                | Study variables e.g.:`study_variable.csv`.                                                                                                                                                 |
-| Unit of Observation (UoO) | One row per `variable_id x window_name` definition. In a single-window setup this is often just one row per `variable_id`.                                                                 |
+`metadata` describes what to find, when to look for it, and how to reduce matching records. Its unit of observation is one `variable_id × window_name` specification. A variable may therefore appear on several rows when it has several windows.
 
-# CODEBOOK
+## Required columns
 
-Mandatory columns are the following:
+| column | type | meaning |
+| --- | --- | --- |
+| `variable_id` | character | Output variable identifier. |
+| `concept_id` | character | Value matched directly to `concepts$concept_id`. |
+| `constructor` | character | Window rule, usually `GENERIC`; see [constructors](definitions/Constructor.md). |
+| `selector` | character | Reduction rule such as `LATEST`, `COUNT`, or `ALL`; see [selectors](definitions/Selector.md). |
+| `start_offset` | integer-like | Inclusive window-start offset in days. |
+| `end_offset` | integer-like | Inclusive window-end offset in days. |
 
-| column            | format    | description                                                                                                                                                                                                                     |
-| ----------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `variable_id`   | chr       | Name of the study variable. This becomes the output variable identifier. Repeat `variable_id` across rows to define multiple windows for the same variable.                                                                     |
-| `concept_id`    | chr       | Concept identifier queried in the concepts source. May be missing for variables that are handled upstream or are not directly anchorable from the concepts table.                                                               |
-| `start_offset`  | num       | Start of the anchoring window relative to the anchor date. In some source metadata these values may be fractional (for example `-54750.5`); `anchoR` currently coerces offsets with `as.integer()` during normalization. |
-| `end_offset`    | int / num | End of the anchoring window relative to the anchor date.                                                                                                                                                                        |
-| `window_name`   | chr       | Label of the window, for example `lookback`, `risk`, `induction`, `control`.                                                                                                                                                    |
-| `constructor`   | chr       | Name of the window-construction function. In the current metadata this is typically `GENERIC`.                                                                                                                                  |
-| `selector`      | chr       | Rule used to collapse one or more matching concept rows inside the window, for example `LATEST`, `EARLIEST`, `COUNT`, `RANGE_COUNT`.                                                                                            |
+`start_offset` and `end_offset` are converted with `as.integer()`. Fractional values are truncated toward zero, so validate or round them before calling anchoR if fractions have scientific meaning.
 
-> `start_offset`/`end_offset` are the only names `anchoR` accepts for this column -- unlike some other columns below, there is no alias. If your source metadata (e.g. a BRIDGE-derived `study_variables.csv`) still uses `start_look_back`/`end_look_back` for this purpose, rename those columns to `start_offset`/`end_offset` before calling `anchor()`; `start_look_back`/`end_look_back` now name a different, unrelated column (see below).
+## Optional columns and defaults
 
-Optional columns supported by the package, even when absent from the current metadata object:
+| column | default | meaning |
+| --- | --- | --- |
+| `window_name` | `NA_character_` | Distinguishes multiple windows for one variable. |
+| `anchor_start_col` | `anchor_col` | Population column used as the start anchor. Alias: `anchor_date_start`. |
+| `anchor_end_col` | `anchor_col` | Population column used as the end anchor. Alias: `anchor_date_end`. |
+| `range_min`, `range_max` | `NA_real_` | Inclusive numeric bounds used by `RANGE_COUNT`. |
+| `event_col` | `NA_character_` | Population list-column containing episodes for episode-based constructors. |
+| `end_cap_offset` | `NA_real_` | Optional end cap for `IN_PRIOR_PREG`. |
+| `start_look_back`, `end_look_back` | `NA_real_` | Optional episode-eligibility range used only by `IN_PRIOR_PREG`. |
 
-| column               | format | description                                                                                                                                                                          |
-| -------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `anchor_date_start`  | chr    | Population column used as the start anchor for the window. If missing, `anchoR` uses the `anchor_col` argument, typically `T0`.                                                     |
-| `anchor_date_end`    | chr    | Population column used as the end anchor for the window. If missing, `anchoR` uses the `anchor_col` argument.                                                                       |
-| `range_min`          | num    | Lower bound used by `RANGE_COUNT`.                                                                                                                                                   |
-| `range_max`          | num    | Upper bound used by `RANGE_COUNT`.                                                                                                                                                   |
-| `start_look_back`    | num    | `IN_PRIOR_PREG` only: restricts which prior episodes are eligible to those overlapping `[anchor + start_look_back, anchor + end_look_back]`. NA (the default) applies no filter. See [[IN_PRIOR_PREG]]. |
-| `end_look_back`      | num    | `IN_PRIOR_PREG` only, paired with `start_look_back` above.                                                                                                                            |
+`date_extraction_func` is accepted as a legacy alias for `selector`. The literal value `"T0"` in either anchor-column field is treated as a placeholder for the `anchor_col` argument.
 
+No aliases exist for `start_offset`, `end_offset`, `window_name`, or `constructor`. In particular, `start`, `end`, `window_start_offset`, `window_end_offset`, and `window_definition` must be renamed before use.
 
-Everything else in the current metadata object is descriptive or study-management metadata and can remain in the table without affecting the core anchoring step.
+## Canonical example
 
-If `anchor_date_start` and `anchor_date_end` are not present, the metadata is interpreted relative to the `anchor_col` argument supplied to `anchor()` or `anchor_by_variable()`. In the current workflow that anchor is usually `T0`.
+```r
+metadata <- data.table::data.table(
+  variable_id = c("recent_flu_vaccine", "recent_flu_vaccine"),
+  concept_id = "FLU_VAX",
+  constructor = "GENERIC",
+  selector = c("LATEST", "EARLIEST"),
+  window_name = c("one_year", "ten_years"),
+  start_offset = c(-365L, -3650L),
+  end_offset = 0L
+)
+```
 
-# EXAMPLE
+This requests two independently labelled windows for the same variable. `anchor()` preserves both definitions in the hive through `window_name`.
 
-Example rows matching the current metadata structure:
+## Legacy metadata migration
 
+Older BRIDGE-derived files may use names such as these:
 
-| variable_id                 | concept_id        | label                                | anchor | window    | start | end  | date_extraction_func | data_type |
-| :-------------------------- | :---------------- | :----------------------------------- | :----- | :-------- | :---- | :--- | :------------------- | :-------- |
-| COD_ACUTE_ASEPTIC_ARTHRITIS | M_ARTASEPTIC_AESI | Acute aseptic arthritis              | T0     | lookback  | -365  | -1   | LATEST               | BOOL      |
-| COD_ACUTE_ASEPTIC_ARTHRITIS | M_ARTASEPTIC_AESI | Acute aseptic arthritis              | T0     | induction | 0     | 0    | EARLIEST             | DATE      |
-| COD_ACUTE_ASEPTIC_ARTHRITIS | M_ARTASEPTIC_AESI | Acute aseptic arthritis              | T0     | risk      | 1     | 42   | EARLIEST             | DATE      |
-| SV_OBESITY                  | L_OBESITY_COV     | Obesity diagnosis or obesity surgery | T0     | lookback  | -1095 | 0    | LATEST               | BOOL      |
+| legacy name | canonical anchoR name |
+| --- | --- |
+| `date_extraction_func` | `selector` (automatic alias) |
+| `anchor_date_start` | `anchor_start_col` (automatic alias) |
+| `anchor_date_end` | `anchor_end_col` (automatic alias) |
+| `window` | `window_name` (rename explicitly) |
+| `start`, `window_start_offset` | `start_offset` (rename explicitly) |
+| `end`, `window_end_offset` | `end_offset` (rename explicitly) |
+| `window_definition` | `constructor` (rename explicitly) |
 
+For example:
 
-# MULTIPLE WINDOWS
+```r
+data.table::setnames(
+  legacy_metadata,
+  old = c("window", "start", "end", "window_definition"),
+  new = c("window_name", "start_offset", "end_offset", "constructor"),
+  skip_absent = TRUE
+)
+```
 
-To define multiple windows for the same study variable, add multiple metadata rows with the same `variable_id` and `concept_id`, but different values in one or more of:
+## Validation behavior
 
-- `window_name`
-- `window_start_offset`
-- `window_end_offset`
-- `selector`
-- `window_definition`
+- Unsupported or missing selectors cause `anchor()` to stop. Use `filter_supported_metadata()` when deliberately dropping them is appropriate.
+- Referenced anchor and episode columns must exist in `population`.
+- Anchor columns should be `Date` values (or `YYYY-mm-dd` character values for the primary `anchor_col`).
+- Rows with missing `concept_id` cannot match concept records and should normally be removed or handled upstream.
+- Additional descriptive columns are allowed, but validation retains only the columns used by anchoR.
 
-Example:
-
-| `variable_id`                 | `concept_id`        | `window_name` | `window_start_offset` | `window_end_offset` | `window_definition` | `selector` |
-| :---------------------------- | :------------------ | :------------ | --------------------: | ------------------: | :------------------ | :--------- |
-| `COD_ACUTE_ASEPTIC_ARTHRITIS` | `M_ARTASEPTIC_AESI` | `lookback`    |                `-365` |                `-1` | `GENERIC`           | `LATEST`   |
-| `COD_ACUTE_ASEPTIC_ARTHRITIS` | `M_ARTASEPTIC_AESI` | `induction`   |                   `0` |                 `0` | `GENERIC`           | `EARLIEST` |
-| `COD_ACUTE_ASEPTIC_ARTHRITIS` | `M_ARTASEPTIC_AESI` | `risk`        |                   `1` |                `42` | `GENERIC`           | `EARLIEST` |
-
-# NOTES
-
-- `selector` names can be filtered with `filter_supported_metadata()`.
-- Rows with unsupported selectors are dropped by that helper.
-- Rows with missing `concept_id` are still part of the source metadata, but they will not produce concept matches unless they are handled upstream or excluded before anchoring.
+See [Tutorial_standard_windows.md](Tutorial_standard_windows.md) for ordinary windows and [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) for episode-based metadata.

@@ -38,9 +38,9 @@ hive. Must not be \code{NULL}.}
 
 \item{chunk_size}{How many variables to process per batch. Bigger
 batches mean fewer (and cheaper) scans of \code{concepts}, but (with
-\code{publish = "once"}) also means more work is thrown away if a
-batch fails partway through, since nothing is saved until the whole
-call succeeds. Use \code{1} to process one variable at a time.}
+\code{publish = "once"}) also throw away more work if a batch fails
+partway through, since nothing is saved until the whole call succeeds.
+Use \code{1} to process one variable at a time.}
 
 \item{staging_dir}{Folder to use for DuckDB's own temporary files, and
 (only when \code{staging_mode = "disk"}) for the local scratch hive
@@ -78,22 +78,22 @@ round trip that \code{"disk"} needs, but holds the whole run's output in
 memory (DuckDB spills to local disk on its own if that gets too big);
 \code{"disk"} bounds memory use to one batch at a time instead.
 
-\code{publish} controls when that held output actually gets written to
+\code{publish} controls when that held output gets written to
 \code{anchor_hive_path}. With \code{publish = "once"} (the default),
 nothing is written until every batch in the call has finished
-successfully, and if any batch fails, nothing is written at all --
+successfully, and if any batch fails, nothing is written at all,
 \code{anchor_hive_path} is left exactly as it was before the call, and
 the error is raised, so you never end up with some variables refreshed
 and others not. With \code{publish = "per_chunk"}, each batch's results
 are written as soon as that batch finishes, so a later batch's failure
-doesn't discard earlier batches' already-published results useful if
-\code{anchor_hive_path} is fast enough that the extra writes don't
-matter and you'd rather keep whatever progress you can.
+doesn't discard earlier batches' already-published results. This is
+useful if \code{anchor_hive_path} is fast enough that the extra writes
+don't matter and you'd rather keep whatever progress you can.
 
 Whichever combination is used, publishing only ever replaces the
-\code{variable_id} partitions that were actually computed and leaves
-the rest of \code{anchor_hive_path} untouched, so re-running for just a
-few variables is always safe.
+\code{variable_id} partitions that were computed and leaves the rest of
+\code{anchor_hive_path} untouched, so re-running for just a few
+variables is always safe.
 
 Grouping several variables into one batch also means a single query
 (and a single join against \code{concepts}) can cover all of them at

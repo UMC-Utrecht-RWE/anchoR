@@ -1,6 +1,6 @@
 # Using anchoR for Standard (Single-Anchor) Study Variables
 
-This is the usage guide for anchoR's core workflow: a study variable anchored to one fixed date per person (usually called `T0`), with a window defined as a fixed offset around it. If you need a window that depends on a *recurring* event instead (e.g. pregnancy, or any condition that can start and stop multiple times), see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows), everything on this page is the `GENERIC` special case of that same machinery.
+This is the usage guide for anchoR's core workflow: a study variable anchored to one fixed date per person (usually called `T0`), with a window defined as a fixed offset around it. If you need a window that depends on a *recurring* event instead (e.g. pregnancy, or any condition that can start and stop multiple times), see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md), everything on this page is the `GENERIC` special case of that same machinery.
 
 ## The three inputs
 
@@ -12,9 +12,10 @@ This is the usage guide for anchoR's core workflow: a study variable anchored to
 
 `anchor()` cross-joins population with metadata, builds a window per person-variable pair, filters `concepts` to whichever records fall in that window, and collapses the matches with the requested selector.
 
-## Step 1: [[Population]]
+## Step 1: [Population](definitions/Population.md)
 
 ```r
+library(anchoR)
 library(data.table)
 
 population <- data.table(
@@ -23,9 +24,9 @@ population <- data.table(
 )
 ```
 
-Only `person_id` and the anchor column (`T0` by default) are required. Extra columns are fine and are simply ignored by the anchoring step itself.
+Only `person_id` and the anchor column (`T0` by default) are required. Extra columns are fine; the anchoring step itself ignores them.
 
-## Step 2: [[Metadata]]
+## Step 2: [Metadata](definitions/Metadata.md)
 
 Each row says: for this `variable_id`, look for `concept_id` in a window built from `start_offset`/`end_offset` days around the anchor, and collapse whatever matches with `selector`.
 
@@ -40,9 +41,9 @@ metadata <- data.table(
 )
 ```
 
-`constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow. (`start_offset`/`end_offset` are not aliased to anything else -- `start_look_back`/`end_look_back` are a separate, unrelated pair of columns used only by `IN_PRIOR_PREG`, see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows).)
+`constructor = "GENERIC"` means "a fixed offset around the anchor", it's the only constructor you need for this workflow. (`start_offset`/`end_offset` are not aliased to anything else, `start_look_back`/`end_look_back` are a separate, unrelated pair of columns used only by `IN_PRIOR_PREG`, see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md).)
 
-## Step 3: [[Concepts]]
+## Step 3: [Concepts](definitions/Concepts.md)
 
 ```r
 concepts <- data.table(
@@ -75,7 +76,7 @@ get_anchor_result(
 #> 1:         1 2024-01-01 flu_vaccine_recent        <NA> 2023-10-01  TRUE
 ```
 
-Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 record. Persons 2 and 3 have no matching record, so they simply don't appear, long output is sparse by design.
+Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 record. Persons 2 and 3 have no matching record, so they don't appear; long output is sparse by design.
 
 `anchor()` *replaces* whatever parquet is already at `anchor_hive_path` for each `variable_id` it computes (rather than appending to it), so calling it twice with overlapping `variable_id` values into the same path re-runs cleanly instead of producing duplicate rows. `variable_id`s outside the current `metadata` call are left untouched. See `anchor_by_variable()`/`anchor_by_selector()` (below) if you want to recompute a subset of variables without recomputing everything else in one pass.
 
@@ -130,7 +131,9 @@ concepts <- data.table(
 )
 
 anchor(population, metadata, concepts, anchor_hive_path = hive_path)
-result <- get_anchor_result(metadata, hive_path, result_shape = "long")
+result <- get_anchor_result(metadata, hive_path, result_shape = "long")[
+  , .(person_id, T0, variable_id, date, value)
+]
 setorder(result, variable_id, person_id)
 result
 #>    person_id         T0               variable_id       date value
@@ -146,7 +149,7 @@ result
 
 A few things worth noticing:
 
-- Person 2's `BMI` was `30`, outside `[18.5, 25]`, so   `bmi_in_healthy_range` has no row for them, `RANGE_COUNT`'s `value` is   a *count* of in-range records, not the BMI itself.
+- Person 2's `BMI` was `30`, outside `[18.5, 25]`, so `bmi_in_healthy_range` has no row for them. `RANGE_COUNT`'s `value` is a *count* of in-range records, not the BMI itself.
 - Person 2 has only one `HOSP` record, so `hospitalizations_1y` still reports it (`COUNT` includes everyone with >= 1 match), but `recurrent_hospitalization` (`COUNT_MORE_THAN_1`) correctly excludes them.
 - Person 3 has no concept records at all and never appears.
 
@@ -205,7 +208,7 @@ Passing `population` to `get_anchor_result()` also backfills a row for every pop
 
 ## `anchor()` vs `anchor_by_variable()`
 
-`anchor()` computes every variable in `metadata` in one pass and writes one parquet hive. `anchor_by_variable()` does the same thing but one `variable_id` at a time, replacing (not appending to) only that variable's own partition of the hive. Use `anchor_by_variable()` when you expect to re-run individual variables later (e.g. a corrected concept source for one variable) without recomputing everything else:
+`anchor()` computes every variable in `metadata` in one pass and writes one parquet hive. `anchor_by_variable()` processes variable IDs in bounded chunks (`chunk_size = 10` by default) and replaces each variable's own partition rather than appending. A call with metadata for one variable therefore touches only that partition. Use it when you want a bounded processing/failure scope or expect to re-run selected variables without recomputing everything else:
 
 ```r
 hive_path <- tempfile(pattern = "anchor-hive-")
@@ -230,7 +233,9 @@ concepts <- data.table(
 )
 
 anchor_by_variable(population, metadata, concepts, anchor_hive_path = hive_path)
-read_anchor_hive(hive_path)[, .(variable_id, person_id, value, date)]
+get_anchor_result(metadata, hive_path, result_shape = "long")[
+  , .(variable_id, person_id, value, date)
+]
 #>           variable_id person_id  value       date
 #> 1: flu_vaccine_recent         1   TRUE 2023-10-01
 #> 2:  recent_hosp_count         2      1 2023-11-01
@@ -251,13 +256,15 @@ anchor_by_variable(
   anchor_hive_path = hive_path
 )
 
-read_anchor_hive(hive_path)[, .(variable_id, person_id, value, date)]
+get_anchor_result(metadata, hive_path, result_shape = "long")[
+  , .(variable_id, person_id, value, date)
+]
 #>           variable_id person_id  value       date
 #> 1: flu_vaccine_recent         1   TRUE 2023-12-01
 #> 2:  recent_hosp_count         2      1 2023-11-01
 ```
 
-Only `flu_vaccine_recent`'s partition changed (now reflecting the 2023-12-01 record); `recent_hosp_count`, untouched by the second call, kept its original value. (`read_anchor_hive()` is a small helper for reading a hive back with DuckDB, see its definition in the test suite's `helper-fixtures.R` if you want the equivalent query yourself.)
+Only `flu_vaccine_recent`'s partition changed (now reflecting the 2023-12-01 record); `recent_hosp_count`, untouched by the second call, kept its original value.
 
 ## A non-default anchor column
 
@@ -288,11 +295,13 @@ anchor(
   population, metadata, concepts,
   anchor_col = "index_date", anchor_hive_path = hive_path
 )
-read_anchor_hive(hive_path)[, .(person_id, T0, value, date)]
+get_anchor_result(metadata, hive_path, result_shape = "long")[
+  , .(person_id, T0, value, date)
+]
 #>    person_id         T0  value       date
 #> 1:         1 2024-01-01   TRUE 2023-10-01
 ```
 
 ## Extending beyond a fixed offset
 
-`GENERIC` covers "the window is always N days around one anchor date." If a study variable instead needs a window built from a *recurring* event (multiple pregnancies, repeated hospitalizations, ...), that's what the episode-based constructors in [pregnancy_windows_usage.md](pregnancy_windows_usage.md) are for, same `population`/`metadata`/`concepts`/`anchor()` workflow, just a different `constructor` value and one extra population column. For anything else entirely bespoke, `make_constructor()` lets you build and register a new window shape without editing anchoR itself.
+`GENERIC` covers "the window is always N days around one anchor date." If a study variable instead needs a window built from a *recurring* event (multiple pregnancies, repeated hospitalizations, ...), that's what the episode-based constructors in [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) are for, same `population`/`metadata`/`concepts`/`anchor()` workflow, just a different `constructor` value and one extra population column. For anything else entirely bespoke, `make_constructor()` lets you build and register a new window shape without editing anchoR itself.
