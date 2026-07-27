@@ -477,6 +477,11 @@ imputing_missing <- function(wide_anchored, metadata) {
 
       if (i_variable_type %in% c("TF", "BOOL", "BOOLEAN", "LOGICAL")) {
         # Report invalid values
+        # Identify invalid non-missing values
+        invalid_rows <- wide_anchored[
+          !is.na(get(value_col)) &
+            !(get(value_col) %in% c(TRUE, 1, "TRUE", "1"))
+        ]
         if (nrow(invalid_rows) > 0) {
           warning(
             sprintf(
