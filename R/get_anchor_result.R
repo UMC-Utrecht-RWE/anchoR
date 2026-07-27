@@ -478,7 +478,7 @@ imputing_missing <- function(wide_anchored, metadata) {
       if (i_variable_type %in% c("TF", "BOOL", "BOOLEAN", "LOGICAL")) {
         # Report invalid values
         if (nrow(invalid_rows) > 0) {
-          warning(
+          logger::log_warn(
             sprintf(
               "Variable '%s' contains %d invalid boolean value(s): %s. They will be replaced with TRUE.",
               value_col,
