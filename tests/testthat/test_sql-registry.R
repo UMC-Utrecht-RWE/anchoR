@@ -141,7 +141,11 @@ testthat::test_that("run_selector_queries reports selector context on error", {
   environment(query_fn) <- list2env(
     list(
       run_selector_query = function(
-        con, selector, anchor_hive_path = NULL, accumulate_table = NULL
+        con,
+        selector,
+        anchor_hive_path = NULL,
+        accumulate_table = NULL,
+        selector_env = globalenv()
       ) {
         stop("boom", call. = FALSE)
       }
