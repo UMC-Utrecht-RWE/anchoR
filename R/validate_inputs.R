@@ -40,7 +40,10 @@ population_columns_for_window <- function(population_dt, metadata_dt) {
   population_dt[, needed_cols, with = FALSE]
 }
 
-metadata_supported_selectors <- function(metadata_dt, selector_env = globalenv()) {
+metadata_supported_selectors <- function(
+  metadata_dt,
+  selector_env = globalenv()
+) {
   # Selector validation happens before any SQL runs so unsupported study
   # variables fail with a metadata error instead of a late database error.
   # A selector missing from the bundled list isn't necessarily unsupported
