@@ -126,6 +126,35 @@ selector_sql_path <- function(selector) {
   sql_path
 }
 
+#' Check Whether a Built-in SQL Template Exists for a Selector
+#'
+#' Non-throwing counterpart to `selector_sql_path()`, used by
+#' `resolve_selector_sql()`/`selector_is_resolvable()` to check the package
+#' templates before falling back to a caller-defined selector.
+#'
+#' @param selector Selector name such as `"LATEST"` or `"COUNT"`.
+#' @return `TRUE` if a bundled `inst/sql/<selector>.sql` template exists.
+#' @keywords internal
+selector_sql_exists <- function(selector) {
+  sql_path <- file.path(
+    selector_sql_root(),
+    paste0(tolower(normalize_selector_name(selector[[1L]])), ".sql")
+  )
+  file.exists(sql_path)
+}
+
+#' Read a Built-in Selector's SQL Template
+#'
+#' @param selector Selector name such as `"LATEST"` or `"COUNT"`.
+#' @return SQL text (a single string) read from `inst/sql`.
+#' @keywords internal
+read_builtin_selector_sql <- function(selector) {
+  paste(
+    readLines(selector_sql_path(selector), warn = FALSE),
+    collapse = "\n"
+  )
+}
+
 add_parquet_export <- function(sql_query, anchor_hive_path, selector = NULL) {
   # This helper is for SQL templates that export concept subsets to Parquet
   # files instead of returning them as query results.
@@ -200,22 +229,23 @@ add_table_accumulation <- function(sql_query, table_name) {
   sprintf("INSERT INTO %s BY NAME (%s);", table_name, sql_query)
 }
 
-read_selector_sql_query <- function(selector) {
-  # Keeping SQL in separate template files makes the selector logic inspectable
-  # and editable without embedding large query strings inside R functions.
-  paste(
-    readLines(selector_sql_path(selector), warn = FALSE),
-    collapse = "\n"
-  )
+read_selector_sql_query <- function(selector, selector_env = globalenv()) {
+  # Keeping built-in SQL in separate template files makes the selector logic
+  # inspectable and editable without embedding large query strings inside R
+  # functions. A selector not bundled with the package is resolved from
+  # `selector_env` instead see `resolve_selector_sql()` and
+  # `make_selector()`.
+  resolve_selector_sql(selector, selector_env)
 }
 
 run_selector_query <- function(
   con,
   selector,
   anchor_hive_path = NULL,
-  accumulate_table = NULL
+  accumulate_table = NULL,
+  selector_env = globalenv()
 ) {
-  query <- read_selector_sql_query(selector)
+  query <- read_selector_sql_query(selector, selector_env)
   sql <- if (is.null(accumulate_table)) {
     add_parquet_export(query, anchor_hive_path, selector)
   } else {
@@ -234,13 +264,19 @@ run_selector_query <- function(
 #'   this table instead of being written to `anchor_hive_path` -- the
 #'   caller is then responsible for exporting the table to parquet itself
 #'   (see `add_parquet_export()`).
+#' @param selector_env Environment searched for user-defined selectors (see
+#'   `make_selector()`) once the bundled `inst/sql` templates come up empty.
+#'   Defaults to `globalenv()`, the same default `define_window()` uses for
+#'   `constructor_env`, so a selector assigned at the top level of a user's
+#'   script is picked up automatically.
 #' @keywords internal
 #' @noRd
 run_selector_queries <- function(
   con,
   selectors,
   anchor_hive_path = NULL,
-  accumulate_table = NULL
+  accumulate_table = NULL,
+  selector_env = globalenv()
 ) {
   if (
     is.null(accumulate_table) &&
@@ -269,7 +305,8 @@ run_selector_queries <- function(
             con,
             selector_name,
             anchor_hive_path = anchor_hive_path,
-            accumulate_table = accumulate_table
+            accumulate_table = accumulate_table,
+            selector_env = selector_env
           ),
           warning = function(w) {
             logger::log_warn(
