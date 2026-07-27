@@ -40,13 +40,22 @@ population_columns_for_window <- function(population_dt, metadata_dt) {
   population_dt[, needed_cols, with = FALSE]
 }
 
-metadata_supported_selectors <- function(metadata_dt) {
+metadata_supported_selectors <- function(metadata_dt, selector_env = globalenv()) {
   # Selector validation happens before any SQL runs so unsupported study
   # variables fail with a metadata error instead of a late database error.
+  # A selector missing from the bundled list isn't necessarily unsupported
+  # it may be a custom one built with `make_selector()` and assigned in
+  # `selector_env` (mirroring how `resolve_window_constructor()` treats
+  # `constructor_env` for window constructors), so those are checked
+  # individually via `selector_is_resolvable()` before being flagged.
   supported_selectors <- available_selectors()
   unsupported_selectors <- setdiff(
     unique(metadata_dt$selector),
     supported_selectors
+  )
+  unsupported_selectors <- Filter(
+    function(selector) !selector_is_resolvable(selector, selector_env),
+    unsupported_selectors
   )
 
   if (length(unsupported_selectors) > 0L) {
