@@ -71,12 +71,10 @@ metadata_supported_selectors <- function(metadata_dt) {
 
 metadata_range_count_bounds <- function(metadata_dt) {
   # `inst/sql/range_count.sql` filters out any row where range_min/range_max
-  # are NULL, so a RANGE_COUNT variable missing bounds doesn't error -- it
-  # just silently produces no output rows, indistinguishable from "no
-  # matching concepts". This only warns (not stops) because a mixed
-  # metadata file -- some RANGE_COUNT rows configured, some not -- is still
-  # otherwise runnable, the same permissive spirit as
-  # `filter_supported_metadata()`.
+  # are NULL, so a RANGE_COUNT variable missing bounds doesn't error, it
+  # just silently produces no output rows,
+  # Here, if RANGE_COUNT rows are missing bounds, we log a warning but keep all
+  # runnable, the same permissive spirit as `filter_supported_metadata()`.
   range_count_rows <- metadata_dt[selector == "RANGE_COUNT"]
 
   if (nrow(range_count_rows) == 0L) {

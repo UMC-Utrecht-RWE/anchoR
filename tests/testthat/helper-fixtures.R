@@ -21,7 +21,9 @@ minimal_metadata <- function() {
     constructor = c("GENERIC", "GENERIC", "GENERIC"),
     selector = c("LATEST", "COUNT", "RANGE_COUNT"),
     start_offset = c(-30L, -90L, -30L),
-    end_offset = c(0L, 0L, 30L)
+    end_offset = c(0L, 0L, 30L),
+    range_min = c(NA_real_, NA_real_, 0),
+    range_max = c(NA_real_, NA_real_, 10)
   )
 }
 # minimal concepts data.table contains columns:
