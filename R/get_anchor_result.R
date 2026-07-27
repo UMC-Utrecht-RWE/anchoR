@@ -485,7 +485,8 @@ imputing_missing <- function(wide_anchored, metadata) {
         if (nrow(invalid_rows) > 0) {
           logger::log_warn(
             sprintf(
-              "Variable '%s' contains %d invalid boolean value(s): %s. They will be replaced with TRUE.",
+              "Variable '%s' contains %d invalid boolean value(s): %s.
+              They will be replaced with TRUE.",
               value_col,
               nrow(invalid_rows),
               paste(unique(invalid_rows[[value_col]]), collapse = ", ")
@@ -501,7 +502,6 @@ imputing_missing <- function(wide_anchored, metadata) {
             !(get(value_col) %in% c(TRUE, 1, "TRUE", "1")),
           (value_col) := TRUE
         ]
-
       } else if (i_variable_type %in% c("CAT", "FACTOR")) {
         wide_anchored[is.na(get(value_col)), (value_col) := 0]
       }
