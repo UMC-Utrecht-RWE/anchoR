@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # List of releases
 - unreleased: https://github.com/UMC-Utrecht-RWE/anchoR@main
+- v1.4.3 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.3
 - v1.4.2 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.2
 - v1.4.1.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1.1
 - v1.4.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1
