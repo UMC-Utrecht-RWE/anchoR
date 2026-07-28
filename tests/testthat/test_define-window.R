@@ -15,7 +15,7 @@ testthat::test_that("cross_join_population_metadata works as expected", {
     names(res),
     c(
       "person_id", "T0", "variable_id", "concept_id", "constructor",
-      "selector", "start_offset", "end_offset"
+      "selector", "start_offset", "end_offset", "range_min", "range_max"
     )
   )
 })

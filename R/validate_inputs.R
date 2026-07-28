@@ -71,6 +71,43 @@ metadata_supported_selectors <- function(metadata_dt) {
   invisible(metadata_dt)
 }
 
+metadata_range_count_bounds <- function(metadata_dt) {
+  # `inst/sql/range_count.sql` filters out any row where range_min/range_max
+  # are NULL, so a RANGE_COUNT variable missing bounds doesn't error, it
+  # just silently produces no output rows,
+  # Here, if RANGE_COUNT rows are missing bounds, we log a warning but keep all
+  # runnable, the same permissive spirit as `filter_supported_metadata()`.
+  range_count_rows <- metadata_dt[selector == "RANGE_COUNT"]
+
+  if (nrow(range_count_rows) == 0L) {
+    return(invisible(metadata_dt))
+  }
+
+  has_bounds_cols <- all(
+    c("range_min", "range_max") %in% names(range_count_rows)
+  )
+  missing_bounds <- if (!has_bounds_cols) {
+    range_count_rows
+  } else {
+    range_count_rows[is.na(range_min) | is.na(range_max)]
+  }
+
+  if (nrow(missing_bounds) > 0L) {
+    msg <- sprintf(
+      paste(
+        "`metadata` has RANGE_COUNT row(s) missing `range_min`/`range_max`:",
+        "%s. Both bounds are required for a RANGE_COUNT selector to match",
+        "any rows; these will silently produce no output."
+      ),
+      paste(unique(missing_bounds$variable_id), collapse = ", ")
+    )
+    logger::log_warn(msg)
+    base::warning(msg, call. = FALSE)
+  }
+
+  invisible(metadata_dt)
+}
+
 normalize_concepts_input <- function(concepts) {
   concepts_type <- concepts_input_type(concepts)
 
@@ -221,6 +258,7 @@ validate_anchor_inputs <- function(
 
   population_anchor_columns(population_dt, metadata_dt)
   metadata_supported_selectors(metadata_dt)
+  metadata_range_count_bounds(metadata_dt)
 
   concepts_obj <- NULL
   if (!is.null(concepts)) {
