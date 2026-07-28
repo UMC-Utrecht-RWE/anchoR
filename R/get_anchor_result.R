@@ -433,8 +433,32 @@ imputing_missing <- function(wide_anchored, metadata) {
       # integer variable is left as is.
 
       if (i_variable_type %in% c("TF", "BOOL", "BOOLEAN", "LOGICAL")) {
-        wide_anchored[is.na(get(value_col)), (value_col) := FALSE]
-        wide_anchored[, (value_col) := as.logical(get(value_col))]
+        # Report invalid values
+        # Identify invalid non-missing values
+        invalid_rows <- wide_anchored[
+          !is.na(get(value_col)) &
+            !(get(value_col) %in% c(TRUE, 1, "TRUE", "1"))
+        ]
+        if (nrow(invalid_rows) > 0) {
+          logger::log_warn(
+            sprintf(
+              "Variable '%s' contains %d invalid boolean value(s): %s.
+              They will be replaced with TRUE.",
+              value_col,
+              nrow(invalid_rows),
+              paste(unique(invalid_rows[[value_col]]), collapse = ", ")
+            )
+          )
+
+          print(invalid_rows)
+        }
+
+        # Replace invalid values with TRUE
+        wide_anchored[
+          !is.na(get(value_col)) &
+            !(get(value_col) %in% c(TRUE, 1, "TRUE", "1")),
+          (value_col) := TRUE
+        ]
       } else if (i_variable_type %in% c("CAT", "FACTOR")) {
         wide_anchored[is.na(get(value_col)), (value_col) := 0]
       }
