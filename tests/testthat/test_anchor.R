@@ -765,3 +765,64 @@ testthat::test_that(
     )
   }
 )
+
+testthat::test_that(
+  "prepare_con lets MASK_COUNT run by loading concept_ranges first",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    # Same concepts/concept_ranges fixture as the direct-SQL
+    # "mask_count selector buckets the raw count via concept_ranges" test in
+    # test_selectors.R (p1: 0 matches, p2: 1, p3: 3, p4: 5), driven through
+    # anchor() this time instead of a hand-built population_windows table.
+    # population/metadata are built so define_window() reproduces that same
+    # test's window (2024-01-01 to 2024-12-31) for every person.
+    population <- data.table::data.table(
+      person_id = c("p1", "p2", "p3", "p4"),
+      T0 = as.Date("2024-06-01")
+    )
+    metadata <- data.table::data.table(
+      variable_id = "v1",
+      concept_id = "C1",
+      constructor = "GENERIC",
+      selector = "MASK_COUNT",
+      start_offset = -152L,
+      end_offset = 213L
+    )
+    concepts <- data.table::data.table(
+      person_id = c("p2", "p3", "p3", "p3", "p4", "p4", "p4", "p4", "p4"), # nolint p1 not in concepts
+      concept_id = "C1",
+      date = as.Date(c(
+        "2024-03-01",
+        "2024-03-01", "2024-04-01", "2024-05-01",
+        "2024-01-15", "2024-02-15", "2024-03-15", "2024-04-15", "2024-05-15"
+      )),
+      value = NA_character_
+    )
+    concept_ranges <- data.table::data.table(
+      concept_id = "C1",
+      new_value = c(1, 2, 3, 4),
+      lower_range = c(0, 1, 3, 5),
+      upper_range = c(0, 2, 4, 99999)
+    )
+
+    anchor(
+      population = population,
+      metadata = metadata,
+      concepts = concepts,
+      anchor_hive_path = hive_path,
+      prepare_con = function(con) {
+        DBI::dbWriteTable(con, "concept_ranges", concept_ranges)
+      }
+    )
+
+    anchored <- read_anchor_hive(hive_path)
+    data.table::setorder(anchored, person_id)
+
+    testthat::expect_equal(anchored$person_id, c("p2", "p3", "p4"))
+    testthat::expect_equal(anchored$value, c("2", "3", "4"))
+    testthat::expect_equal(anchored$n, c(1L, 3L, 5L))
+  }
+)
