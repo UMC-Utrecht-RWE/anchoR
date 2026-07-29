@@ -19,7 +19,7 @@ minimal_metadata <- function() {
     variable_id = c("cov_latest", "cov_count", "lab_range"),
     concept_id = c("COV_A", "COV_B", "LAB_X"),
     constructor = c("GENERIC", "GENERIC", "GENERIC"),
-    selector = c("LATEST", "COUNT", "MASK_COUNT"),
+    selector = c("LATEST", "COUNT", "EARLIEST"),
     start_offset = c(-30L, -90L, -30L),
     end_offset = c(0L, 0L, 30L),
     range_min = c(NA_real_, NA_real_, 0),
@@ -73,7 +73,7 @@ minimal_output <- function() {
     value = c(
       c("TRUE", NA, NA, NA, NA),
       c(NA, "1", "1", NA, NA),
-      c(0, 0, 0, 0, 0)
+      c(NA, NA, NA, NA, NA)
     )
   )
 }

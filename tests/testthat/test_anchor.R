@@ -316,7 +316,7 @@ testthat::test_that(
   "chunk_size batches variables (multiple selectors) without changing output",
   {
     # minimal_metadata() spans three different selectors (LATEST, COUNT,
-    # MASK_COUNT), so batching all three variables into one chunk exercises
+    # EARLIEST), so batching all three variables into one chunk exercises
     # one selector query per selector instead of per variable_id.
     metadata <- minimal_metadata()
 
@@ -362,12 +362,12 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    # `lab_range`'s selector (MASK_COUNT) sorts last among the three
-    # selectors in `minimal_metadata()`, so with `chunk_size = 1` it lands in
-    # the final chunk -- `cov_count` and `cov_latest` succeed in earlier
-    # chunks before this one fails.
+    # `cov_latest`'s selector (LATEST) sorts last among the three selectors
+    # in `minimal_metadata()`, so with `chunk_size = 1` it lands in the final
+    # chunk -- `cov_count` and `lab_range` succeed in earlier chunks before
+    # this one fails.
     metadata <- minimal_metadata()
-    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+    metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
       anchor_by_variable(
@@ -380,7 +380,7 @@ testthat::test_that(
       "Window function does not exist"
     )
 
-    # Even though cov_count and cov_latest were computed successfully before
+    # Even though cov_count and lab_range were computed successfully before
     # the failing chunk, nothing should have been published.
     testthat::expect_length(list.files(hive_path, recursive = TRUE), 0L)
   }
@@ -432,12 +432,15 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    # Same setup as the all-or-nothing test above (lab_range fails and sorts
-    # into the final chunk), but with publish = "per_chunk" the opposite is
-    # expected: cov_count and cov_latest should already be on disk by the
-    # time lab_range's chunk fails.
-    metadata <- minimal_metadata()
-    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+    # `cov_count` (COUNT) sorts before `cov_latest` (LATEST), so with
+    # chunk_size = 1 it lands in the earlier chunk and has real matching
+    # output (unlike `lab_range`, whose concept never matches anything) --
+    # restricting to these two variables keeps this test's success/failure
+    # split meaningful. With publish = "per_chunk" the opposite of the
+    # all-or-nothing test above is expected: cov_count should already be on
+    # disk by the time cov_latest's chunk fails.
+    metadata <- minimal_metadata()[variable_id %in% c("cov_count", "cov_latest")]
+    metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
       anchor_by_variable(
@@ -452,9 +455,7 @@ testthat::test_that(
     )
 
     anchored <- read_anchor_hive(hive_path)
-    testthat::expect_setequal(
-      unique(anchored$variable_id), c("cov_count", "cov_latest")
-    )
+    testthat::expect_equal(unique(anchored$variable_id), "cov_count")
   }
 )
 
@@ -465,8 +466,8 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    metadata <- minimal_metadata()
-    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+    metadata <- minimal_metadata()[variable_id %in% c("cov_count", "cov_latest")]
+    metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
       anchor_by_variable(
@@ -482,9 +483,7 @@ testthat::test_that(
     )
 
     anchored <- read_anchor_hive(hive_path)
-    testthat::expect_setequal(
-      unique(anchored$variable_id), c("cov_count", "cov_latest")
-    )
+    testthat::expect_equal(unique(anchored$variable_id), "cov_count")
   }
 )
 
@@ -699,7 +698,7 @@ testthat::test_that(
 testthat::test_that(
   "anchor_by_selector batches variables by selector and matches anchor()",
   {
-    # minimal_metadata() spans three selectors (LATEST, COUNT, MASK_COUNT),
+    # minimal_metadata() spans three selectors (LATEST, COUNT, EARLIEST),
     # so this exercises one anchor() call per selector.
     metadata <- minimal_metadata()
 
@@ -727,7 +726,7 @@ testthat::test_that(
     )
 
     testthat::expect_setequal(
-      processed_selectors, c("LATEST", "COUNT", "MASK_COUNT")
+      processed_selectors, c("LATEST", "COUNT", "EARLIEST")
     )
 
     result_cols <- c("person_id", "T0", "variable_id", "value", "date", "n")
