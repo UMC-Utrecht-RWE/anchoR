@@ -2,7 +2,7 @@ testthat::test_that("available_selectors lists bundled SQL templates", {
   selectors <- available_selectors()
 
   testthat::expect_true(
-    all(c("LATEST", "EARLIEST", "COUNT", "MASK_COUNT", "ALL") %in% selectors)
+    all(c("LATEST", "EARLIEST", "COUNT", "COUNT_CATEGORY", "ALL") %in% selectors)
   )
   testthat::expect_true("COUNT_MORE_THAN_1" %in% selectors)
 })
@@ -45,7 +45,7 @@ testthat::test_that(
 )
 
 testthat::test_that(
-  "mask_count selector buckets the raw count via concept_ranges",
+  "count_category selector buckets the raw count via concept_ranges",
   {
     con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
     withr::defer(DBI::dbDisconnect(con, shutdown = TRUE))
@@ -58,7 +58,7 @@ testthat::test_that(
       variable_id = "v1",
       concept_id = "C1",
       window_name = "w",
-      selector = "MASK_COUNT",
+      selector = "COUNT_CATEGORY",
       window_start = as.Date("2024-01-01"),
       window_end = as.Date("2024-12-31")
     ))
@@ -82,7 +82,7 @@ testthat::test_that(
     ))
 
     result <- data.table::as.data.table(
-      DBI::dbGetQuery(con, read_selector_sql_query("MASK_COUNT"))
+      DBI::dbGetQuery(con, read_selector_sql_query("COUNT_CATEGORY"))
     )
     data.table::setorder(result, person_id)
 

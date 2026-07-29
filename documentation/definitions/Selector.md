@@ -12,10 +12,12 @@ Candidate windows are not deduplicated before the join. If candidate windows ove
 | `EARLIEST`          | Record on the earliest matching date.                                                                                                        |
 | `COUNT`             | Number of matches as `value`; latest matching date as `date`.                                                                                |
 | `COUNT_MORE_THAN_1` | `value = "TRUE"` only for two or more matches; otherwise no row.                                                                             |
-| `MASK_COUNT`        | It casts `value` to a number and masks values within inclusive `lower_range`/`upper_range` bounds from user provided `concept_ranges` table. |
+| `COUNT_CATEGORY`    | Counts matches like `COUNT`, then looks up that count in a `concept_ranges` table (matched on `concept_id`, count within inclusive `lower_range`/`upper_range` bounds) to return a bucketed category as `value` instead of the raw count. |
 | `ALL`               | Every matching record, one output row per record.                                                                                            |
 
 A window with zero matches produces no persisted row for any selector. `COUNT` therefore does not persist zeroes; population-complete zero/false values can be introduced later in wide output using documented imputation rules.
+
+`COUNT_CATEGORY` requires a `concept_ranges` table (columns `concept_id`, `new_value`, `lower_range`, `upper_range`) to exist in the DuckDB session before it runs; unlike `concepts`, this is not an `anchor()` argument, since `concept_ranges` is loaded via the `prepare_con` hook (see `anchor()`'s documentation), e.g. `anchor(..., prepare_con = function(con) DBI::dbWriteTable(con, "concept_ranges", my_ranges))`.
 
 `LATEST` and `EARLIEST` compare dates first. If records share the selected date, the lexicographically largest normalized character `value` breaks the tie. Null values are normalized consistently with selector output. This makes the result deterministic but may differ from numeric ordering (for example, `"9"` sorts after `"10"`); deduplicate upstream when another tie rule is scientifically required.
 

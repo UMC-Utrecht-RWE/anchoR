@@ -40,7 +40,7 @@ The same person may have multiple rows for one concept, and records may fall ins
 
 - Window bounds are inclusive: matching SQL uses `date BETWEEN window_start AND window_end`.
 - `LATEST` and `EARLIEST` select by date. If records tie on the selected date, the lexicographically largest normalized character `value` breaks the tie, producing one row.
-- `MASK_COUNT` casts `value` to a number and masks values within inclusive `lower_range`/`upper_range` bounds from user provided `concept_ranges` table.
+- `COUNT_CATEGORY` counts matches per person/window like `COUNT`, then looks up that count in a user-provided `concept_ranges` table (matched on `concept_id`, count falling within inclusive `lower_range`/`upper_range` bounds) to return a bucketed category instead of the raw count.
 - Boolean presence concepts commonly use `"TRUE"`, but anchoR does not require that convention.
 
 See [definitions/Selector.md](definitions/Selector.md) for the complete selector contract.

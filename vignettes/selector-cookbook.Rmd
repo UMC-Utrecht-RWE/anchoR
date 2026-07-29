@@ -16,10 +16,10 @@ Selectors reduce concept matches after inclusive window filtering. This example 
 
 ```{r inputs}
 population <- data.table(person_id = "1", T0 = as.Date("2024-01-10"))
-# MASK_COUNT is excluded here: it looks up its output value from a
+# COUNT_CATEGORY is excluded here: it looks up its output value from a
 # user-supplied `concept_ranges` table, which this single-concepts-table demo
-# does not provide (see the MASK_COUNT bullet below).
-selectors <- setdiff(available_selectors(), "MASK_COUNT")
+# does not provide (see the COUNT_CATEGORY bullet below).
+selectors <- setdiff(available_selectors(), "COUNT_CATEGORY")
 metadata <- data.table(
   variable_id = paste0("example_", tolower(selectors)),
   concept_id = "MEASURE",
@@ -49,7 +49,7 @@ Important details:
 - `COUNT` persists only when at least one record matches; it does not write zero rows.
 - `COUNT_MORE_THAN_1` writes `TRUE` only for two or more joined matches.
 - `ALL` returns every joined match and normally requires long output.
-- `MASK_COUNT` counts joined matches like `COUNT`, then looks up that count in a `concept_ranges` table (matched on `concept_id`, with the count falling between `lower_range` and `upper_range`) to return a bucketed value instead of the raw count.
+- `COUNT_CATEGORY` counts joined matches like `COUNT`, then looks up that count in a `concept_ranges` table (matched on `concept_id`, with the count falling between `lower_range` and `upper_range`) to return a bucketed value instead of the raw count.
 - Overlapping candidate windows can join the same concept record multiple times.
 
 Selector output `value` is character in persisted/public long results. Convert it to the type you need after retrieval rather than assuming the source type survives every SQL selector.

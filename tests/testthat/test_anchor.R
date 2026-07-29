@@ -771,14 +771,14 @@ testthat::test_that(
 )
 
 testthat::test_that(
-  "prepare_con lets MASK_COUNT run by loading concept_ranges first",
+  "prepare_con lets COUNT_CATEGORY run by loading concept_ranges first",
   {
     hive_path <- tempfile(pattern = "anchor-hive-")
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
     # Same concepts/concept_ranges fixture as the direct-SQL
-    # "mask_count selector buckets the raw count via concept_ranges" test in
+    # "count_category selector buckets the raw count via concept_ranges" test in
     # test_selectors.R (p1: 0 matches, p2: 1, p3: 3, p4: 5), driven through
     # anchor() this time instead of a hand-built population_windows table.
     # population/metadata are built so define_window() reproduces that same
@@ -791,7 +791,7 @@ testthat::test_that(
       variable_id = "v1",
       concept_id = "C1",
       constructor = "GENERIC",
-      selector = "MASK_COUNT",
+      selector = "COUNT_CATEGORY",
       start_offset = -152L,
       end_offset = 213L
     )

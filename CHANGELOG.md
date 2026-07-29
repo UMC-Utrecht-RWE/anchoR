@@ -12,12 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `RANGE_COUNT` has been removed because not confirm with requests and specifications. All connected functionalities are also removed.
 
 ### Added
-- `MASK_COUNT` in `mask_count.sql`: counts matching `concepts` rows per person/window like `COUNT` does, then looks up that count in a user-supplied `concept_ranges` table and to return a bucketed `new_value` instead of the raw count.
-- `anchor()`, `anchor_by_variable()`, and `anchor_by_selector()` gain a `prepare_con` argument: an optional function called once, on the same DuckDB connection, right after `concepts` is loaded and before any selector query runs. Lets a caller load extra tables a selector needs (e.g. `MASK_COUNT`'s `concept_ranges`) with plain `DBI` calls, without the package needing to know about them; connection lifecycle (opening/closing) stays owned by the package.
+- `COUNT_CATEGORY` in `count_category.sql`: counts matching `concepts` rows per person/window like `COUNT` does, then looks up that count in a user-supplied `concept_ranges` table and to return a bucketed `new_value` instead of the raw count.
+- `anchor()`, `anchor_by_variable()`, and `anchor_by_selector()` gain a `prepare_con` argument: an optional function called once, on the same DuckDB connection, right after `concepts` is loaded and before any selector query runs. Lets a caller load extra tables a selector needs (e.g. `COUNT_CATEGORY`'s `concept_ranges`) with plain `DBI` calls, without the package needing to know about them; connection lifecycle (opening/closing) stays owned by the package.
 
 ### Fixed
-- `mask_count.sql` no longer wraps its bucketing `CASE` inside `COUNT(...)` (which just counted rows, identical to `COUNT(*)`, since every branch was non-`NULL`) and no longer references `w.value`, a column that doesn't exist on `population_windows`. It's now a two-step query: count matches, then join the count against `concept_ranges`. Also casts the looked-up bucket value through `BIGINT` before `VARCHAR` so it renders as `"2"` instead of `"2.0"` when `concept_ranges$new_value` is a double (the common case when read from a CSV).
-- `vignettes/selector-cookbook.Rmd` excludes `MASK_COUNT` from its "every bundled selector" demo (it needs a `concept_ranges` table the vignette's single-`concepts`-table example doesn't provide) and no longer references the removed `RANGE_COUNT` selector.
+- `count_category.sql` no longer wraps its bucketing `CASE` inside `COUNT(...)` (which just counted rows, identical to `COUNT(*)`, since every branch was non-`NULL`) and no longer references `w.value`, a column that doesn't exist on `population_windows`. It's now a two-step query: count matches, then join the count against `concept_ranges`. Also casts the looked-up bucket value through `BIGINT` before `VARCHAR` so it renders as `"2"` instead of `"2.0"` when `concept_ranges$new_value` is a double (the common case when read from a CSV).
+- `vignettes/selector-cookbook.Rmd` excludes `COUNT_CATEGORY` from its "every bundled selector" demo (it needs a `concept_ranges` table the vignette's single-`concepts`-table example doesn't provide) and no longer references the removed `RANGE_COUNT` selector.
 
 ## [v1.4.3]
 

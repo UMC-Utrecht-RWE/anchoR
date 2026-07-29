@@ -31,8 +31,6 @@ if (getRversion() >= "2.15.1") {
       "concept_id",
       "i.derived_t0",
       "person_id",
-      "range_max",
-      "range_min",
       "selector",
       "value",
       "variable_id",

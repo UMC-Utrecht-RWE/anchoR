@@ -34,13 +34,7 @@ directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
 
 \item{prepare_con}{Optional function taking a single argument (the open
-DBI connection selector queries run against). Called once, after
-\code{concepts} is loaded and before any selector query runs, so a
-selector that references its own extra table (e.g. \code{MASK_COUNT}'s
-\code{concept_ranges}) can have that table ready. Use
-\code{DBI::dbWriteTable()}, \code{DBI::dbExecute(con, "ATTACH ...")}, or
-similar inside it; the connection's own lifecycle stays managed by
-\code{anchor()} regardless.}
+DBI connection selector queries run against).}
 }
 \value{
 Invisibly returns the selector values that were processed.

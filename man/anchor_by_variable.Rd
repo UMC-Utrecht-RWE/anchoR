@@ -59,13 +59,7 @@ instead. See Details.}
 \code{"per_chunk"} after each batch, incrementally. See Details.}
 
 \item{prepare_con}{Optional function taking a single argument (the open
-DBI connection selector queries run against). Called once, after
-\code{concepts} is loaded and before any selector query runs, so a
-selector that references its own extra table (e.g. \code{MASK_COUNT}'s
-\code{concept_ranges}) can have that table ready. Use
-\code{DBI::dbWriteTable()}, \code{DBI::dbExecute(con, "ATTACH ...")}, or
-similar inside it; the connection's own lifecycle stays managed by
-\code{anchor()} regardless.}
+DBI connection selector queries run against).}
 }
 \value{
 Invisibly returns the variable ids that were processed.
