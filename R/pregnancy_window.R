@@ -244,3 +244,37 @@ outside_all_preg_window <- make_constructor(
   ),
   check_fn = generic_window_check
 )
+
+
+each_preg_window <- make_constructor(
+  transform_fn = function(window_dt) {
+    output_rows <- vector("list", nrow(window_dt))
+
+    for (i in seq_len(nrow(window_dt))) {
+      row <- window_dt[i]
+      events <- data.table::as.data.table(row[[row$event_col]][[1]])
+      if (nrow(events) == 0L) next
+
+      output_rows[[i]] <- cbind(
+        row[rep(1L, nrow(events))],
+        data.table::data.table(
+          window_start = as.Date(events$event_start + events$start_offset),
+          window_end   = as.Date(events$event_end)
+        )
+      )
+    }
+
+    non_empty <- Filter(Negate(is.null), output_rows)
+    if (length(non_empty) == 0L) {
+      return(window_dt[0])
+    }
+    data.table::rbindlist(non_empty, use.names = TRUE, fill = TRUE)[]
+  },
+  required_cols = "event_col"
+)
+
+episodes <- data.table::data.table(
+  event_start  = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
+  event_end    = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01")),
+  start_offset = c(0L, 30L, -14L) # each pregnancy gets its own value
+)

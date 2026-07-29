@@ -15,12 +15,12 @@ Every constructor in this family answers the same two questions about a person's
 
 There is one shared internal engine underneath (`event_window_engine()`); the four public constructor names below are that engine pre-configured with a selection rule. Users interact with it through `define_window()` or `anchor()`, rather than calling the internal engine directly.
 
-| `constructor`                | Selects                         | Window                                                       |
-| ---------------------------- | ------------------------------- | ------------------------------------------------------------ |
-| [IN_PRIOR_PREG](definitions/IN_PRIOR_PREG.md) | every episode ending before `T0` | `episode_start + start_offset` to `episode_end + end_offset` |
-| [SINCE_START_CURRENT_PREG](definitions/SINCE_START_CURRENT_PREG.md) | the episode containing `T0` | `episode_start + start_offset` to `T0 + end_offset` |
-| [ANYTIME_CURRENT_PREG](definitions/ANYTIME_CURRENT_PREG.md) | the episode containing `T0` | `episode_start + start_offset` to `episode_end + end_offset` |
-| [OUTSIDE_ALL_PREG](definitions/OUTSIDE_ALL_PREG.md) | gaps between *all* episodes | each gap within `[T0 + start_offset, T0 + end_offset]` |
+| `constructor`                                                       | Selects                          | Window                                                       |
+| ------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------ |
+| [IN_PRIOR_PREG](definitions/IN_PRIOR_PREG.md)                       | every episode ending before `T0` | `episode_start + start_offset` to `episode_end + end_offset` |
+| [SINCE_START_CURRENT_PREG](definitions/SINCE_START_CURRENT_PREG.md) | the episode containing `T0`      | `episode_start + start_offset` to `T0 + end_offset`          |
+| [ANYTIME_CURRENT_PREG](definitions/ANYTIME_CURRENT_PREG.md)         | the episode containing `T0`      | `episode_start + start_offset` to `episode_end + end_offset` |
+| [OUTSIDE_ALL_PREG](definitions/OUTSIDE_ALL_PREG.md)                 | gaps between *all* episodes      | each gap within `[T0 + start_offset, T0 + end_offset]`       |
 
 `IN_PRIOR_PREG` can produce more than one candidate window per person (one per prior episode); `OUTSIDE_ALL_PREG` can too (one per gap). `anchoR` handles that automatically, see "Multiple candidate windows" below.
 
