@@ -316,7 +316,7 @@ testthat::test_that(
   "chunk_size batches variables (multiple selectors) without changing output",
   {
     # minimal_metadata() spans three different selectors (LATEST, COUNT,
-    # RANGE_COUNT), so batching all three variables into one chunk exercises
+    # MASK_COUNT), so batching all three variables into one chunk exercises
     # one selector query per selector instead of per variable_id.
     metadata <- minimal_metadata()
 
@@ -362,7 +362,7 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    # `lab_range`'s selector (RANGE_COUNT) sorts last among the three
+    # `lab_range`'s selector (MASK_COUNT) sorts last among the three
     # selectors in `minimal_metadata()`, so with `chunk_size = 1` it lands in
     # the final chunk -- `cov_count` and `cov_latest` succeed in earlier
     # chunks before this one fails.
@@ -699,7 +699,7 @@ testthat::test_that(
 testthat::test_that(
   "anchor_by_selector batches variables by selector and matches anchor()",
   {
-    # minimal_metadata() spans three selectors (LATEST, COUNT, RANGE_COUNT),
+    # minimal_metadata() spans three selectors (LATEST, COUNT, MASK_COUNT),
     # so this exercises one anchor() call per selector.
     metadata <- minimal_metadata()
 
@@ -727,7 +727,7 @@ testthat::test_that(
     )
 
     testthat::expect_setequal(
-      processed_selectors, c("LATEST", "COUNT", "RANGE_COUNT")
+      processed_selectors, c("LATEST", "COUNT", "MASK_COUNT")
     )
 
     result_cols <- c("person_id", "T0", "variable_id", "value", "date", "n")
