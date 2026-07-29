@@ -6,14 +6,14 @@ Each selector is implemented by `inst/sql/<selector>.sql`. The query joins conce
 
 Candidate windows are not deduplicated before the join. If candidate windows overlap, one concept record can match more than one window row and therefore be counted or returned more than once. Episode data or window definitions should avoid overlap when distinct-event counts are required.
 
-| selector | output |
-| --- | --- |
-| `LATEST` | Record on the latest matching date. |
-| `EARLIEST` | Record on the earliest matching date. |
-| `COUNT` | Number of matches as `value`; latest matching date as `date`. |
-| `COUNT_MORE_THAN_1` | `value = "TRUE"` only for two or more matches; otherwise no row. |
-| `RANGE_COUNT` | Count of records whose numeric value is within inclusive `[range_min, range_max]`; latest qualifying date as `date`. |
-| `ALL` | Every matching record, one output row per record. |
+| selector            | output                                                                                                                                       |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LATEST`            | Record on the latest matching date.                                                                                                          |
+| `EARLIEST`          | Record on the earliest matching date.                                                                                                        |
+| `COUNT`             | Number of matches as `value`; latest matching date as `date`.                                                                                |
+| `COUNT_MORE_THAN_1` | `value = "TRUE"` only for two or more matches; otherwise no row.                                                                             |
+| `MASK_COUNT`        | It casts `value` to a number and masks values within inclusive `lower_range`/`upper_range` bounds from user provided `concept_ranges` table. |
+| `ALL`               | Every matching record, one output row per record.                                                                                            |
 
 A window with zero matches produces no persisted row for any selector. `COUNT` therefore does not persist zeroes; population-complete zero/false values can be introduced later in wide output using documented imputation rules.
 

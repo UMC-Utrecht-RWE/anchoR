@@ -4,12 +4,12 @@
 
 ## Required columns
 
-| column | type | meaning |
-| --- | --- | --- |
-| `person_id` | character-compatible | Person identifier joined to `population$person_id`. |
-| `concept_id` | character-compatible | Identifier matched directly to `metadata$concept_id`. |
-| `date` | `Date` or date-compatible | Event date tested against inclusive window boundaries. |
-| `value` | any scalar type | Event value returned or interpreted by the selector. It is normalized to character for selector output. |
+| column       | type                      | meaning                                                                                                 |
+| ------------ | ------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `person_id`  | character-compatible      | Person identifier joined to `population$person_id`.                                                     |
+| `concept_id` | character-compatible      | Identifier matched directly to `metadata$concept_id`.                                                   |
+| `date`       | `Date` or date-compatible | Event date tested against inclusive window boundaries.                                                  |
+| `value`      | any scalar type           | Event value returned or interpreted by the selector. It is normalized to character for selector output. |
 
 The source may contain additional columns. anchoR selects only these four fields for selector queries.
 
@@ -40,7 +40,7 @@ The same person may have multiple rows for one concept, and records may fall ins
 
 - Window bounds are inclusive: matching SQL uses `date BETWEEN window_start AND window_end`.
 - `LATEST` and `EARLIEST` select by date. If records tie on the selected date, the lexicographically largest normalized character `value` breaks the tie, producing one row.
-- `RANGE_COUNT` casts `value` to a number and counts values within inclusive `range_min`/`range_max` bounds.
+- `MASK_COUNT` casts `value` to a number and masks values within inclusive `lower_range`/`upper_range` bounds from user provided `concept_ranges` table.
 - Boolean presence concepts commonly use `"TRUE"`, but anchoR does not require that convention.
 
 See [definitions/Selector.md](definitions/Selector.md) for the complete selector contract.
