@@ -439,7 +439,9 @@ testthat::test_that(
     # split meaningful. With publish = "per_chunk" the opposite of the
     # all-or-nothing test above is expected: cov_count should already be on
     # disk by the time cov_latest's chunk fails.
-    metadata <- minimal_metadata()[variable_id %in% c("cov_count", "cov_latest")]
+    metadata <- minimal_metadata()[
+      variable_id %in% c("cov_count", "cov_latest")
+    ]
     metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
@@ -466,7 +468,9 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    metadata <- minimal_metadata()[variable_id %in% c("cov_count", "cov_latest")]
+    metadata <- minimal_metadata()[
+      variable_id %in% c("cov_count", "cov_latest")
+    ]
     metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
