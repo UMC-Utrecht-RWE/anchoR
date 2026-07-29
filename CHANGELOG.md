@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- `RANGE_COUNT` has been removed because not confirm with requests and specifications. All connected functionalities are also removed.
+
+### Added
+- `MASK_COUNT` in `mask_count.sql` it counts and masks values according to user provided `concept_ranges`
+
 ## [v1.4.3]
 
 ### Fixed
