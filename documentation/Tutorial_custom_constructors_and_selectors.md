@@ -42,7 +42,7 @@ FUN <- make_constructor(
 ### Worked example: follow-up capped at 180 days
 
 Say a variable should start at `T0` and end at the earlier of a person's recorded follow-up date or 180 days after `T0`, whichever comes first. Metadata value `CAPPED_FOLLOWUP` needs to resolve to a function named `capped_followup_window`:
-
+Note: This function differs from the GENERIC constructor function in the use of the follow-up as a factor in the construction of the anchoring window. In the GENERIC constructor, we generate anchoring windows using star and end offsets, regardless of any follow-up criteria for the person.
 ```r
 library(data.table)
 
