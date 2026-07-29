@@ -107,6 +107,30 @@ load_concepts_table <- function(con, concepts, concept_ids = NULL) {
   }
 }
 
+#' Run a user-supplied hook against the selector execution connection.
+#'
+#' Lets a caller load whatever extra tables their own (or a custom) selector
+#' needs e.g. `concept_ranges` without the package having to know about them.
+#'
+#' @param con An open DBI connection.
+#' @param prepare_con `NULL`, or a function taking that connection as its
+#'   only argument.
+#' @keywords internal
+#' @noRd
+run_prepare_con <- function(con, prepare_con) {
+  if (is.null(prepare_con)) {
+    return(invisible(NULL))
+  }
+
+  if (!is.function(prepare_con)) {
+    stop_log("`prepare_con` must be a function that accepts a DBI connection.")
+  }
+
+  logger::log_trace("Running `prepare_con` hook before selector execution.")
+  prepare_con(con)
+  invisible(NULL)
+}
+
 write_population_windows <- function(
   con, population_windows, anchor_col = "T0"
 ) {
