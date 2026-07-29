@@ -161,7 +161,7 @@ add_parquet_export <- function(sql_query, anchor_hive_path, selector = NULL) {
 ensure_accumulate_table <- function(con, table_name) {
   # Selector templates don't all select the same columns. For example LATEST and
   # EARLIEST need `anchor_row_id` (to break ties among candidate rows),
-  # ALL/COUNT/COUNT_CATEGORY/COUNT_MORE_THAN_1 don't. Rather than forcing every
+  # ALL/COUNT/RANGE_COUNT/COUNT_MORE_THAN_1 don't. Rather than forcing every
   # template to carry a column most of them have no use for, the
   # accumulator table is created upfront with a full column set
   # `anchor_row_id`, `person_id`, `T0`, `variable_id`, `window_name`,

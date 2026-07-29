@@ -6,7 +6,7 @@ It is built for a common epidemiology workflow:
 
 - define a time window around an anchor date such as `T0`
 - find matching concept records for each person inside that window
-- reduce those matches to one anchored value using a selector such as `LATEST`, `EARLIEST`, `COUNT`, or `COUNT_CATEGORY`
+- reduce those matches to one anchored value using a selector such as `LATEST`, `EARLIEST`, `COUNT`, or `RANGE_COUNT`
 
 The package is intentionally small. It focuses on reusable anchoring logic and leaves study-specific preprocessing to the calling pipeline.
 

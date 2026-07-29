@@ -88,7 +88,7 @@ Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 rec
 | `EARLIEST`          | the oldest matching record                                                                                                                   |
 | `COUNT`             | how many records matched (`value` is the count, `date` is the latest)                                                                        |
 | `COUNT_MORE_THAN_1` | `TRUE` only if 2 or more records matched, otherwise no row at all                                                                            |
-| `COUNT_CATEGORY`    | counts matches like `COUNT`, then looks up that count in a user-provided `concept_ranges` table (matched on `concept_id`, inclusive `lower_range`/`upper_range` bounds) to return a bucketed category instead of the raw count |
+| `RANGE_COUNT`    | counts matches like `COUNT`, then looks up that count in a user-provided `concept_ranges` table (matched on `concept_id`, inclusive `lower_range`/`upper_range` bounds) to return a bucketed category instead of the raw count |
 | `ALL`               | every matching record, one output row each                                                                                                   |
 
 Worked example, one variable per selector:
@@ -110,7 +110,7 @@ metadata <- data.table(
   concept_id = c("FLU_VAX", "FLU_VAX", "HOSP", "HOSP", "BMI", "DX"),
   constructor = "GENERIC",
   selector = c(
-    "LATEST", "EARLIEST", "COUNT", "COUNT_MORE_THAN_1", "COUNT_CATEGORY", "ALL"
+    "LATEST", "EARLIEST", "COUNT", "COUNT_MORE_THAN_1", "RANGE_COUNT", "ALL"
   ),
   start_offset = c(-365L, -3650L, -365L, -365L, -180L, -365L),
   end_offset   = 0L,

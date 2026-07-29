@@ -120,7 +120,7 @@ testthat::test_that("normalize_selector_name: converts to uppercase", {
   testthat::expect_equal(normalize_selector_name("latest"), "LATEST")
   testthat::expect_equal(normalize_selector_name("count"), "COUNT")
   testthat::expect_equal(
-    normalize_selector_name("COUNT_CATEGORY"), "COUNT_CATEGORY"
+    normalize_selector_name("RANGE_COUNT"), "RANGE_COUNT"
   )
   testthat::expect_equal(normalize_selector_name(123), "123")
   testthat::expect_equal(normalize_selector_name(TRUE), "TRUE")
@@ -131,7 +131,7 @@ testthat::test_that("normalize_selector_name: trims whitespace", {
   testthat::expect_equal(normalize_selector_name("  latest  "), "LATEST")
   testthat::expect_equal(normalize_selector_name("\tCOUNT\n"), "COUNT")
   testthat::expect_equal(
-    normalize_selector_name(" COUNT_CATEGORY "), "COUNT_CATEGORY"
+    normalize_selector_name(" RANGE_COUNT "), "RANGE_COUNT"
   )
 })
 
