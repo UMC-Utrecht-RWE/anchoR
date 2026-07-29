@@ -13,7 +13,8 @@ anchor_by_variable(
   chunk_size = 20L,
   staging_dir = NULL,
   staging_mode = c("memory", "disk"),
-  publish = c("once", "per_chunk")
+  publish = c("once", "per_chunk"),
+  prepare_con = NULL
 )
 }
 \arguments{
@@ -56,6 +57,15 @@ instead. See Details.}
 \item{publish}{When to write results to \code{anchor_hive_path}:
 \code{"once"} (default) after the whole call succeeds, all together;
 \code{"per_chunk"} after each batch, incrementally. See Details.}
+
+\item{prepare_con}{Optional function taking a single argument (the open
+DBI connection selector queries run against). Called once, after
+\code{concepts} is loaded and before any selector query runs, so a
+selector that references its own extra table (e.g. \code{MASK_COUNT}'s
+\code{concept_ranges}) can have that table ready. Use
+\code{DBI::dbWriteTable()}, \code{DBI::dbExecute(con, "ATTACH ...")}, or
+similar inside it; the connection's own lifecycle stays managed by
+\code{anchor()} regardless.}
 }
 \value{
 Invisibly returns the variable ids that were processed.
