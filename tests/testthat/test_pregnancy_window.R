@@ -414,3 +414,18 @@ testthat::test_that(
     )
   }
 )
+
+testthat::test_that("Testing each_preg_window", {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    population <- pregnancy_population_with_events()
+    population$start_per_person_offset <- c(0L, 7L, 30L, -14L)
+    windows <- define_window(
+      population, pregnancy_metadata_translated()
+    )
+
+    new_windows <- each_preg_window(windows)
+  }
+)

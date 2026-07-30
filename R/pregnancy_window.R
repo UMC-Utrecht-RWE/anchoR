@@ -258,7 +258,9 @@ each_preg_window <- make_constructor(
       output_rows[[i]] <- cbind(
         row[rep(1L, nrow(events))],
         data.table::data.table(
-          window_start = as.Date(events$event_start + events$start_offset),
+          window_start = as.Date(
+            events$event_start + events$start_per_person_offset
+          ),
           window_end   = as.Date(events$event_end)
         )
       )
@@ -271,10 +273,4 @@ each_preg_window <- make_constructor(
     data.table::rbindlist(non_empty, use.names = TRUE, fill = TRUE)[]
   },
   required_cols = "event_col"
-)
-
-episodes <- data.table::data.table(
-  event_start  = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
-  event_end    = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01")),
-  start_offset = c(0L, 30L, -14L) # each pregnancy gets its own value
 )
