@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `anchor_by_selector()` had a bug in which it'd overwrite a partition if a second selector is present in the metadata. Now, `anchor_by_selector()` goes directly to `anchor_impl()` skipping `anchor()`. It creates its own connection and deletes folder if it finds them. `anchor_impl(`) has now `clear_existing_partitions` to still ensure it delete folders in other functions.
 - Validation and improved test coverage for RANGE_COUNT rows in metadata, ensuring that missing `range_min` or `range_max` values generate warnings rather than failing silently. Also updated test fixtures and expectations to include these new columns.
 
+### Added
+- New constructor `per_preg_window`. User can now have a start and end offeset per `person_id`
 ## [v1.4.2]
 
 ### Added
