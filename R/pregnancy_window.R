@@ -246,7 +246,12 @@ outside_all_preg_window <- make_constructor(
 )
 
 
-each_preg_window <- make_constructor(
+# Look for records in every one of a person's pregnancies (no PRIOR/CURRENT
+# filtering against the anchor at all), with a start offset that varies per
+# person rather than being fixed in metadata: population carries its own
+# start_per_person_offset/end_per_person_offset columns, one value per
+# person, applied to every episode that person has.
+per_preg_window <- make_constructor(
   transform_fn = function(window_dt) {
     output_rows <- vector("list", nrow(window_dt))
 
@@ -259,9 +264,11 @@ each_preg_window <- make_constructor(
         row[rep(1L, nrow(events))],
         data.table::data.table(
           window_start = as.Date(
-            events$event_start + events$start_per_person_offset
+            events$event_start + row$start_per_person_offset
           ),
-          window_end   = as.Date(events$event_end)
+          window_end = as.Date(
+            events$event_end + row$end_per_person_offset
+          )
         )
       )
     }
@@ -272,5 +279,7 @@ each_preg_window <- make_constructor(
     }
     data.table::rbindlist(non_empty, use.names = TRUE, fill = TRUE)[]
   },
-  required_cols = "event_col"
+  required_cols = c(
+    "event_col", "start_per_person_offset", "end_per_person_offset"
+  )
 )

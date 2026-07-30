@@ -415,17 +415,40 @@ testthat::test_that(
   }
 )
 
-testthat::test_that("Testing each_preg_window", {
-    hive_path <- tempfile(pattern = "anchor-hive-")
-    dir.create(hive_path)
-    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+testthat::test_that(
+  "per_preg_window builds one window per episode using a per-person offset",
+  {
+    # Person 1 has three episodes, person 2 has none (same fixture used for
+    # the IN_PRIOR_PREG engine tests above).
+    population <- data.table::copy(event_population())
+    population[, start_per_person_offset := c(7L, 0L)]
+    population[, end_per_person_offset := c(0L, 0L)]
 
-    population <- pregnancy_population_with_events()
-    population$start_per_person_offset <- c(0L, 7L, 30L, -14L)
-    windows <- define_window(
-      population, pregnancy_metadata_translated()
+    metadata <- data.table::data.table(
+      variable_id = "per_preg_test",
+      concept_id = "X",
+      constructor = "PER_PREG",
+      selector = "ALL",
+      start_offset = NA_real_,
+      end_offset = NA_real_,
+      event_col = "pregnancy_events"
     )
 
-    new_windows <- each_preg_window(windows)
+    windows <- define_window(population, metadata)
+
+    # No PRIOR/CURRENT filtering against T0 -- all three of person 1's
+    # episodes get a window; person 2 contributes none, since it has no
+    # episodes at all.
+    testthat::expect_equal(nrow(windows), 3L)
+    testthat::expect_equal(windows$person_id, rep("1", 3L))
+    testthat::expect_equal(
+      windows$window_start,
+      as.Date(c("2020-01-01", "2021-02-15", "2022-03-01")) + 7L
+    )
+    testthat::expect_equal(
+      windows$window_end,
+      as.Date(c("2020-09-01", "2021-05-20", "2022-12-01"))
+    )
+    testthat::expect_true(all(windows$window_valid))
   }
 )
