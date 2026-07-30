@@ -434,6 +434,8 @@ anchor_impl <- function(
 #' @param anchor_hive_path Character. Path to an existing (or creatable)
 #'   directory where selector query results are written as a partitioned parquet
 #'   hive. Must not be \code{NULL}.
+#' @param prepare_con Optional function taking a single argument (the open
+#'   DBI connection selector queries run against).
 #'
 #' @return Invisibly `NULL`; writes parquet files to `anchor_hive_path` as a
 #'   side effect.
@@ -443,7 +445,8 @@ anchor <- function(
   metadata,
   concepts,
   anchor_col = "T0",
-  anchor_hive_path = NULL
+  anchor_hive_path = NULL,
+  prepare_con = NULL
 ) {
   logger::log_debug("Starting anchor().")
   # Normalize inputs at the beginning so the rest
@@ -491,6 +494,7 @@ anchor <- function(
     validated$concepts,
     concept_ids = unique(as.character(validated$metadata$concept_id))
   )
+  run_prepare_con(con, prepare_con)
 
   result <- anchor_impl(
     con = con,
@@ -578,7 +582,8 @@ anchor_by_variable <- function(
   chunk_size = 20L,
   staging_dir = NULL,
   staging_mode = c("memory", "disk"),
-  publish = c("once", "per_chunk")
+  publish = c("once", "per_chunk"),
+  prepare_con = NULL
 ) {
   staging_mode <- match.arg(staging_mode)
   publish <- match.arg(publish)
@@ -704,6 +709,7 @@ anchor_by_variable <- function(
     validated$concepts,
     concept_ids = unique(as.character(metadata_dt$concept_id))
   )
+  run_prepare_con(con, prepare_con)
 
   publish_chunk <- function(chunk_variable_ids) {
     logger::log_debug(
@@ -859,7 +865,8 @@ anchor_by_selector <- function(
   metadata,
   concepts,
   anchor_col = "T0",
-  anchor_hive_path = NULL
+  anchor_hive_path = NULL,
+  prepare_con = NULL
 ) {
   validated <- validate_anchor_inputs(
     population = population,
@@ -896,6 +903,7 @@ anchor_by_selector <- function(
     validated$concepts,
     concept_ids = unique(as.character(metadata_dt$concept_id))
   )
+  run_prepare_con(con, prepare_con)
 
   for (current_selector in selectors) {
     selector_start_time <- Sys.time()

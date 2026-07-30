@@ -9,7 +9,8 @@ anchor_by_selector(
   metadata,
   concepts,
   anchor_col = "T0",
-  anchor_hive_path = NULL
+  anchor_hive_path = NULL,
+  prepare_con = NULL
 )
 }
 \arguments{
@@ -31,6 +32,9 @@ Defaults to \code{"T0"}.}
 \item{anchor_hive_path}{Character. Path to an existing (or creatable)
 directory where selector query results are written as a partitioned parquet
 hive. Must not be \code{NULL}.}
+
+\item{prepare_con}{Optional function taking a single argument (the open
+DBI connection selector queries run against).}
 }
 \value{
 Invisibly returns the selector values that were processed.

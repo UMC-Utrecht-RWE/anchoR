@@ -119,7 +119,9 @@ testthat::test_that("respects order of aliases when multiple exist", {
 testthat::test_that("normalize_selector_name: converts to uppercase", {
   testthat::expect_equal(normalize_selector_name("latest"), "LATEST")
   testthat::expect_equal(normalize_selector_name("count"), "COUNT")
-  testthat::expect_equal(normalize_selector_name("Range_Count"), "RANGE_COUNT")
+  testthat::expect_equal(
+    normalize_selector_name("RANGE_COUNT"), "RANGE_COUNT"
+  )
   testthat::expect_equal(normalize_selector_name(123), "123")
   testthat::expect_equal(normalize_selector_name(TRUE), "TRUE")
   testthat::expect_equal(normalize_selector_name(FALSE), "FALSE")
@@ -129,7 +131,7 @@ testthat::test_that("normalize_selector_name: trims whitespace", {
   testthat::expect_equal(normalize_selector_name("  latest  "), "LATEST")
   testthat::expect_equal(normalize_selector_name("\tCOUNT\n"), "COUNT")
   testthat::expect_equal(
-    normalize_selector_name(" range_count "), "RANGE_COUNT"
+    normalize_selector_name(" RANGE_COUNT "), "RANGE_COUNT"
   )
 })
 

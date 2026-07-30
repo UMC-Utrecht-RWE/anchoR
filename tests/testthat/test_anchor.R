@@ -316,7 +316,7 @@ testthat::test_that(
   "chunk_size batches variables (multiple selectors) without changing output",
   {
     # minimal_metadata() spans three different selectors (LATEST, COUNT,
-    # RANGE_COUNT), so batching all three variables into one chunk exercises
+    # EARLIEST), so batching all three variables into one chunk exercises
     # one selector query per selector instead of per variable_id.
     metadata <- minimal_metadata()
 
@@ -362,12 +362,12 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    # `lab_range`'s selector (RANGE_COUNT) sorts last among the three
-    # selectors in `minimal_metadata()`, so with `chunk_size = 1` it lands in
-    # the final chunk -- `cov_count` and `cov_latest` succeed in earlier
-    # chunks before this one fails.
+    # `cov_latest`'s selector (LATEST) sorts last among the three selectors
+    # in `minimal_metadata()`, so with `chunk_size = 1` it lands in the final
+    # chunk -- `cov_count` and `lab_range` succeed in earlier chunks before
+    # this one fails.
     metadata <- minimal_metadata()
-    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+    metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
       anchor_by_variable(
@@ -380,7 +380,7 @@ testthat::test_that(
       "Window function does not exist"
     )
 
-    # Even though cov_count and cov_latest were computed successfully before
+    # Even though cov_count and lab_range were computed successfully before
     # the failing chunk, nothing should have been published.
     testthat::expect_length(list.files(hive_path, recursive = TRUE), 0L)
   }
@@ -432,12 +432,17 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    # Same setup as the all-or-nothing test above (lab_range fails and sorts
-    # into the final chunk), but with publish = "per_chunk" the opposite is
-    # expected: cov_count and cov_latest should already be on disk by the
-    # time lab_range's chunk fails.
-    metadata <- minimal_metadata()
-    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+    # `cov_count` (COUNT) sorts before `cov_latest` (LATEST), so with
+    # chunk_size = 1 it lands in the earlier chunk and has real matching
+    # output (unlike `lab_range`, whose concept never matches anything) --
+    # restricting to these two variables keeps this test's success/failure
+    # split meaningful. With publish = "per_chunk" the opposite of the
+    # all-or-nothing test above is expected: cov_count should already be on
+    # disk by the time cov_latest's chunk fails.
+    metadata <- minimal_metadata()[
+      variable_id %in% c("cov_count", "cov_latest")
+    ]
+    metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
       anchor_by_variable(
@@ -452,9 +457,7 @@ testthat::test_that(
     )
 
     anchored <- read_anchor_hive(hive_path)
-    testthat::expect_setequal(
-      unique(anchored$variable_id), c("cov_count", "cov_latest")
-    )
+    testthat::expect_equal(unique(anchored$variable_id), "cov_count")
   }
 )
 
@@ -465,8 +468,10 @@ testthat::test_that(
     dir.create(hive_path)
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
-    metadata <- minimal_metadata()
-    metadata[variable_id == "lab_range", constructor := "NOPE_CONSTRUCTOR"]
+    metadata <- minimal_metadata()[
+      variable_id %in% c("cov_count", "cov_latest")
+    ]
+    metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
       anchor_by_variable(
@@ -482,9 +487,7 @@ testthat::test_that(
     )
 
     anchored <- read_anchor_hive(hive_path)
-    testthat::expect_setequal(
-      unique(anchored$variable_id), c("cov_count", "cov_latest")
-    )
+    testthat::expect_equal(unique(anchored$variable_id), "cov_count")
   }
 )
 
@@ -699,7 +702,7 @@ testthat::test_that(
 testthat::test_that(
   "anchor_by_selector batches variables by selector and matches anchor()",
   {
-    # minimal_metadata() spans three selectors (LATEST, COUNT, RANGE_COUNT),
+    # minimal_metadata() spans three selectors (LATEST, COUNT, EARLIEST),
     # so this exercises one anchor() call per selector.
     metadata <- minimal_metadata()
 
@@ -727,7 +730,7 @@ testthat::test_that(
     )
 
     testthat::expect_setequal(
-      processed_selectors, c("LATEST", "COUNT", "RANGE_COUNT")
+      processed_selectors, c("LATEST", "COUNT", "EARLIEST")
     )
 
     result_cols <- c("person_id", "T0", "variable_id", "value", "date", "n")
@@ -764,5 +767,66 @@ testthat::test_that(
       list.files(partition_path),
       c("latest_0.parquet", "count_0.parquet")
     )
+  }
+)
+
+testthat::test_that(
+  "prepare_con lets RANGE_COUNT run by loading concept_ranges first",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    # Same concepts/concept_ranges fixture as the direct-SQL
+    # "range_count selector buckets the raw count via concept_ranges" test in
+    # test_selectors.R (p1: 0 matches, p2: 1, p3: 3, p4: 5), driven through
+    # anchor() this time instead of a hand-built population_windows table.
+    # population/metadata are built so define_window() reproduces that same
+    # test's window (2024-01-01 to 2024-12-31) for every person.
+    population <- data.table::data.table(
+      person_id = c("p1", "p2", "p3", "p4"),
+      T0 = as.Date("2024-06-01")
+    )
+    metadata <- data.table::data.table(
+      variable_id = "v1",
+      concept_id = "C1",
+      constructor = "GENERIC",
+      selector = "RANGE_COUNT",
+      start_offset = -152L,
+      end_offset = 213L
+    )
+    concepts <- data.table::data.table(
+      person_id = c("p2", "p3", "p3", "p3", "p4", "p4", "p4", "p4", "p4"), # nolint p1 not in concepts
+      concept_id = "C1",
+      date = as.Date(c(
+        "2024-03-01",
+        "2024-03-01", "2024-04-01", "2024-05-01",
+        "2024-01-15", "2024-02-15", "2024-03-15", "2024-04-15", "2024-05-15"
+      )),
+      value = NA_character_
+    )
+    concept_ranges <- data.table::data.table(
+      concept_id = "C1",
+      new_value = c(1, 2, 3, 4),
+      lower_range = c(0, 1, 3, 5),
+      upper_range = c(0, 2, 4, 99999)
+    )
+
+    anchor(
+      population = population,
+      metadata = metadata,
+      concepts = concepts,
+      anchor_hive_path = hive_path,
+      prepare_con = function(con) {
+        DBI::dbWriteTable(con, "concept_ranges", concept_ranges)
+      }
+    )
+
+    anchored <- read_anchor_hive(hive_path)
+    data.table::setorder(anchored, person_id)
+
+    testthat::expect_equal(anchored$person_id, c("p2", "p3", "p4"))
+    testthat::expect_equal(anchored$value, c("2", "3", "4"))
+    testthat::expect_equal(anchored$n, c(1L, 3L, 5L))
   }
 )

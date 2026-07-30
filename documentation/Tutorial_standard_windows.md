@@ -82,14 +82,14 @@ Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 rec
 
 ## Selector reference
 
-| selector            | returns per window                                                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `LATEST`            | the most recent matching record (by `date`)                                                                                     |
-| `EARLIEST`          | the oldest matching record                                                                                                      |
-| `COUNT`             | how many records matched (`value` is the count, `date` is the latest)                                                           |
-| `COUNT_MORE_THAN_1` | `TRUE` only if 2 or more records matched, otherwise no row at all                                                               |
-| `RANGE_COUNT`       | how many records had a numeric `value` inside `[range_min, range_max]` (also needs `range_min`/`range_max` columns in metadata) |
-| `ALL`               | every matching record, one output row each                                                                                      |
+| selector            | returns per window                                                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LATEST`            | the most recent matching record (by `date`)                                                                                                  |
+| `EARLIEST`          | the oldest matching record                                                                                                                   |
+| `COUNT`             | how many records matched (`value` is the count, `date` is the latest)                                                                        |
+| `COUNT_MORE_THAN_1` | `TRUE` only if 2 or more records matched, otherwise no row at all                                                                            |
+| `RANGE_COUNT`    | counts matches like `COUNT`, then looks up that count in a user-provided `concept_ranges` table (matched on `concept_id`, inclusive `lower_range`/`upper_range` bounds) to return a bucketed category instead of the raw count |
+| `ALL`               | every matching record, one output row each                                                                                                   |
 
 Worked example, one variable per selector:
 
@@ -149,7 +149,7 @@ result
 
 A few things worth noticing:
 
-- Person 2's `BMI` was `30`, outside `[18.5, 25]`, so `bmi_in_healthy_range` has no row for them. `RANGE_COUNT`'s `value` is a *count* of in-range records, not the BMI itself.
+- Person 2's `BMI` was `30`, outside `[18.5, 25]`, so `bmi_in_healthy_range` has no row for them. `COUNT`'s `value` is a *count*, not the BMI itself.
 - Person 2 has only one `HOSP` record, so `hospitalizations_1y` still reports it (`COUNT` includes everyone with >= 1 match), but `recurrent_hospitalization` (`COUNT_MORE_THAN_1`) correctly excludes them.
 - Person 3 has no concept records at all and never appears.
 

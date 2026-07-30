@@ -20,6 +20,38 @@ testthat::test_that(
   }
 )
 
+testthat::test_that("run_prepare_con is a no-op when prepare_con is NULL", {
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  testthat::expect_null(run_prepare_con(con, NULL))
+  testthat::expect_false("side_table" %in% DBI::dbListTables(con))
+})
+
+testthat::test_that("run_prepare_con runs the hook against the connection", {
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  run_prepare_con(con, function(prepared_con) {
+    DBI::dbWriteTable(
+      prepared_con, "side_table", data.table::data.table(x = 1L)
+    )
+  })
+
+  testthat::expect_true("side_table" %in% DBI::dbListTables(con))
+})
+
+testthat::test_that("run_prepare_con errors when prepare_con not a function", {
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  testthat::expect_error(
+    run_prepare_con(con, "not a function"),
+    "`prepare_con` must be a function that accepts a DBI connection.",
+    fixed = TRUE
+  )
+})
+
 testthat::test_that(
   "load_concepts_table keeps every row when concept_ids is NULL",
   {

@@ -13,7 +13,8 @@ anchor_by_variable(
   chunk_size = 20L,
   staging_dir = NULL,
   staging_mode = c("memory", "disk"),
-  publish = c("once", "per_chunk")
+  publish = c("once", "per_chunk"),
+  prepare_con = NULL
 )
 }
 \arguments{
@@ -56,6 +57,9 @@ instead. See Details.}
 \item{publish}{When to write results to \code{anchor_hive_path}:
 \code{"once"} (default) after the whole call succeeds, all together;
 \code{"per_chunk"} after each batch, incrementally. See Details.}
+
+\item{prepare_con}{Optional function taking a single argument (the open
+DBI connection selector queries run against).}
 }
 \value{
 Invisibly returns the variable ids that were processed.
