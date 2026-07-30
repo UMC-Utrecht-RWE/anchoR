@@ -436,7 +436,7 @@ testthat::test_that(
 
     windows <- define_window(population, metadata)
 
-    # No PRIOR/CURRENT filtering against T0 -- all three of person 1's
+    # No PRIOR/CURRENT filtering against T0, all three of person 1's
     # episodes get a window; person 2 contributes none, since it has no
     # episodes at all.
     testthat::expect_equal(nrow(windows), 3L)
