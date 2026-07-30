@@ -20,28 +20,6 @@ make_selector <- function(selector_query) {
     stop_log("selector_query must not be empty")
   }
 
-  required_cols <- c(
-    "person_id", "T0", "variable_id", "window_name", "value", "date", "n"
-  )
-  missing_cols <- required_cols[
-    !vapply(
-      required_cols,
-      function(col) {
-        grepl(col, selector_query, ignore.case = TRUE)
-      },
-      logical(1L)
-    )
-  ]
-
-  if (length(missing_cols) > 0L) {
-    stop_log(
-      sprintf(
-        "selector_query must select the standard output column(s): %s",
-        paste(missing_cols, collapse = ", ")
-      )
-    )
-  }
-
   structure(list(sql = selector_query), class = "anchor_selector")
 }
 

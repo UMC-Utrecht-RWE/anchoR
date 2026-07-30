@@ -30,7 +30,7 @@ max_value_selector <- make_selector("
       w.variable_id,
       w.window_name,
       CAST(MAX(TRY_CAST(c.value AS DOUBLE)) AS VARCHAR) AS value,
-      MAX(c.date) AS date,
+      ARG_MAX(c.date, TRY_CAST(c.value AS DOUBLE)) AS date,
       COUNT(*) AS n
   FROM population_windows AS w
   INNER JOIN concepts AS c
@@ -42,7 +42,9 @@ max_value_selector <- make_selector("
 ")
 ```
 
-`make_selector()` only checks that `selector_query` is a non-empty string and that it selects every required column by name -- it cannot validate the SQL itself, since the tables it references only exist once `anchor()` opens its DuckDB connection. A typo surfaces as a database error the first time the selector actually runs.
+`date` uses `ARG_MAX(c.date, TRY_CAST(c.value AS DOUBLE))`, DuckDB's aggregate for "the `date` from whichever row has the max value", not `MAX(c.date)`. Those are different things: `MAX(c.date)` is just the latest date among every row in the group, regardless of which row had the highest value. If the highest-value record isn't also the most recent one, `MAX(c.date)` silently reports a date that doesn't correspond to the returned `value` at all.
+
+`make_selector()` only checks that `selector_query` is a non-empty string -- it does not validate the SQL itself, or that it selects the required columns, since the tables it references only exist once `anchor()` opens its DuckDB connection. A missing column or a typo surfaces as a database error the first time the selector actually runs, not when you define it.
 
 ```{r inputs}
 population <- data.table(
@@ -60,8 +62,11 @@ metadata <- data.table(
 concepts <- data.table(
   person_id = c("1", "1", "2"),
   concept_id = "LAB_X",
+  # Person 1's higher value (7.8) is the EARLIER record; if `date` came from
+  # MAX(c.date) instead of ARG_MAX(), it would report the later, lower-value
+  # record's date instead.
   date = as.Date(c("2023-11-01", "2023-12-15", "2023-12-20")),
-  value = c("4.2", "7.8", "3.1")
+  value = c("7.8", "4.2", "3.1")
 )
 ```
 
@@ -86,7 +91,7 @@ get_anchor_result(metadata, hive, result_shape = "long")[
 ]
 ```
 
-Person 1 gets `7.8`, the higher of two matches; person 2 gets `3.1`, its only match; person 3 has no `LAB_X` records at all, so it produces no row -- the same "silent gap, not an error" behavior every selector has when nothing matches.
+Person 1 gets `value = 7.8` with `date = 2023-11-01`, the earlier record, because that's the one that actually has the higher value, not `2023-12-15` (the later record's date, which `MAX(c.date)` would have wrongly reported). Person 2 gets `3.1`, its only match; person 3 has no `LAB_X` records at all, so it produces no row -- the same "silent gap, not an error" behavior every selector has when nothing matches.
 
 Built-in and custom selector rows may coexist in one metadata table, and a metadata file can reference a custom selector without erroring during validation: `metadata_supported_selectors()` accepts any selector name that either ships with anchoR or resolves via `selector_env` (default `globalenv()`), the same two-tier lookup `resolve_window_constructor()` uses for constructors.
 

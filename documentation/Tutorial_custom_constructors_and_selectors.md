@@ -136,7 +136,7 @@ A selector is not an R function, it's a SQL `SELECT` statement, run directly ins
 - Filter on `w.selector = '<NAME>'`, so it only claims the metadata rows routed to it.
 - Join `concepts AS c` to `population_windows AS w` on `person_id`, `concept_id`, and `c.date BETWEEN w.window_start AND w.window_end`, the same join every built-in selector template uses.
 
-`make_selector()` checks `selector_query` is a non-empty string that selects every required column by name; it can't check the SQL itself, since `population_windows`/`concepts` only exist once `anchor()` actually opens a connection. A typo surfaces as a database error the first time the selector runs, not when you define it.
+`make_selector()` only checks `selector_query` is a non-empty string; it does not validate the SQL itself, or that it selects the required columns, since `population_windows`/`concepts` only exist once `anchor()` actually opens a connection. A missing column or a typo surfaces as a database error the first time the selector runs, not when you define it.
 
 ```r
 FUN <- make_selector(selector_query)  # a single SQL SELECT statement, as a string
@@ -154,7 +154,7 @@ max_value_selector <- make_selector("
       w.variable_id,
       w.window_name,
       CAST(MAX(TRY_CAST(c.value AS DOUBLE)) AS VARCHAR) AS value,
-      MAX(c.date) AS date,
+      ARG_MAX(c.date, TRY_CAST(c.value AS DOUBLE)) AS date,
       COUNT(*) AS n
   FROM population_windows AS w
   INNER JOIN concepts AS c
@@ -164,7 +164,11 @@ max_value_selector <- make_selector("
   WHERE w.selector = 'MAX_VALUE'
   GROUP BY w.person_id, w.T0, w.variable_id, w.window_name
 ")
+```
 
+`date` uses `ARG_MAX(c.date, TRY_CAST(c.value AS DOUBLE))`, DuckDB's aggregate for "the `date` from whichever row has the max value", not `MAX(c.date)`. Those are different things: `MAX(c.date)` is just the latest date among every row in the group, regardless of which row had the highest value. If the highest-value record isn't also the most recent one, `MAX(c.date)` would silently report a date that doesn't correspond to the returned `value` at all, the example below is built to expose exactly that.
+
+```r
 population <- data.table(
   person_id = c("1", "2", "3"),
   T0 = as.Date(c("2024-01-01", "2024-01-15", "2024-02-01"))
@@ -177,22 +181,24 @@ metadata <- data.table(
   start_offset = -90L,
   end_offset = 0L
 )
+# Person 1's higher value (7.8) is the EARLIER record; MAX(c.date) would
+# wrongly report the later, lower-value record's date (2023-12-15) instead.
 concepts <- data.table(
   person_id = c("1", "1", "2"),
   concept_id = "LAB_X",
   date = as.Date(c("2023-11-01", "2023-12-15", "2023-12-20")),
-  value = c("4.2", "7.8", "3.1")
+  value = c("7.8", "4.2", "3.1")
 )
 
 hive <- tempfile("selector-hive-")
 anchor(population, metadata, concepts, anchor_hive_path = hive)
 get_anchor_result(metadata, hive, result_shape = "long")[, .(person_id, T0, value, date)]
 #>    person_id         T0  value       date
-#> 1:         1 2024-01-01    7.8 2023-12-15
+#> 1:         1 2024-01-01    7.8 2023-11-01
 #> 2:         2 2024-01-15    3.1 2023-12-20
 ```
 
-Person 1 has two `LAB_X` records in their window (`4.2` and `7.8`), and gets the higher one; person 2 has one match; person 3 has none, so they produce no row at all rather than a row with a missing value, the same "silent gap, not an error" behavior every selector has when nothing matches (see the `selector-cookbook` vignette).
+Person 1 gets `value = 7.8` with `date = 2023-11-01`, the earlier record, because that's the one that actually has the higher value. Person 2 has one match; person 3 has none, so they produce no row at all rather than a row with a missing value, the same "silent gap, not an error" behavior every selector has when nothing matches (see the `selector-cookbook` vignette).
 
 ### If the name doesn't resolve to anything
 
