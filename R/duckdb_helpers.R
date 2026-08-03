@@ -46,13 +46,21 @@ load_concepts_table <- function(con, concepts, concept_ids = NULL) {
   if (concepts_type == "duckdb") {
     # A DuckDB source can be queried in place, which avoids copying a large
     # concept table into the temporary analysis database.
-    DBI::dbExecute(
-      con,
-      sprintf(
-        "ATTACH '%s' AS concepts_db (READ_ONLY);",
-        normalizePath(concepts, winslash = "/")
+
+    # `load_concepts_table()` can be called more than once against the same
+    # connection (e.g. `anchor_by_selector()`), ATTACH makes this possible.
+    # because it doesn't reattach the concepts file if it's already hooked up
+    # ATTACHing the same database twice raises a DuckDB error.
+    attached_dbs <- DBI::dbGetQuery(con, "PRAGMA database_list;")$name
+    if (!"concepts_db" %in% attached_dbs) {
+      DBI::dbExecute(
+        con,
+        sprintf(
+          "ATTACH '%s' AS concepts_db (READ_ONLY);",
+          normalizePath(concepts, winslash = "/")
+        )
       )
-    )
+    }
     DBI::dbExecute(con, "DROP VIEW IF EXISTS concepts;")
     DBI::dbExecute(
       con,
