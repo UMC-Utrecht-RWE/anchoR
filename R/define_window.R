@@ -278,6 +278,12 @@ cross_join_population_metadata <- function(population_dt, metadata_dt) {
 #'
 #' @param population A data frame containing the study population.
 #' @param metadata A data frame describing the variables to anchor.
+#' @param episodes Optional data frame with `person_id`, `start_episode`,
+#'   `end_episode` columns. Required when `metadata` uses an episode-based
+#'   constructor (`in_current_pregnancy`, `in_prior_pregnancy`,
+#'  `in_current_and_prior`, `outside_all_pregnancy`); nested onto `population`
+#'   internally, one person's episodes per row, via
+#'  `nest_episodes_onto_population()`.
 #' @param anchor_col Column to use when metadata does not specify
 #'   `anchor_start_col` or `anchor_end_col`.
 #' @param constructor_env Environment to search for user-defined window
@@ -292,6 +298,7 @@ cross_join_population_metadata <- function(population_dt, metadata_dt) {
 define_window <- function(
   population,
   metadata,
+  episodes = NULL,
   anchor_col = "T0",
   constructor_env = globalenv()
 ) {
@@ -299,11 +306,35 @@ define_window <- function(
     population = population,
     metadata = metadata,
     concepts = NULL,
+    episodes = episodes,
     anchor_col = anchor_col
   )
 
   population_dt <- validated$population
   metadata_dt <- validated$metadata
+
+  needs_episodes <- any(
+    tolower(as.character(metadata_dt$constructor)) %in% EPISODE_CONSTRUCTORS
+  )
+  if (needs_episodes) {
+    if (is.null(validated$episodes)) {
+      stop_log(
+        paste(
+          "`metadata` uses an episode-based constructor",
+          "but the `episodes` table was not supplied."
+        )
+      )
+    }
+    logger::log_debug(
+      sprintf(
+        "Nesting %d episode row(s) onto population.",
+        nrow(validated$episodes)
+      )
+    )
+    population_dt <- nest_episodes_onto_population(
+      population_dt, validated$episodes
+    )
+  }
 
   logger::log_debug(
     sprintf(
@@ -316,7 +347,7 @@ define_window <- function(
   # window start/end for that combination, whether a concept matched inside
   # it, and the final value for that variable and person.
   window_dt <- cross_join_population_metadata(
-    validated$population, validated$metadata
+    population_dt, metadata_dt
   )
   # Preserve the pre-processing order so later operations can reorder safely
   # and still return rows in the same sequence the cross join produced.
