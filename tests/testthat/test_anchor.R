@@ -825,8 +825,11 @@ testthat::test_that(
     anchored <- read_anchor_hive(hive_path)
     data.table::setorder(anchored, person_id)
 
-    testthat::expect_equal(anchored$person_id, c("p2", "p3", "p4"))
-    testthat::expect_equal(anchored$value, c("2", "3", "4"))
-    testthat::expect_equal(anchored$n, c(1L, 3L, 5L))
+    # p1 has 0 matching concept rows, which is itself a valid, countable
+    # outcome (falls in the lower_range=0/upper_range=0 bucket) and must not
+    # be silently dropped from the result.
+    testthat::expect_equal(anchored$person_id, c("p1", "p2", "p3", "p4"))
+    testthat::expect_equal(anchored$value, c("1", "2", "3", "4"))
+    testthat::expect_equal(anchored$n, c(0L, 1L, 3L, 5L))
   }
 )
