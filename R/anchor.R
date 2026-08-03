@@ -315,6 +315,8 @@ order_variable_ids_by_selector <- function(metadata_dt) {
 #'   process in this call.
 #' @param anchor_col Column in `population_dt` used as the index date when
 #'   metadata does not specify an anchor column.
+#' @param episodes_dt Validated episodes `data.table`, or `NULL` when
+#'   `metadata_dt` uses no episode-based constructor.
 #' @param anchor_hive_path Existing, normalized path to write selector output.
 #' @param clear_existing_partitions Whether to clear partitions before writing.
 #' @return Invisibly `NULL` on success, or (only when no window was valid) the
@@ -326,6 +328,7 @@ anchor_impl <- function(
   population_dt,
   metadata_dt,
   anchor_col,
+  episodes_dt = NULL,
   anchor_hive_path = NULL,
   accumulate_table = NULL,
   clear_existing_partitions = TRUE
@@ -341,6 +344,7 @@ anchor_impl <- function(
   window_dt <- define_window(
     population = window_population,
     metadata = metadata_dt,
+    episodes = episodes_dt,
     anchor_col = anchor_col
   )
   logger::log_debug(
@@ -428,6 +432,12 @@ anchor_impl <- function(
 #' @param concepts A concept table as a data frame, a DuckDB file path whose
 #'   \code{concept_table} contains \code{person_id}, \code{concept_id}, and
 #'   \code{date}, or parquet file location(s).
+#' @param episodes Optional data frame with \code{person_id},
+#'   \code{start_episode}, \code{end_episode} columns. Required when
+#'   \code{metadata} uses an episode-based constructor
+#'   (\code{in_current_pregnancy}, \code{in_prior_pregnancy},
+#'   \code{in_current_and_prior}, \code{outside_all_pregnancy}); see
+#'   \code{R/pregnancy_window.R}.
 #' @param anchor_col Character. Name of the column in \code{population} to use
 #'   as the index date when metadata does not specify an anchor column.
 #'   Defaults to \code{"T0"}.
@@ -444,6 +454,7 @@ anchor <- function(
   population,
   metadata,
   concepts,
+  episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL,
   prepare_con = NULL
@@ -455,6 +466,7 @@ anchor <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
+    episodes = episodes,
     anchor_col = anchor_col
   )
   concepts_type <- if (is.null(validated$concepts)) {
@@ -501,6 +513,7 @@ anchor <- function(
     population_dt = validated$population,
     metadata_dt = validated$metadata,
     anchor_col = anchor_col,
+    episodes_dt = validated$episodes,
     anchor_hive_path = anchor_hive_path
   )
 
@@ -577,6 +590,7 @@ anchor_by_variable <- function(
   population,
   metadata,
   concepts,
+  episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL,
   chunk_size = 20L,
@@ -596,6 +610,7 @@ anchor_by_variable <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
+    episodes = episodes,
     anchor_col = anchor_col
   )
 
@@ -774,6 +789,7 @@ anchor_by_variable <- function(
           population_dt = validated$population,
           metadata_dt = chunk_metadata,
           anchor_col = anchor_col,
+          episodes_dt = validated$episodes,
           anchor_hive_path = local_hive_path,
           accumulate_table = accumulate_table,
           clear_existing_partitions = FALSE
@@ -864,6 +880,7 @@ anchor_by_selector <- function(
   population,
   metadata,
   concepts,
+  episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL,
   prepare_con = NULL
@@ -872,6 +889,7 @@ anchor_by_selector <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
+    episodes = episodes,
     anchor_col = anchor_col
   )
 
@@ -921,6 +939,7 @@ anchor_by_selector <- function(
       population_dt = validated$population,
       metadata_dt = selector_metadata,
       anchor_col = anchor_col,
+      episodes_dt = validated$episodes,
       anchor_hive_path = anchor_hive_path,
       clear_existing_partitions = FALSE
     )
