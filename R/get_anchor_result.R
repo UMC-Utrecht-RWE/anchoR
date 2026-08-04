@@ -459,6 +459,8 @@ imputing_missing <- function(wide_anchored, metadata) {
             !(get(value_col) %in% c(TRUE, 1, "TRUE", "1")),
           (value_col) := TRUE
         ]
+        wide_anchored[is.na(get(value_col)), (value_col) := FALSE]
+        wide_anchored[, (value_col) := as.logical(get(value_col))]
       } else if (i_variable_type %in% c("CAT", "FACTOR")) {
         wide_anchored[is.na(get(value_col)), (value_col) := 0]
       }

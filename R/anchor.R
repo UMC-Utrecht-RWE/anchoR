@@ -916,11 +916,6 @@ anchor_by_selector <- function(
 
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
-  load_concepts_table(
-    con,
-    validated$concepts,
-    concept_ids = unique(as.character(metadata_dt$concept_id))
-  )
   run_prepare_con(con, prepare_con)
 
   for (current_selector in selectors) {
@@ -932,6 +927,12 @@ anchor_by_selector <- function(
         current_selector,
         length(unique(selector_metadata$variable_id))
       )
+    )
+
+    load_concepts_table(
+      con,
+      validated$concepts,
+      concept_ids = unique(as.character(selector_metadata$concept_id))
     )
 
     anchor_impl(
