@@ -1,0 +1,105 @@
+---
+title: "Custom selectors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Custom selectors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, message=FALSE}
+library(anchoR)
+library(data.table)
+```
+
+Use a custom selector when none of the bundled rules (`LATEST`, `EARLIEST`, `COUNT`, `COUNT_MORE_THAN_1`, `RANGE_COUNT`, `ALL` -- see `vignette("selector-cookbook")`) reduce a window's concept matches the way you need. This example keeps the highest numeric value recorded in each window.
+
+Unlike a constructor, a selector is not an R function -- it is SQL that `anchor()` runs directly inside its DuckDB connection, where `population_windows` (aliased `w`) and `concepts` (aliased `c`) are already loaded. It must:
+
+- Project exactly these columns: `person_id`, `T0`, `variable_id`, `window_name`, `value`, `date`, `n`.
+- Filter on `w.selector = '<NAME>'` so it only claims the metadata rows routed to it.
+- Join `concepts AS c` to `population_windows AS w` on `person_id`, `concept_id`, and `c.date BETWEEN w.window_start AND w.window_end`, the same join every bundled template uses.
+
+Selector metadata value `MAX_VALUE` resolves to an object named `max_value_selector`, built with `make_selector()`.
+
+```{r selector}
+max_value_selector <- make_selector("
+  SELECT
+      w.person_id,
+      w.T0,
+      w.variable_id,
+      w.window_name,
+      CAST(MAX(TRY_CAST(c.value AS DOUBLE)) AS VARCHAR) AS value,
+      ARG_MAX(c.date, TRY_CAST(c.value AS DOUBLE)) AS date,
+      COUNT(*) AS n
+  FROM population_windows AS w
+  INNER JOIN concepts AS c
+      ON c.person_id = w.person_id
+     AND c.concept_id = w.concept_id
+     AND c.date BETWEEN w.window_start AND w.window_end
+  WHERE w.selector = 'MAX_VALUE'
+  GROUP BY w.person_id, w.T0, w.variable_id, w.window_name
+")
+```
+
+`date` uses `ARG_MAX(c.date, TRY_CAST(c.value AS DOUBLE))`, DuckDB's aggregate for "the `date` from whichever row has the max value", not `MAX(c.date)`. Those are different things: `MAX(c.date)` is just the latest date among every row in the group, regardless of which row had the highest value. If the highest-value record isn't also the most recent one, `MAX(c.date)` silently reports a date that doesn't correspond to the returned `value` at all.
+
+`make_selector()` only checks that `selector_query` is a non-empty string -- it does not validate the SQL itself, or that it selects the required columns, since the tables it references only exist once `anchor()` opens its DuckDB connection. A missing column or a typo surfaces as a database error the first time the selector actually runs, not when you define it.
+
+```{r inputs}
+population <- data.table(
+  person_id = c("1", "2", "3"),
+  T0 = as.Date(c("2024-01-01", "2024-01-15", "2024-02-01"))
+)
+metadata <- data.table(
+  variable_id = "highest_lab_value",
+  concept_id = "LAB_X",
+  constructor = "GENERIC",
+  selector = "MAX_VALUE",
+  start_offset = -90L,
+  end_offset = 0L
+)
+concepts <- data.table(
+  person_id = c("1", "1", "2"),
+  concept_id = "LAB_X",
+  # Person 1's higher value (7.8) is the EARLIER record; if `date` came from
+  # MAX(c.date) instead of ARG_MAX(), it would report the later, lower-value
+  # record's date instead.
+  date = as.Date(c("2023-11-01", "2023-12-15", "2023-12-20")),
+  value = c("7.8", "4.2", "3.1")
+)
+```
+
+```{r anchor}
+hive <- tempfile("selector-hive-")
+
+# anchor() resolves custom selectors from the global environment, the same
+# way it resolves custom constructors.
+had_existing_selector <- exists(
+  "max_value_selector", envir = globalenv(), inherits = FALSE
+)
+if (had_existing_selector) {
+  existing_selector <- get(
+    "max_value_selector", envir = globalenv(), inherits = FALSE
+  )
+}
+assign("max_value_selector", max_value_selector, envir = globalenv())
+
+anchor(population, metadata, concepts, anchor_hive_path = hive)
+get_anchor_result(metadata, hive, result_shape = "long")[
+  , .(person_id, value, date)
+]
+```
+
+Person 1 gets `value = 7.8` with `date = 2023-11-01`, the earlier record, because that's the one that actually has the higher value, not `2023-12-15` (the later record's date, which `MAX(c.date)` would have wrongly reported). Person 2 gets `3.1`, its only match; person 3 has no `LAB_X` records at all, so it produces no row -- the same "silent gap, not an error" behavior every selector has when nothing matches.
+
+Built-in and custom selector rows may coexist in one metadata table, and a metadata file can reference a custom selector without erroring during validation: `metadata_supported_selectors()` accepts any selector name that either ships with anchoR or resolves via `selector_env` (default `globalenv()`), the same two-tier lookup `resolve_window_constructor()` uses for constructors.
+
+```{r cleanup, include=FALSE}
+unlink(hive, recursive = TRUE)
+if (had_existing_selector) {
+  assign("max_value_selector", existing_selector, envir = globalenv())
+} else {
+  rm("max_value_selector", envir = globalenv())
+}
+```

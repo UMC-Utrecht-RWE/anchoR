@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `clear_anchor_partitions` to avoid the duplications of row while using `anchor()` and `anchor_by_selector()` by `OVERWRITE_OR_IGNORE`.
+- File `define_selector.R` that contains the functionality to let the user insert their own selector DuckDB/SQL queries. The main fuction responsable for this is `make_selector()`, that mirrors `make_constructor()` original idea of a factory function as vehicle for user inserted selectors.
 
 ### Removed
 
