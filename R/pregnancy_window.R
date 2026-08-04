@@ -28,6 +28,40 @@ nest_episodes_onto_population <- function(population_dt, episodes_dt) {
   population_dt[]
 }
 
+#' Define a raw window boundary into an optional range around an episode edge
+#'
+#' `before_offset`/`after_offset` are independent and optional (`NA` means
+#' "no define on that side"), and both are read the same way, as a signed
+#' number of days from `edge`: `before_offset` stops `raw` from being
+#' earlier than `edge + before_offset` (a floor), `after_offset` stops it
+#' from being later than `edge + after_offset` (a cap). Applied in that
+#' order, so if both are set and inconsistent (the floor lands after the
+#' cap), the cap wins. `raw` may itself be `NA` (e.g. when the matching
+#' `anchor_start_offset`/`anchor_end_offset` was left unset because the
+#' window is meant to be derived purely from the episode, with no anchor
+#' contribution at all): `pmax`/`pmin` are called with `na.rm = TRUE`, so an
+#' `NA` `raw` simply drops out and the active define offset(s) alone
+#' determine the result.
+#'
+#' @param raw The anchor-derived boundary before defineing (a Date vector,
+#'   may contain `NA`).
+#' @param edge The episode's own start or end date (a Date vector, same
+#'   length as `raw`).
+#' @param before_offset,after_offset Single integer offsets, or `NA` to skip
+#'   that side's define.
+#' @return `raw`, defineed.
+#' @keywords internal
+define_episode_boundary <- function(raw, edge, before_offset, after_offset) {
+  out <- raw
+  if (!is.na(before_offset)) {
+    out <- pmax(out, edge + before_offset, na.rm = TRUE)
+  }
+  if (!is.na(after_offset)) {
+    out <- pmin(out, edge + after_offset, na.rm = TRUE)
+  }
+  out
+}
+
 #' Compute the "outside all episodes" gap windows
 #'
 #' Within `[range_start, range_end]`, returns the parts that do not fall
@@ -84,39 +118,7 @@ outside_all_episode_gaps <- function(episodes, range_start, range_end) {
   )
 }
 
-#' Clamp a raw window boundary into an optional range around an episode edge
-#'
-#' `before_offset`/`after_offset` are independent and optional (`NA` means
-#' "no clamp on that side"), and both are read the same way, as a signed
-#' number of days from `edge`: `before_offset` stops `raw` from being
-#' earlier than `edge + before_offset` (a floor), `after_offset` stops it
-#' from being later than `edge + after_offset` (a cap). Applied in that
-#' order, so if both are set and inconsistent (the floor lands after the
-#' cap), the cap wins. `raw` may itself be `NA` (e.g. when the matching
-#' `anchor_start_offset`/`anchor_end_offset` was left unset because the
-#' window is meant to be derived purely from the episode, with no anchor
-#' contribution at all): `pmax`/`pmin` are called with `na.rm = TRUE`, so an
-#' `NA` `raw` simply drops out and the active clamp offset(s) alone
-#' determine the result.
-#'
-#' @param raw The anchor-derived boundary before clamping (a Date vector,
-#'   may contain `NA`).
-#' @param edge The episode's own start or end date (a Date vector, same
-#'   length as `raw`).
-#' @param before_offset,after_offset Single integer offsets, or `NA` to skip
-#'   that side's clamp.
-#' @return `raw`, clamped.
-#' @keywords internal
-clamp_episode_boundary <- function(raw, edge, before_offset, after_offset) {
-  out <- raw
-  if (!is.na(before_offset)) {
-    out <- pmax(out, edge + before_offset, na.rm = TRUE)
-  }
-  if (!is.na(after_offset)) {
-    out <- pmin(out, edge + after_offset, na.rm = TRUE)
-  }
-  out
-}
+
 
 #' Episode-Based Window Engine
 #'
@@ -137,11 +139,11 @@ clamp_episode_boundary <- function(raw, edge, before_offset, after_offset) {
 #'
 #' For `"CURRENT"`/`"PRIOR"`/`"CURRENT_AND_PRIOR"`, each selected episode's
 #' window starts from `anchor_start_col + anchor_start_offset` and ends at
-#' `anchor_end_col + anchor_end_offset`, then that raw boundary is clamped
+#' `anchor_end_col + anchor_end_offset`, then that raw boundary is defineed
 #' into range around the episode's own start/end via
 #' `before_start_episode_offset`/`after_start_episode_offset` (window start)
 #' and `before_end_episode_offset`/`after_end_episode_offset` (window end);
-#' see `clamp_episode_boundary()`. For `"OUTSIDE_ALL"`, it instead finds the
+#' see `define_episode_boundary()`. For `"OUTSIDE_ALL"`, it instead finds the
 #' gaps *between all* of a person's episodes inside `[anchor_start_col +
 #' anchor_start_offset, anchor_end_col + anchor_end_offset]` (the
 #' before/after episode offsets are not used).
@@ -198,13 +200,13 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
         anchor_end_val + row$anchor_end_offset, nrow(selected)
       )
 
-      window_start <- clamp_episode_boundary(
+      window_start <- define_episode_boundary(
         window_start_raw,
         selected$start_episode,
         row$before_start_episode_offset,
         row$after_start_episode_offset
       )
-      window_end <- clamp_episode_boundary(
+      window_end <- define_episode_boundary(
         window_end_raw,
         selected$end_episode,
         row$before_end_episode_offset,

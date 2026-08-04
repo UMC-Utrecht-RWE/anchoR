@@ -14,7 +14,13 @@ testthat::test_that("Test nest_episodes_onto_population intended behaviour", {
   testthat::expect_equal(dim(nested$.episodes[[1]]), c(3, 2))
 })
 
-testthat::test_that("", {})
+testthat::test_that("Test define_episode_boundary intended behaviour", {
+  window_dt <- define_window(
+    pregnancy_population_simple(),
+    pregnancy_metadata_simple(),
+    episodes = pregnancy_episodes_simple()
+  )
+})
 
 testthat::test_that("", {})
 
