@@ -8,16 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.4.4]
+
 ### Removed
 - The original `RANGE_COUNT` (filtered raw `concept.value` against metadata `range_min`/`range_max` bounds) has been removed because not confirm with requests and specifications. All connected functionalities are also removed.
 
 ### Added
 - `RANGE_COUNT` reintroduced with new, unrelated semantics (developed under the working names `MASK_COUNT`/`COUNT_CATEGORY`/`COUNT_RANGE` before settling back on this name) in `range_count.sql`: counts matching `concepts` rows per person/window like `COUNT` does, then looks up that count in a user-supplied `concept_ranges` table and returns a bucketed `new_value` instead of the raw count. Note this reuses the exact name of the selector removed above; the two are unrelated, and old metadata still using the pre-removal `RANGE_COUNT` bounds-filter behavior will now silently run under this new logic instead of erroring.
 - `anchor()`, `anchor_by_variable()`, and `anchor_by_selector()` gain a `prepare_con` argument: an optional function called once, on the same DuckDB connection, right after `concepts` is loaded and before any selector query runs. Lets a caller load extra tables a selector needs (e.g. the new `RANGE_COUNT`'s `concept_ranges`) with plain `DBI` calls, without the package needing to know about them; connection lifecycle (opening/closing) stays owned by the package.
+- Update `get_anchor_result` by adding imputation of boolean variables. When value is missing, then `value = FALS`E. We lost this logic on previous PR
 
 ### Fixed
 - `range_count.sql` (the new selector described above) no longer wraps its bucketing `CASE` inside `COUNT(...)` (which just counted rows, identical to `COUNT(*)`, since every branch was non-`NULL`) and no longer references `w.value`, a column that doesn't exist on `population_windows`. It's now a two-step query: count matches, then join the count against `concept_ranges`. Also casts the looked-up bucket value through `BIGINT` before `VARCHAR` so it renders as `"2"` instead of `"2.0"` when `concept_ranges$new_value` is a double (the common case when read from a CSV).
 - `vignettes/selector-cookbook.Rmd` excludes the new `RANGE_COUNT` from its "every bundled selector" demo (it needs a `concept_ranges` table the vignette's single-`concepts`-table example doesn't provide) and no longer references the removed (original) `RANGE_COUNT` selector.
+- `load_concepts_table()` is now inside the per selector loop, so the filtering is much smaller again (each selector only filters on its own concept_ids). The connection itself is still opened just once, that part didn't change.
 
 ## [v1.4.3]
 
@@ -82,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # List of releases
 - unreleased: https://github.com/UMC-Utrecht-RWE/anchoR@main
+- v1.4.3 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.4
 - v1.4.3 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.3
 - v1.4.2 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.2
 - v1.4.1.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1.1
