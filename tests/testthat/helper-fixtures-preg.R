@@ -204,3 +204,88 @@ pregnancy_concepts_complex <- function() {
     value = c("TRUE", "TRUE", "TRUE", "TRUE")
   )
 }
+
+# ---------------------------------------------------------------------------
+pregnancy_episodes_cases <- function() {
+  data.table::data.table(
+    person_id = c("1", "1"),
+    start_episode = as.Date(c("2020-01-01", "2021-06-01")), # prior, current
+    end_episode = as.Date(c("2020-10-01", "2022-03-01"))
+  )
+}
+
+pregnancy_population_cases <- function() {
+  data.table::data.table(
+    person_id = "1",
+    T0 = as.Date("2021-09-01") # anchor_date; falls inside the current episode
+  )
+}
+
+# Case 1: In prior pregnancy, look for events between LMP + 140 until the end
+# of pregnancy
+# Case 2: In prior pregnancy, look for events between LMP - 14 and LMP + 140.
+# Should not count events after LMP + 140.
+# Case 3: In prior and current pregnancy before anchor_date, look for events
+# LMP - 14 and LMP + 140. Should not count events after
+# min(anchor_date + 1, LMP + 140) should not be count.
+# Case 4: In current pregnancy, look for events between anchor_date - 1
+# and anchor_date + 42.
+# Case 5: In current pregnancy, look for events between the
+# max(LMP + 210, anchor_date) and LMP + 258.
+pregnancy_metadata_cases <- function() {
+  data.table::data.table(
+    variable_id = c(
+      "case1", "case2", "case3", "case4", "case5"
+    ),
+    concept_id = "DEMO",
+    constructor = c(
+      "in_prior_pregnancy", "in_prior_pregnancy", "in_current_and_prior",
+      "in_current_pregnancy", "in_current_pregnancy"
+    ),
+    selector = "ALL",
+    start_offset = 0L, # unused by episode-based constructors, still required
+    end_offset = 0L,
+    anchor_start_offset = c(NA_real_, NA_real_, -999, 1, 0),
+    anchor_end_offset = c(NA_real_, NA_real_, -1, 42, 999),
+    before_start_episode_offset = c(140, -14, -14, NA_real_, 210),
+    after_start_episode_offset = c(999, 140, 140, NA_real_, 250),
+    before_end_episode_offset = c(0, 0, 0, 0, 0),
+    after_end_episode_offset = c(0, 0, 0, 0, 0)
+  )
+}
+
+# Case 6: constructor = GENERIC (not episode-based at all), "within one
+# month after the current pregnancy ended": anchored directly at a
+# `pregnancy_end_date` population column
+# It needs its own population/metadata pair instead of
+# pregnancy_population_cases()/pregnancy_episodes_cases().
+# Window: [2022-03-01, 2022-03-31].
+pregnancy_population_case6 <- function() {
+  data.table::data.table(
+    person_id = "1",
+    T0 = as.Date("2021-09-01"),
+    pregnancy_end_date = as.Date("2022-03-01")
+  )
+}
+
+pregnancy_metadata_case6 <- function() {
+  data.table::data.table(
+    variable_id = "case6",
+    concept_id = "DEMO",
+    constructor = "GENERIC",
+    selector = "ALL",
+    start_offset = 0L,
+    end_offset = 30L,
+    anchor_start_col = "pregnancy_end_date",
+    anchor_end_col = "pregnancy_end_date"
+  )
+}
+
+pregnancy_concepts_cases <- function() {
+  data.table::data.table(
+    person_id = c("1", "1"),
+    concept_id = c("DEMO", "DEMO"),
+    date = as.Date(c("2020-07-01", "2021-09-15")), # inside case 1, case 4
+    value = c("TRUE", "TRUE")
+  )
+}

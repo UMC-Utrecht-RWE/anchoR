@@ -7,6 +7,7 @@
 define_window(
   population,
   metadata,
+  episodes = NULL,
   anchor_col = "T0",
   constructor_env = globalenv()
 )
@@ -15,6 +16,13 @@ define_window(
 \item{population}{A data frame containing the study population.}
 
 \item{metadata}{A data frame describing the variables to anchor.}
+
+\item{episodes}{Optional data frame with \code{person_id}, \code{start_episode},
+\code{end_episode} columns. Required when \code{metadata} uses an episode-based
+constructor (\code{in_current_pregnancy}, \code{in_prior_pregnancy},
+\code{in_current_and_prior}, \code{outside_all_pregnancy}); nested onto \code{population}
+internally, one person's episodes per row, via
+\code{nest_episodes_onto_population()}.}
 
 \item{anchor_col}{Column to use when metadata does not specify
 \code{anchor_start_col} or \code{anchor_end_col}.}
