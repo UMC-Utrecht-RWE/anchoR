@@ -206,18 +206,19 @@ pregnancy_concepts_complex <- function() {
 }
 
 # ---------------------------------------------------------------------------
+# As for examples in the discussion.
 pregnancy_episodes_cases <- function() {
   data.table::data.table(
     person_id = c("1", "1"),
-    start_episode = as.Date(c("2020-01-01", "2021-06-01")), # prior, current
-    end_episode = as.Date(c("2020-10-01", "2022-03-01"))
+    start_episode = as.Date(c("2025-01-07", "2026-01-07")),
+    end_episode = as.Date(c("2025-05-07", "2026-05-07"))
   )
 }
 
 pregnancy_population_cases <- function() {
   data.table::data.table(
     person_id = "1",
-    T0 = as.Date("2021-09-01") # anchor_date; falls inside the current episode
+    T0 = as.Date("2026-03-07")
   )
 }
 
