@@ -18,14 +18,14 @@ Episodes live in their own long table, one row per episode, with `person_id`, `s
 
 ```{r population}
 episodes <- data.table(
-  person_id = "1",
-  start_episode = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
-  end_episode = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01"))
+    person_id = "1",
+    start_episode = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
+    end_episode = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01"))
 )
 
 population <- data.table(
-  person_id = "1",
-  T0 = as.Date("2026-02-15")
+    person_id = "1",
+    T0 = as.Date("2026-02-15")
 )
 ```
 
@@ -33,33 +33,33 @@ population <- data.table(
 
 ```{r metadata}
 metadata <- data.table(
-  variable_id = c("current", "prior", "current_and_prior", "outside"),
-  concept_id = "DEMO",
-  constructor = c(
-    "in_current_pregnancy", "in_prior_pregnancy",
-    "in_current_and_prior", "outside_all_pregnancy"
-  ),
-  selector = "ALL",
-  start_offset = 0L, # unused by episode-based constructors, still required
-  end_offset = 0L,
-  anchor_start_offset = c(NA_real_, NA_real_, NA_real_, -1172L),
-  anchor_end_offset = c(NA_real_, NA_real_, NA_real_, 0L),
-  before_start_episode_offset = c(0, 0, 0, NA_real_),
-  after_start_episode_offset = NA_real_,
-  before_end_episode_offset = NA_real_,
-  after_end_episode_offset = c(14, 0, 30, NA_real_)
+    variable_id = c("current", "prior", "current_and_prior", "outside"),
+    concept_id = "DEMO",
+    constructor = c(
+        "in_current_pregnancy", "in_prior_pregnancy",
+        "in_current_and_prior", "outside_all_pregnancy"
+    ),
+    selector = "ALL",
+    start_offset = 0L, # unused by episode-based constructors, still required
+    end_offset = 0L,
+    anchor_start_offset = c(NA_real_, NA_real_, NA_real_, -1172L),
+    anchor_end_offset = c(NA_real_, NA_real_, NA_real_, 0L),
+    before_start_episode_offset = c(0, 0, 0, NA_real_),
+    after_start_episode_offset = NA_real_,
+    before_end_episode_offset = NA_real_,
+    after_end_episode_offset = c(14, 0, 30, NA_real_)
 )
 
 define_window(population, metadata, episodes = episodes)[
-  window_valid == TRUE,
-  .(variable_id, window_start, window_end)
+    window_valid == TRUE,
+    .(variable_id, window_start, window_end)
 ]
 ```
 
 Every episode-based window is built from two independent border pairs: `before_start_episode_offset`/`after_start_episode_offset` (relative to the episode's own `start_episode`) and `before_end_episode_offset`/`after_end_episode_offset` (relative to `end_episode`). Each pair is read as `edge + offset`, `NA` meaning that side isn't set:
 
 - **At most one side of a pair set** (as above, every pair here has only one non-`NA` side): that edge contributes `edge + offset` to a single shared window. `current`'s `before_start_episode_offset = 0` pins the window's start to the episode's own start; `after_end_episode_offset = 14` extends the end 14 days past the episode's own end.
-- **Both sides of a pair set**: that pair stops contributing to the shared window and instead becomes its own self-contained region near that edge, `[edge + before_offset, edge + after_offset]` — see `documentation/definitions/Episode-Based Window Engine.md` for the full rule, including what happens when only one pair is fully specified.
+- **Both sides of a pair set**: that pair stops contributing to the shared window and instead becomes its own self-contained region near that edge, `[edge + before_offset, edge + after_offset]` see `documentation/definitions/Episode-Based Window Engine.md` for the full rule, including what happens when only one pair is fully specified.
 
 `outside_all_pregnancy` works differently: it doesn't use the before/after episode offsets at all, only `anchor_start_offset`/`anchor_end_offset`, which define the overall search range (`[T0 - 1172, T0]` above) that the gaps between episodes are computed within.
 

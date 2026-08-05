@@ -19,7 +19,7 @@ Looks up the SQL text for a given \code{selector} value. Built-in selectors
 (e.g. \code{RANGE_COUNT}) are always resolved from the bundled \code{inst/sql}
 templates. A user-defined selector is found by name
 (\verb{<selector>_selector}, lower-cased) in \code{selector_env}, so anyone can add
-one with \code{make_selector()} without editing this package -- the same
+one with \code{make_selector()} without editing this package, the same
 pattern \code{resolve_window_constructor()} uses for window constructors.
 }
 \keyword{internal}

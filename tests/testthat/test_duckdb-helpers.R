@@ -169,7 +169,7 @@ testthat::test_that(
   "anchor() ignores concepts for concept_ids outside metadata",
   {
     # An end-to-end check that the concept_ids filter in load_concepts_table
-    # never changes results -- a concept_id irrelevant to metadata must have
+    # never changes results, a concept_id irrelevant to metadata must have
     # been unmatchable anyway (the join is on w.concept_id), this just locks
     # down that the filtering doesn't accidentally drop something it should
     # keep.

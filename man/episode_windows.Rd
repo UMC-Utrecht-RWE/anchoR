@@ -40,7 +40,7 @@ What happens with the \emph{other} pair depends on whether either pair forms
 a region:
 \itemize{
 \item \strong{Neither pair fully specified}: both edges contribute to one shared
-window -- an edge with neither side set contributes \code{edge} itself,
+window, an edge with neither side set contributes \code{edge} itself,
 unshifted; one with exactly one side set contributes \verb{edge + that offset} (whichever side, no ambiguity with only one value).
 \item \strong{Exactly one pair fully specified}: that pair's region is the only
 output; the other pair (whether fully unset or only partially set)

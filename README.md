@@ -80,6 +80,7 @@ Person 1's window is 365 days before `T0` through `T0` itself, which covers the 
 
 ## Documentation
 
+- New here? [documentation/Quickstart.md](documentation/Quickstart.md) assumes no prior familiarity with R or epidemiology terms.
 - Installed introductory vignettes: `vignette("standard-windows", package = "anchoR")` and `vignette("episode-windows", package = "anchoR")`.
 - Practical vignettes: `multiple-windows`, `metadata-migration`, `production-sources`, `troubleshooting`, `selector-cookbook`, `custom-constructors`, and `imputation` (open one with `vignette("<name>", package = "anchoR")`).
 - [Standard-window tutorial](documentation/Tutorial_standard_windows.md): selectors, multiple windows, batching, and custom anchors.

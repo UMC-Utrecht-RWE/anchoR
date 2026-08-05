@@ -1,6 +1,6 @@
 # Custom Constructors and Selectors
 
-anchoR ships a fixed set of window 'shapes' (`constructor` values like `GENERIC`, see [Tutorial_standard_windows](Tutorial_standard_windows.md), or `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/etc., see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md)) and a fixed set of window-reduction rules (`selector` values like `LATEST`, `COUNT`, `RANGE_COUNT`, compared in the `selector-cookbook` vignette). Most study variables fit one of those.
+anchoR ships a fixed set of window 'shapes' (`constructor` values like `GENERIC`, see [Tutorial_standard_windows](Tutorial_standard_windows.md), or `in_current_pregnancy`/`in_prior_pregnancy`/etc., see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md)) and a fixed set of window-reduction rules (`selector` values like `LATEST`, `COUNT`, `RANGE_COUNT`, compared in the `selector-cookbook` vignette). Most study variables fit one of those.
 
 When one doesn't, you don't need to edit anchoR itself. `make_constructor()` and `make_selector()` let you define your own `constructor`/`selector` value from your own script, and `anchor()` picks it up automatically, the same way it resolves a built-in one.
 

@@ -1,14 +1,14 @@
-A single numerical example run through all four [episode-based](<../definitions/Episode-Based Window Engine.md>) constructors using the exported `define_window()` interface.
+A single numerical example run through all four [episode-based](<../definitions/Episode-Based Window Engine.md>) constructors using the exported `define_window()` interface. Every table below was produced by actually running the snippet above it, not hand-computed.
 
 ## Setup
 
 One person with three episodes and an anchor (`T0`) inside the third:
 
-| Episode     | event_start | event_end  |
-| ----------- | ----------- | ---------- |
-| A (prior)   | 2023-01-01  | 2023-09-01 |
-| B (prior)   | 2024-03-01  | 2024-11-15 |
-| C (current) | 2025-11-01  | 2026-08-01 |
+| Episode     | start_episode | end_episode |
+| ----------- | ------------- | ----------- |
+| A (prior)   | 2023-01-01    | 2023-09-01  |
+| B (prior)   | 2024-03-01    | 2024-11-15  |
+| C (current) | 2025-11-01    | 2026-08-01  |
 
 `T0 = 2026-02-15` (falls inside episode C).
 
@@ -17,112 +17,112 @@ library(anchoR)
 library(data.table)
 
 episodes <- data.table(
-  event_start = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
-  event_end   = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01"))
+  person_id = "1",
+  start_episode = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
+  end_episode   = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01"))
 )
-anchor <- as.Date("2026-02-15")
+population <- data.table(person_id = "1", T0 = as.Date("2026-02-15"))
 
 make_windows <- function(
-  constructor, start_offset, end_offset, end_cap_offset = NA_real_,
-  start_look_back = NA_real_, end_look_back = NA_real_
+  constructor,
+  anchor_start_offset = NA_real_, anchor_end_offset = NA_real_,
+  before_start_episode_offset = NA_real_, after_start_episode_offset = NA_real_,
+  before_end_episode_offset = NA_real_, after_end_episode_offset = NA_real_
 ) {
-  population <- data.table(
-    person_id = "1",
-    anchor = anchor,
-    episodes = list(episodes)
-  )
   metadata <- data.table(
     variable_id = "demo",
     concept_id = "DEMO",
     constructor = constructor,
     selector = "ALL",
-    start_offset = start_offset,
-    end_offset = end_offset,
-    anchor_start_col = "anchor",
-    event_col = "episodes",
-    end_cap_offset = end_cap_offset,
-    start_look_back = start_look_back,
-    end_look_back = end_look_back
+    start_offset = 0L,  # unused by episode-based constructors, still required
+    end_offset = 0L,
+    anchor_start_offset = anchor_start_offset,
+    anchor_end_offset = anchor_end_offset,
+    before_start_episode_offset = before_start_episode_offset,
+    after_start_episode_offset = after_start_episode_offset,
+    before_end_episode_offset = before_end_episode_offset,
+    after_end_episode_offset = after_end_episode_offset
   )
-  define_window(population, metadata, anchor_col = "anchor")[
+  define_window(population, metadata, episodes = episodes)[
     window_valid == TRUE,
     .(window_start, window_end)
   ]
 }
 ```
 
-## [IN_PRIOR_PREG](../definitions/IN_PRIOR_PREG.md)
+## [in_current_pregnancy](../definitions/IN_CURRENT_PREG.md)
 
-`start_offset = 0, end_offset = 30, end_cap_offset = 90`: both A and B ended before `T0`, so both produce a window, each capped to the episode's own first 90 days:
-
-```r
-make_windows("IN_PRIOR_PREG", 0L, 30L, end_cap_offset = 90)
-```
-
-| window_start | window_end | note                                 |
-| ------------ | ---------- | ------------------------------------ |
-| 2023-01-01   | 2023-04-01 | capped: uncapped would be 2023-10-01 |
-| 2024-03-01   | 2024-05-30 | capped: uncapped would be 2024-12-15 |
-
-![IN_PRIOR_PREG worked example|1000](img/in-prior-preg.svg)
-
-### IN_PRIOR_PREG with `start_look_back`/`end_look_back`
-
-`start_look_back`/`end_look_back` are a *separate* pair of columns from `start_offset`/`end_offset` (both `NA` unless set), and only `IN_PRIOR_PREG` reads them. They restrict *which episodes are eligible at all*: an episode not overlapping `[anchor + start_look_back, anchor + end_look_back]` is dropped before any window is built; a survivor's window is still computed from `start_offset`/`end_offset` exactly as above, unaffected by where the lookback range's edges fall.
-
-With `start_look_back` set to `2024-01-01 - T0` (`-776` days) and `end_look_back = 0`, the lookback range is `[2024-01-01, 2026-02-15]`. Episode A (`2023-01-01`/`2023-09-01`) ended before that range starts, so it is dropped entirely; not truncated, just absent. Episode B overlaps the range, so it survives with the *same* window as the row above (`start_offset = 0, end_offset = 30`, no lookback):
+With no border offsets set, episode C's own unshifted span becomes the window:
 
 ```r
-make_windows(
-  "IN_PRIOR_PREG", 0L, 30L,
-  start_look_back = -776, end_look_back = 0L
-)
-```
-
-| window_start | window_end | note                                       |
-| ------------ | ---------- | ------------------------------------------ |
-| 2024-03-01   | 2024-12-15 | episode B only; episode A dropped entirely |
-
-![IN_PRIOR_PREG with start_look_back/end_look_back worked example|1000](img/in-prior-preg-lookback.svg)
-
-Compare to the unfiltered row above: episode A's window (`2023-01-01`/`2023-10-01`) is gone, not clipped to `2024-01-01`. If you want the OUTSIDE_ALL_PREG-style behavior of clipping a *search range* rather than filtering episodes, that's what `OUTSIDE_ALL_PREG`'s own `start_offset`/`end_offset` already does (see below); it is a different mechanism for a different constructor, not the same feature under a different name.
-
-## [SINCE_START_CURRENT_PREG](../definitions/SINCE_START_CURRENT_PREG.md)
-
-`start_offset = 0, end_offset = 0`: episode C contains `T0`; the window stops exactly at the anchor:
-
-```r
-make_windows("SINCE_START_CURRENT_PREG", 0L, 0L)
+make_windows("in_current_pregnancy")
 ```
 
 | window_start | window_end |
 | ------------ | ---------- |
-| 2025-11-01   | 2026-02-15 |
+| 2025-11-01   | 2026-08-01 |
 
-![SINCE_START_CURRENT_PREG worked example|1000](img/since-start-current-preg.svg)
-
-## [ANYTIME_CURRENT_PREG](../definitions/ANYTIME_CURRENT_PREG.md)
-
-`start_offset = 0, end_offset = 14`: same episode C, but bounded by its own end plus a 14-day grace period:
+Extending 14 days past the episode's own end (`after_end_episode_offset = 14`, the end pair's only side set):
 
 ```r
-make_windows("ANYTIME_CURRENT_PREG", 0L, 14L)
+make_windows("in_current_pregnancy", after_end_episode_offset = 14)
 ```
 
 | window_start | window_end |
 | ------------ | ---------- |
 | 2025-11-01   | 2026-08-15 |
 
-![ANYTIME_CURRENT_PREG worked example|1000](img/anytime-current-preg.svg)
+## [in_prior_pregnancy](../definitions/IN_PRIOR_PREG.md)
 
-## [OUTSIDE_ALL_PREG](../definitions/OUTSIDE_ALL_PREG.md)
-
-`start_offset = -1172, end_offset = 0`: search range `[2022-12-01, 2026-02-15]`. Three gaps come back, fenced by A, B, and C; none touches `T0` since it sits inside the still-ongoing episode C:
-
-> **`OUTSIDE_ALL_PREG` does not read `start_look_back`/`end_look_back`.** Its own `start_offset`/`end_offset` already are the anchor-relative range (there is no separate "shift the episode" role for them here, unlike `IN_PRIOR_PREG`/`SINCE_START_CURRENT_PREG`/`ANYTIME_CURRENT_PREG`), so setting `start_look_back`/`end_look_back` on an `OUTSIDE_ALL_PREG` row has no effect at all. If you set them expecting to control the search range, that's the bug to look for, use `start_offset`/`end_offset` instead.
+With no border offsets set, both A and B (classified "prior" relative to current episode C) produce a window each, their own unshifted spans:
 
 ```r
-make_windows("OUTSIDE_ALL_PREG", -1172L, 0L)
+make_windows("in_prior_pregnancy")
+```
+
+| window_start | window_end |
+| ------------ | ---------- |
+| 2023-01-01   | 2023-09-01 |
+| 2024-03-01   | 2024-11-15 |
+
+### `in_prior_pregnancy`, restricted to the first 90 days of each prior episode
+
+Setting *both* sides of the start pair (`before_start_episode_offset = 0, after_start_episode_offset = 90`) turns it into its own self-contained region, `[start_episode, start_episode + 90]`; the end pair is left unset, so per the "exactly one pair fully specified" rule it contributes nothing:
+
+```r
+make_windows(
+  "in_prior_pregnancy",
+  before_start_episode_offset = 0, after_start_episode_offset = 90
+)
+```
+
+| window_start | window_end | note                     |
+| ------------ | ---------- | ------------------------ |
+| 2023-01-01   | 2023-04-01 | episode A, first 90 days |
+| 2024-03-01   | 2024-05-30 | episode B, first 90 days |
+
+Compare to the unrestricted row above: both episodes' full spans (through `2023-09-01`/`2024-11-15`) are gone entirely, not clipped a fully-specified pair replaces the shared window, it doesn't shrink it.
+
+## [in_current_and_prior](../definitions/IN_CURRENT_AND_PRIOR.md)
+
+The union of the two constructors above, same (unset) border offsets:
+
+```r
+make_windows("in_current_and_prior")
+```
+
+| window_start | window_end | which episode |
+| ------------ | ---------- | ------------- |
+| 2025-11-01   | 2026-08-01 | C (current)   |
+| 2023-01-01   | 2023-09-01 | A (prior)     |
+| 2024-03-01   | 2024-11-15 | B (prior)     |
+
+## [outside_all_pregnancy](../definitions/OUTSIDE_ALL_PREG.md)
+
+`anchor_start_offset = -1172, anchor_end_offset = 0`: search range `[2022-12-01, 2026-02-15]`. Three gaps come back, fenced by A, B, and C; none touches `T0` since it sits inside the still-ongoing episode C. This constructor doesn't read the four border-offset columns at all only `anchor_start_offset`/`anchor_end_offset` matter, and they define the search range itself:
+
+```r
+make_windows("outside_all_pregnancy", anchor_start_offset = -1172L, anchor_end_offset = 0L)
 ```
 
 | window_start | window_end | gap             |
@@ -130,5 +130,3 @@ make_windows("OUTSIDE_ALL_PREG", -1172L, 0L)
 | 2022-12-01   | 2022-12-31 | before A        |
 | 2023-09-02   | 2024-02-29 | between A and B |
 | 2024-11-16   | 2025-10-31 | between B and C |
-
-![OUTSIDE_ALL_PREG worked example|1000](img/outside-all-preg.svg)

@@ -130,11 +130,11 @@ testthat::test_that(
   {
     # `"1"` is in the function's own "already valid, don't touch" list
     # (c(TRUE, 1, "TRUE", "1")), so it's never routed through the
-    # invalid-value-to-TRUE branch -- but the final blanket
+    # invalid-value-to-TRUE branch, but the final blanket
     # `as.logical(get(value_col))` call doesn't understand the string "1"
     # (as.logical("1") is NA in base R; only "TRUE"/"T"/"true" etc. parse),
     # so it silently comes out NA instead of TRUE. This test documents the
-    # current (surprising) behavior, not the documented intent -- flag if
+    # current (surprising) behavior, not the documented intent, flag if
     # this should actually be fixed to impute TRUE for "1" like it does for
     # "TRUE".
     wide_anchored <- data.table::data.table(person_id = "1", value_v1 = "1")

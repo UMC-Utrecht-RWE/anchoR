@@ -53,4 +53,4 @@ metadata <- data.table::data.table(
 
 Call `anchor(..., anchor_col = "index_date")`; persisted output still calls the primary anchor field `T0`.
 
-Episode-based constructors additionally require a population list-column named by `metadata$event_col`. Each element must be a table containing `event_start` and `event_end`; see [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md).
+Episode-based constructors additionally require a separate `episodes` table (`person_id`, `start_episode`, `end_episode`), passed as its own argument to `define_window()`/`anchor()`/`anchor_by_variable()`/`anchor_by_selector()` — anchoR nests it onto `population` internally, so `population` itself never needs an episodes column. See [definitions/Episodes.md](<definitions/Episodes.md>) and [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md).

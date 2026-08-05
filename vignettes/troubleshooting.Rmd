@@ -69,7 +69,7 @@ supported_metadata[, .(variable_id, selector)]
 
 ## Episode checks
 
-Episode list-columns must contain `event_start` and `event_end`. Invalid or overlapping periods should be corrected upstream. Multiple candidate windows are joined independently; overlapping windows can cause one concept event to contribute more than once to `COUNT` or `ALL`.
+The `episodes` table must contain `person_id`, `start_episode`, and `end_episode`. Invalid or overlapping periods should be corrected upstream (episode classification assumes a person's own episodes don't overlap). Multiple candidate windows are joined independently; overlapping windows can cause one concept event to contribute more than once to `COUNT` or `ALL`.
 
 ## A useful diagnostic sequence
 

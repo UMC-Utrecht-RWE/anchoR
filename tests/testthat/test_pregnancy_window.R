@@ -182,7 +182,7 @@ testthat::test_that("episode_windows errors on an inverted end pair", {
 # A hand-built window_dt (mirroring what define_window() would eventually
 # feed the constructor's transform_fn with) so these tests exercise
 # pregnancy_window_engine() directly, with full control over every column,
-# instead of going through define_window() -- which already resolves and
+# instead of going through define_window(), which already resolves and
 # calls the constructor internally, so re-running the engine on its
 # (already exploded) output would double-process it.
 cases_window_dt <- function(

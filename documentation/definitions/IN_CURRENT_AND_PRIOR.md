@@ -1,0 +1,5 @@
+> [Engine](<Episode-Based Window Engine.md>) configured with `episode_select = "CURRENT_AND_PRIOR"`: the union of [IN_CURRENT_PREG](IN_CURRENT_PREG.md)'s and [IN_PRIOR_PREG](IN_PRIOR_PREG.md)'s candidate windows.
+
+Selects the current episode (if any) plus every prior episode (per `classify_episodes()`'s rule relative to the current episode if one exists, otherwise relative to the anchor), each windowed independently using the same border-offset formula described in [Episode-Based Window Engine](<Episode-Based Window Engine.md>). A person with no current episode still gets rows for any prior episodes; a person with a current episode and two prior ones gets three (or more, if any episode's offsets produce two regions) candidate windows.
+
+Since every selected episode shares the same row's offsets, the window shape is identical across the current episode and every prior episode for a given variable there's no way to clamp the current episode's window differently from the prior episodes' windows within one `in_current_and_prior` variable. Use two separate variables (one `in_current_pregnancy`, one `in_prior_pregnancy`) if they need different offsets.

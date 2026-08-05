@@ -101,7 +101,7 @@ classify_episodes <- function(episodes, anchor) {
 #' What happens with the *other* pair depends on whether either pair forms
 #' a region:
 #' - **Neither pair fully specified**: both edges contribute to one shared
-#'   window -- an edge with neither side set contributes `edge` itself,
+#'   window, an edge with neither side set contributes `edge` itself,
 #'   unshifted; one with exactly one side set contributes `edge + that
 #'   offset` (whichever side, no ambiguity with only one value).
 #' - **Exactly one pair fully specified**: that pair's region is the only

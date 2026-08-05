@@ -84,7 +84,7 @@ testthat::test_that("resolve_selector_sql returns a custom selector's SQL text",
 })
 
 testthat::test_that("resolve_selector_sql finds a custom selector via lexical scoping", { # nolint: line_length_linter.
-  # selector_env doesn't have to hold the object directly -- exists()/get()
+  # selector_env doesn't have to hold the object directly, exists()/get()
   # use inherits = TRUE, so a parent environment is searched too.
   parent_env <- new.env()
   parent_env$my_custom_selector <- make_selector("SELECT 2 AS demo")

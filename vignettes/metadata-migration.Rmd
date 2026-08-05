@@ -16,22 +16,22 @@ Older study-variable files often use BRIDGE-oriented names. anchoR automatically
 
 ```{r legacy}
 legacy <- data.table(
-  variable_id = c("recent_vaccine", "unsupported_variable"),
-  concept_id = c("VACCINE", "OTHER"),
-  window = c("lookback", "lookback"),
-  start = c(-365, -30),
-  end = c(0, 0),
-  window_definition = c("GENERIC", "GENERIC"),
-  date_extraction_func = c("latest", "not implemented"),
-  anchor_date_start = c("T0", "T0"),
-  anchor_date_end = c("T0", "T0")
+    variable_id = c("recent_vaccine", "unsupported_variable"),
+    concept_id = c("VACCINE", "OTHER"),
+    window = c("lookback", "lookback"),
+    start = c(-365, -30),
+    end = c(0, 0),
+    window_definition = c("GENERIC", "GENERIC"),
+    date_extraction_func = c("latest", "not implemented"),
+    anchor_date_start = c("T0", "T0"),
+    anchor_date_end = c("T0", "T0")
 )
 
 setnames(
-  legacy,
-  old = c("window", "start", "end", "window_definition"),
-  new = c("window_name", "start_offset", "end_offset", "constructor"),
-  skip_absent = TRUE
+    legacy,
+    old = c("window", "start", "end", "window_definition"),
+    new = c("window_name", "start_offset", "end_offset", "constructor"),
+    skip_absent = TRUE
 )
 ```
 
@@ -40,8 +40,8 @@ Filter unsupported rows only when dropping them is an explicit pipeline decision
 ```{r filter}
 migrated <- suppressWarnings(filter_supported_metadata(legacy))
 migrated[, .(
-  variable_id, window_name, start_offset, end_offset,
-  date_extraction_func
+    variable_id, window_name, start_offset, end_offset,
+    date_extraction_func
 )]
 ```
 
@@ -51,9 +51,9 @@ Validation applies the automatic aliases and canonical types.
 population <- data.table(person_id = "1", T0 = as.Date("2024-01-01"))
 normalized <- validate_anchor_inputs(population, migrated)$metadata
 normalized[, .(
-  variable_id, selector, constructor, window_name,
-  anchor_start_col, anchor_end_col, start_offset, end_offset
+    variable_id, selector, constructor, window_name,
+    anchor_start_col, anchor_end_col, start_offset, end_offset
 )]
 ```
 
-Before migration, retain an audit table containing every dropped row and its original selector. Do not silently reinterpret old `start_look_back`/`end_look_back` fields as generic offsets: in current anchoR those names are reserved for the `IN_PRIOR_PREG` episode-eligibility filter.
+Before migration, retain an audit table containing every dropped row and its original selector. `start_look_back`/`end_look_back` no longer exist as metadata columns in current anchoR; episode-based metadata now uses `anchor_start_offset`/`anchor_end_offset` and the four `before_*_episode_offset`/`after_*_episode_offset` columns instead (see `vignette("episode-windows", package = "anchoR")`) do not silently reinterpret old `start_look_back`/`end_look_back` values as any of those, since the semantics changed.

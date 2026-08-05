@@ -99,7 +99,7 @@ pregnancy_concepts_simple <- function() {
 #   - person 2 @ 2022-08-16: current = episode 2, one prior episode (1)
 #   - person 3 @ 2021-04-02: current = its only episode, zero prior episodes
 #   - person 1 @ 2021-01-01: falls in the gap between episodes 1 and 2, so
-#     there is no current episode at all -- in_prior_pregnancy and
+#     there is no current episode at all, in_prior_pregnancy and
 #     in_current_and_prior therefore produce nothing for this row, but
 #     outside_all_pregnancy (which doesn't need a current episode) still
 #     does.
@@ -188,7 +188,7 @@ pregnancy_metadata_complex <- function() {
 # @ 2022-08-16 ([2022-01-30, 2022-12-31]).
 # GEST_DIAB_PRIOR: two records for complex_prior's two candidate windows for
 # person 1 @ 2022-08-16 ([2020-03-01, 2022-08-16] and [2021-04-16,
-# 2022-08-16]) -- one inside only the first, one inside both, so LATEST must
+# 2022-08-16]), one inside only the first, one inside both, so LATEST must
 # pick the later one (2022-05-01) across both windows.
 # OBESITY: one record inside complex_outside's second gap for person 1 @
 # 2022-08-16 ([2020-09-02, 2021-02-14]).

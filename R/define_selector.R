@@ -64,7 +64,7 @@ selector_is_resolvable <- function(selector_name, selector_env) {
 #' (e.g. `RANGE_COUNT`) are always resolved from the bundled `inst/sql`
 #' templates. A user-defined selector is found by name
 #' (`<selector>_selector`, lower-cased) in `selector_env`, so anyone can add
-#' one with `make_selector()` without editing this package -- the same
+#' one with `make_selector()` without editing this package, the same
 #' pattern `resolve_window_constructor()` uses for window constructors.
 #'
 #' @param selector_name Value of the metadata `selector` column.
