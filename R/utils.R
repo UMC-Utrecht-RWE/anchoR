@@ -37,7 +37,11 @@ normalize_selector_name <- function(x) {
 }
 
 looks_like_glob <- function(x) {
-  grepl("[\\*\\?\\[]", x)
+  # A bracket expression like [...] does not treat backslash as an escape
+  # character, so `\\*`/`\\?`/`\\[` inside one match a literal backslash,
+  # not an escaped `*`/`?`/`[`that previously made this TRUE for any
+  # Windows-style path (backslash separators), not just actual globs.
+  grepl("[*?[]", x)
 }
 
 concepts_input_type <- function(concepts) {
