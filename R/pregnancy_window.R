@@ -13,7 +13,7 @@ EPISODE_CONSTRUCTORS <- c( # nolint: object_name_linter.
 #' Combine the Episodes table onto Population, one list-column per person
 #'
 #' Each population row gets its own person's episodes as a small
-#' `data.table(start_episode, end_episode)`, forming a 3D structure so the.
+#' `data.table(start_episode, end_episode)`, forming a '3D structure' so the.
 #' Persons with no episodes get a zero-row table rather than `NULL`.
 #'
 #' @param population_dt A data.table with a `person_id` column.
@@ -28,38 +28,163 @@ nest_episodes_onto_population <- function(population_dt, episodes_dt) {
   population_dt[]
 }
 
-#' Define a raw window boundary into an optional range around an episode edge
+#' Classify a person's episodes relative to the anchor
 #'
-#' `before_offset`/`after_offset` are independent and optional (`NA` means
-#' "no define on that side"), and both are read the same way, as a signed
-#' number of days from `edge`: `before_offset` stops `raw` from being
-#' earlier than `edge + before_offset` (a floor), `after_offset` stops it
-#' from being later than `edge + after_offset` (a cap). Applied in that
-#' order, so if both are set and inconsistent (the floor lands after the
-#' cap), the cap wins. `raw` may itself be `NA` (e.g. when the matching
-#' `anchor_start_offset`/`anchor_end_offset` was left unset because the
-#' window is meant to be derived purely from the episode, with no anchor
-#' contribution at all): `pmax`/`pmin` are called with `na.rm = TRUE`, so an
-#' `NA` `raw` simply drops out and the active define offset(s) alone
-#' determine the result.
+#' The "current" episode is the one containing `anchor` (assumes a person's
+#' episodes don't overlap). "Prior"/"future" are normally relative to that
+#' one current episode's own bounds: an episode entirely before the current
+#' one's start is "prior", one entirely after the current one's end is
+#' "future". If there is no current episode at all, prior/future fall back
+#' to being directly relative to `anchor` itself (ended before it / starts
+#' after it).
 #'
-#' @param raw The anchor-derived boundary before defineing (a Date vector,
-#'   may contain `NA`).
-#' @param edge The episode's own start or end date (a Date vector, same
-#'   length as `raw`).
-#' @param before_offset,after_offset Single integer offsets, or `NA` to skip
-#'   that side's define.
-#' @return `raw`, defineed.
+#' Never mutates `episodes`: the input's list-column element may be shared
+#' (by reference) across several `window_dt` rows for the same person, so
+#' this always returns a freshly built table instead of adding a column to
+#' the one it was given.
+#'
+#' @param episodes A data.table with `start_episode`/`end_episode` columns,
+#'   one row per episode for a single person.
+#' @param anchor A single Date.
+#' @return A new data.table with `start_episode`/`end_episode`/
+#'   `episode_class` columns, `episode_class` one of `"current"`,
+#'   `"prior"`, `"future"`, or `NA` (an episode that is none of the three,
+#'   e.g. one that overlaps the current episode despite the no-overlap
+#'   assumption).
 #' @keywords internal
-define_episode_boundary <- function(raw, edge, before_offset, after_offset) {
-  out <- raw
-  if (!is.na(before_offset)) {
-    out <- pmax(out, edge + before_offset, na.rm = TRUE)
+classify_episodes <- function(episodes, anchor) {
+  is_current <-
+    episodes$start_episode <= anchor & anchor <= episodes$end_episode
+  current <- episodes[is_current]
+
+  if (nrow(current) > 0L) {
+    current_start <- current$start_episode[[1]]
+    current_end <- current$end_episode[[1]]
+    episode_class <- data.table::fifelse(
+      is_current, "current",
+      data.table::fifelse(
+        episodes$end_episode < current_start, "prior",
+        data.table::fifelse(
+          episodes$start_episode > current_end, "future", NA_character_
+        )
+      )
+    )
+  } else {
+    # No current episode: fall back to anchor-relative prior/future.
+    episode_class <- data.table::fifelse(
+      episodes$end_episode < anchor, "prior",
+      data.table::fifelse(
+        episodes$start_episode > anchor, "future", NA_character_
+      )
+    )
   }
-  if (!is.na(after_offset)) {
-    out <- pmin(out, edge + after_offset, na.rm = TRUE)
+
+  data.table::data.table(
+    start_episode = episodes$start_episode,
+    end_episode = episodes$end_episode,
+    episode_class = episode_class
+  )
+}
+
+#' Compute the window(s) one episode contributes, from its border offsets
+#'
+#' Each pair: `before_start_offset`/`after_start_offset` for
+#' `start_episode`, `before_end_offset`/`after_end_offset` for `end_episode`.
+#' It is read as up to two independent borders relative to that edge:
+#' `edge + offset` (`0` means the border sits exactly on the edge; `NA`
+#' means that particular border isn't set). A pair with **both** sides set
+#' becomes its own self-contained region, `[edge + before_offset,
+#' edge + after_offset]` (a single calendar day when both offsets are `0`);
+#' `before_offset` must not be later than `after_offset`, or that region
+#' would be inverted, which is an error.
+#'
+#' What happens with the *other* pair depends on whether either pair forms
+#' a region:
+#' - **Neither pair fully specified**: both edges contribute to one shared
+#'   window -- an edge with neither side set contributes `edge` itself,
+#'   unshifted; one with exactly one side set contributes `edge + that
+#'   offset` (whichever side, no ambiguity with only one value).
+#' - **Exactly one pair fully specified**: that pair's region is the only
+#'   output; the other pair (whether fully unset or only partially set)
+#'   contributes nothing.
+#' - **Both pairs fully specified**: two regions, one per pair.
+#'
+#' @param start_episode,end_episode The episode's own bounds (single Dates).
+#' @param before_start_offset,after_start_offset Single integer offsets (or
+#'   `NA`) for the `start_episode` border.
+#' @param before_end_offset,after_end_offset Single integer offsets (or
+#'   `NA`) for the `end_episode` border.
+#' @return A data.table with one or two rows of `window_start`/`window_end`.
+#' @keywords internal
+episode_windows <- function(
+  start_episode, end_episode,
+  before_start_offset, after_start_offset,
+  before_end_offset, after_end_offset
+) {
+  start_both_set <- !is.na(before_start_offset) && !is.na(after_start_offset)
+  end_both_set <- !is.na(before_end_offset) && !is.na(after_end_offset)
+
+  if (start_both_set && before_start_offset > after_start_offset) {
+    stop_log(
+      paste(
+        "`before_start_episode_offset` must not be later than",
+        "`after_start_episode_offset`."
+      )
+    )
   }
-  out
+  if (end_both_set && before_end_offset > after_end_offset) {
+    stop_log(
+      paste(
+        "`before_end_episode_offset` must not be later than",
+        "`after_end_episode_offset`."
+      )
+    )
+  }
+
+  if (start_both_set && end_both_set) {
+    return(data.table::data.table(
+      window_start = as.Date(c(
+        start_episode + before_start_offset, end_episode + before_end_offset
+      )),
+      window_end = as.Date(c(
+        start_episode + after_start_offset, end_episode + after_end_offset
+      ))
+    ))
+  }
+
+  if (start_both_set) {
+    return(data.table::data.table(
+      window_start = as.Date(start_episode + before_start_offset),
+      window_end = as.Date(start_episode + after_start_offset)
+    ))
+  }
+  if (end_both_set) {
+    return(data.table::data.table(
+      window_start = as.Date(end_episode + before_end_offset),
+      window_end = as.Date(end_episode + after_end_offset)
+    ))
+  }
+
+  # Neither pair fully specified: contribute to one shared window.
+  start_offset <- if (!is.na(before_start_offset)) {
+    before_start_offset
+  } else if (!is.na(after_start_offset)) {
+    after_start_offset
+  } else {
+    0
+  }
+  end_offset <- if (!is.na(before_end_offset)) {
+    before_end_offset
+  } else if (!is.na(after_end_offset)) {
+    after_end_offset
+  } else {
+    0
+  }
+
+  data.table::data.table(
+    window_start = as.Date(start_episode + start_offset),
+    window_end = as.Date(end_episode + end_offset)
+  )
 }
 
 #' Compute the "outside all episodes" gap windows
@@ -118,35 +243,23 @@ outside_all_episode_gaps <- function(episodes, range_start, range_end) {
   )
 }
 
-
-
 #' Episode-Based Window Engine
 #'
-#' Shared engine behind every episode-based constructor (`in_current_pregnancy`,
-#' `in_prior_pregnancy`, `in_current_and_prior`, `outside_all_pregnancy`).
+#' Shared engine behind every episode-based constructor.
 #' Each `window_dt` row carries that person's episodes in the `.episodes`
 #' list-column (a data.table with `start_episode`/`end_episode` columns,
 #' one row per episode), added by `nest_episodes_onto_population()`. One
 #' input row can expand into zero, one, or many output rows, one per
 #' candidate window.
 #'
-#' The current episode is the one containing the anchor
-#' (`start_episode <= anchor <= end_episode`, where `anchor` is the row's
-#' `anchor_start_col` value); this assumes a person's episodes don't
-#' overlap. Prior episodes are defined relative to the *current* episode,
-#' not directly relative to the anchor: `end_episode < current$start_episode`.
-#' If there is no current episode, there are no prior episodes either.
-#'
-#' For `"CURRENT"`/`"PRIOR"`/`"CURRENT_AND_PRIOR"`, each selected episode's
-#' window starts from `anchor_start_col + anchor_start_offset` and ends at
-#' `anchor_end_col + anchor_end_offset`, then that raw boundary is defineed
-#' into range around the episode's own start/end via
-#' `before_start_episode_offset`/`after_start_episode_offset` (window start)
-#' and `before_end_episode_offset`/`after_end_episode_offset` (window end);
-#' see `define_episode_boundary()`. For `"OUTSIDE_ALL"`, it instead finds the
-#' gaps *between all* of a person's episodes inside `[anchor_start_col +
-#' anchor_start_offset, anchor_end_col + anchor_end_offset]` (the
-#' before/after episode offsets are not used).
+#' For `"CURRENT"`/`"PRIOR"`/`"CURRENT_AND_PRIOR"`, episodes are first
+#' classified relative to the anchor (see `classify_episodes()`), then each
+#' selected episode independently contributes its own window(s) via
+#' `episode_windows()`, purely from its own `start_episode`/`end_episode`
+#' and the row's four border offsets.
+#' `"OUTSIDE_ALL"` is different: it finds the gaps *between all* of a
+#' person's episodes inside `[anchor_start_col + anchor_start_offset,
+#' anchor_end_col + anchor_end_offset]`; the border offsets are not used.
 #'
 #' @param window_dt A data.table produced by `cross_join_population_metadata()`,
 #'   with `.episodes` already nested onto it.
@@ -161,27 +274,19 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
   for (i in seq_len(nrow(window_dt))) {
     row <- window_dt[i]
     anchor_start_val <- row[[row$anchor_start_col]]
-    anchor_end_val <- row[[row$anchor_end_col]]
     episodes <- data.table::as.data.table(row$.episodes[[1]])
 
     if (episode_select == "OUTSIDE_ALL") {
+      anchor_end_val <- row[[row$anchor_end_col]]
       windows <- outside_all_episode_gaps(
         episodes,
         anchor_start_val + row$anchor_start_offset,
         anchor_end_val + row$anchor_end_offset
       )
     } else {
-      # Assumes a person's episodes don't overlap: "current" is whichever
-      # episode contains the anchor, and "prior" is defined relative to
-      # that one episode's own start, not directly relative to the anchor.
-      current <- episodes[
-        start_episode <= anchor_start_val & anchor_start_val <= end_episode
-      ]
-      prior <- if (nrow(current) == 0L) {
-        episodes[0]
-      } else {
-        episodes[end_episode < current$start_episode[[1]]]
-      }
+      classified <- classify_episodes(episodes, anchor_start_val)
+      current <- classified[episode_class == "current"]
+      prior <- classified[episode_class == "prior"]
 
       selected <- switch(episode_select,
         "CURRENT" = current,
@@ -193,29 +298,16 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
         next
       }
 
-      window_start_raw <- rep(
-        anchor_start_val + row$anchor_start_offset, nrow(selected)
-      )
-      window_end_raw <- rep(
-        anchor_end_val + row$anchor_end_offset, nrow(selected)
-      )
-
-      window_start <- define_episode_boundary(
-        window_start_raw,
-        selected$start_episode,
-        row$before_start_episode_offset,
-        row$after_start_episode_offset
-      )
-      window_end <- define_episode_boundary(
-        window_end_raw,
-        selected$end_episode,
-        row$before_end_episode_offset,
-        row$after_end_episode_offset
-      )
-
-      windows <- data.table::data.table(
-        window_start = as.Date(window_start), window_end = as.Date(window_end)
-      )
+      windows <- data.table::rbindlist(lapply(
+        seq_len(nrow(selected)),
+        function(j) {
+          episode_windows(
+            selected$start_episode[[j]], selected$end_episode[[j]],
+            row$before_start_episode_offset, row$after_start_episode_offset,
+            row$before_end_episode_offset, row$after_end_episode_offset
+          )
+        }
+      ))
     }
 
     if (nrow(windows) == 0L) {
