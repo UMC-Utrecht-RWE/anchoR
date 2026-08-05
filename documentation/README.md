@@ -4,7 +4,7 @@ Choose the shortest guide that matches the task.
 
 ## Start here
 
-- **New to anchoR, or to this domain entirely?** [Quickstart.md](Quickstart.md) — no jargon assumed, five terms and one runnable example.
+- **New to anchoR, or to this domain entirely?** [Quickstart.md](Quickstart.md) no jargon assumed, five terms and one runnable example.
 - [Standard windows](Tutorial_standard_windows.md): the complete fixed-anchor workflow.
 - [Episode-based windows](Tutorial_pregnancy_windows.md): recurring start/end episodes.
 - [Custom constructors and selectors](Tutorial_custom_constructors_and_selectors.md): define your own window shape or selection rule without editing anchoR.
@@ -41,7 +41,7 @@ vignette("troubleshooting", package = "anchoR")
 
 ## Definitions
 
-Short linked definitions live under [`definitions/`](definitions/). [Episode-Based Window Engine.md](<definitions/Episode-Based Window Engine.md>) is the canonical description of the episode-window border-offset formula — the four constructor pages and the episode tutorial summarize it but defer to that page. The historical pregnancy prototype under [`examples/pregnancy_examples.md`](examples/pregnancy_examples.md) is retained for design provenance only; use the current episode tutorial for supported metadata.
+Short linked definitions live under [`definitions/`](definitions/). [Episode-Based Window Engine.md](<definitions/Episode-Based Window Engine.md>) is the canonical description of the episode-window border-offset formula the four constructor pages and the episode tutorial summarize it but defer to that page. The historical pregnancy prototype under [`examples/pregnancy_examples.md`](examples/pregnancy_examples.md) is retained for design provenance only; use the current episode tutorial for supported metadata.
 
 ## Contributing to anchoR itself
 

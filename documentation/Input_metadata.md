@@ -17,16 +17,16 @@
 
 ## Optional columns and defaults
 
-| column                                                       | default         | meaning                                                                                                                     |
-| -------------------------------------------------------------| --------------- | ---------------------------------------------------------------------------------------------------------------------------|
-| `window_name`                                                | `NA_character_` | Distinguishes multiple windows for one variable.                                                                           |
-| `anchor_start_col`                                           | `anchor_col`    | Population column used as the start anchor. Alias: `anchor_date_start`.                                                    |
-| `anchor_end_col`                                             | `anchor_col`    | Population column used as the end anchor. Alias: `anchor_date_end`.                                                        |
-| `anchor_start_offset`, `anchor_end_offset`                   | `NA_real_`      | Episode-based constructors only: `OUTSIDE_ALL_PREG`'s anchor-relative search range (unused by the other three).            |
-| `before_start_episode_offset`, `after_start_episode_offset`  | `NA_real_`      | Episode-based constructors only (not `outside_all_pregnancy`): border offsets relative to a selected episode's own start.  |
-| `before_end_episode_offset`, `after_end_episode_offset`      | `NA_real_`      | Episode-based constructors only (not `outside_all_pregnancy`): border offsets relative to a selected episode's own end.    |
+| column                                                      | default         | meaning                                                                                                                   |
+| ----------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `window_name`                                               | `NA_character_` | Distinguishes multiple windows for one variable.                                                                          |
+| `anchor_start_col`                                          | `anchor_col`    | Population column used as the start anchor. Alias: `anchor_date_start`.                                                   |
+| `anchor_end_col`                                            | `anchor_col`    | Population column used as the end anchor. Alias: `anchor_date_end`.                                                       |
+| `anchor_start_offset`, `anchor_end_offset`                  | `NA_real_`      | Episode-based constructors only: `OUTSIDE_ALL_PREG`'s anchor-relative search range (unused by the other three).           |
+| `before_start_episode_offset`, `after_start_episode_offset` | `NA_real_`      | Episode-based constructors only (not `outside_all_pregnancy`): border offsets relative to a selected episode's own start. |
+| `before_end_episode_offset`, `after_end_episode_offset`     | `NA_real_`      | Episode-based constructors only (not `outside_all_pregnancy`): border offsets relative to a selected episode's own end.   |
 
-See [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) for exactly how the four border-offset columns combine to build a window, and [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) for a walkthrough. Episode-based constructors also require a separate `episodes` table, passed as its own argument alongside `population`/`metadata` — see [Input_population.md](Input_population.md).
+See [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) for exactly how the four border-offset columns combine to build a window, and [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) for a walkthrough. Episode-based constructors also require a separate `episodes` table, passed as its own argument alongside `population`/`metadata` see [Input_population.md](Input_population.md).
 
 `date_extraction_func` is accepted as a legacy alias for `selector`. The literal value `"T0"` in either anchor-column field is treated as a placeholder for the `anchor_col` argument.
 

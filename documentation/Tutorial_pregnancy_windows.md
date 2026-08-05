@@ -14,16 +14,16 @@ Every constructor in this family answers the same two questions about a person's
 2. **Where do a selected episode's window boundaries sit, relative to that episode?**
    - Two independent border-offset pairs, one around `start_episode` and one around `end_episode`. See "Building a window from a selected episode" below.
 
-There is one shared internal engine underneath (`pregnancy_window_engine()`); the four public constructor names below are that engine pre-configured with a selection rule. Users interact with it through `define_window()` or `anchor()`, rather than calling the internal engine directly. **The formula in this page is a summary — [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) is the canonical, complete description; if the two ever disagree, that page is right.**
+There is one shared internal engine underneath (`pregnancy_window_engine()`); the four public constructor names below are that engine pre-configured with a selection rule. Users interact with it through `define_window()` or `anchor()`, rather than calling the internal engine directly. **The formula in this page is a summary [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) is the canonical, complete description; if the two ever disagree, that page is right.**
 
-| `constructor`                | Selects                                     |
-| ----------------------------- | -------------------------------------------- |
-| [in_current_pregnancy](definitions/IN_CURRENT_PREG.md) | the episode containing `T0`, if any |
-| [in_prior_pregnancy](definitions/IN_PRIOR_PREG.md) | every episode classified "prior" |
+| `constructor`                                               | Selects                                  |
+| ----------------------------------------------------------- | ---------------------------------------- |
+| [in_current_pregnancy](definitions/IN_CURRENT_PREG.md)      | the episode containing `T0`, if any      |
+| [in_prior_pregnancy](definitions/IN_PRIOR_PREG.md)          | every episode classified "prior"         |
 | [in_current_and_prior](definitions/IN_CURRENT_AND_PRIOR.md) | the current episode plus every prior one |
-| [outside_all_pregnancy](definitions/OUTSIDE_ALL_PREG.md) | gaps between *all* episodes |
+| [outside_all_pregnancy](definitions/OUTSIDE_ALL_PREG.md)    | gaps between *all* episodes              |
 
-`in_prior_pregnancy`, `in_current_and_prior`, and `outside_all_pregnancy` can each produce more than one candidate window per person (one per selected episode, or one per gap). `anchoR` handles that automatically — see "Multiple candidate windows" below.
+`in_prior_pregnancy`, `in_current_and_prior`, and `outside_all_pregnancy` can each produce more than one candidate window per person (one per selected episode, or one per gap). `anchoR` handles that automatically see "Multiple candidate windows" below.
 
 ## Which episode is "current", "prior", or "future"?
 
@@ -33,11 +33,11 @@ There is one shared internal engine underneath (`pregnancy_window_engine()`); th
 - If a current episode exists, **prior**/**future** are relative to *that episode's own bounds* (ended before its start / starts after its end).
 - **If there's no current episode**, prior/future fall back to being relative to the anchor itself instead (ended before the anchor / starts after the anchor).
 
-`in_prior_pregnancy` doesn't require a current episode to exist — a person with three episodes, none of which contain `T0`, can still have prior episodes via the anchor-relative fallback.
+`in_prior_pregnancy` doesn't require a current episode to exist a person with three episodes, none of which contain `T0`, can still have prior episodes via the anchor-relative fallback.
 
 ## Building a window from a selected episode: the border-offset formula
 
-Once an episode is selected, four offset columns — in two independent pairs — decide where its window (or windows) sit:
+Once an episode is selected, four offset columns in two independent pairs decide where its window (or windows) sit:
 
 - **Start pair**: `before_start_episode_offset` / `after_start_episode_offset`, relative to that episode's own `start_episode`.
 - **End pair**: `before_end_episode_offset` / `after_end_episode_offset`, relative to that episode's own `end_episode`.
@@ -45,12 +45,12 @@ Once an episode is selected, four offset columns — in two independent pairs �
 Each side is `edge + offset` (`0` = exactly on the edge, `NA` = not set):
 
 - **Neither pair fully specified** (each pair has zero or one side set): one shared window, using whichever offset each pair has (or the unshifted edge, if a pair has neither side set).
-- **Exactly one pair fully specified** (both sides set): only that pair's region is emitted — `[edge + before_offset, edge + after_offset]` — and the *other* pair contributes nothing, whether it's unset or only partially set.
+- **Exactly one pair fully specified** (both sides set): only that pair's region is emitted `[edge + before_offset, edge + after_offset]` and the *other* pair contributes nothing, whether it's unset or only partially set.
 - **Both pairs fully specified**: two independent regions, one per pair.
 
 A fully-specified pair must not be inverted (`before_*_offset` later than `after_*_offset`); that's an error. See [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) for the complete rule and more worked examples.
 
-`outside_all_pregnancy` doesn't use these four columns at all — see its own row below.
+`outside_all_pregnancy` doesn't use these four columns at all see its own row below.
 
 ## Which constructor should I use?
 
@@ -68,11 +68,11 @@ flowchart TD
 A few notes to go with the diagram:
 
 - The four boxes are exactly the four constructors from the table above; each has its own definitions page with more detail.
-- There is no separate "since the start of the current episode, up to today" shape built in — `in_current_pregnancy`'s window is always relative to the episode's own `start_episode`/`end_episode`, never the anchor directly. If you need "up to T0," add a second, `GENERIC` variable anchored at `T0` instead.
+- There is no separate "since the start of the current episode, up to today" shape built in `in_current_pregnancy`'s window is always relative to the episode's own `start_episode`/`end_episode`, never the anchor directly. If you need "up to T0," add a second, `GENERIC` variable anchored at `T0` instead.
 
 ## Step 1: build the episodes table
 
-Unlike `T0`, episodes are a *list* per person (a person can have any number of pregnancies), so they're a separate long table, not a population column — one row per episode, required columns `person_id`, `start_episode`, `end_episode`.
+Unlike `T0`, episodes are a *list* per person (a person can have any number of pregnancies), so they're a separate long table, not a population column one row per episode, required columns `person_id`, `start_episode`, `end_episode`.
 
 ```r
 library(anchoR)
@@ -96,7 +96,7 @@ population <- data.table(
 
 ## Step 2: write metadata
 
-Alongside the usual columns (`variable_id`, `concept_id`, `selector`, `start_offset`, `end_offset` — the last two required by `normalize_metadata()` but unused by episode-based constructors), add:
+Alongside the usual columns (`variable_id`, `concept_id`, `selector`, `start_offset`, `end_offset` the last two required by `normalize_metadata()` but unused by episode-based constructors), add:
 
 - `constructor`: one of the four names above
 - `before_start_episode_offset` / `after_start_episode_offset`, `before_end_episode_offset` / `after_end_episode_offset` (all default `NA_real_`): the border-offset pairs described above
@@ -151,7 +151,7 @@ Person 1 has two prior episodes (`[2023-01-01, 2023-09-01]` and `[2024-03-01, 20
 
 ## Multiple candidate windows for one variable
 
-`in_prior_pregnancy`, `in_current_and_prior`, and `outside_all_pregnancy` can generate several candidate windows per person for the same variable (one per selected episode, or one per gap — and a single episode itself can contribute two regions if both border-offset pairs are fully specified). The selector aggregates matches across all candidate window rows for that output key, exactly as shown above. Candidate windows are not deduplicated before the concepts join: overlapping episodes can make one concept event match more than once, so keep episodes/windows non-overlapping when using `COUNT` or `ALL` and distinct-event semantics matter.
+`in_prior_pregnancy`, `in_current_and_prior`, and `outside_all_pregnancy` can generate several candidate windows per person for the same variable (one per selected episode, or one per gap and a single episode itself can contribute two regions if both border-offset pairs are fully specified). The selector aggregates matches across all candidate window rows for that output key, exactly as shown above. Candidate windows are not deduplicated before the concepts join: overlapping episodes can make one concept event match more than once, so keep episodes/windows non-overlapping when using `COUNT` or `ALL` and distinct-event semantics matter.
 
 ## Constructor-by-constructor reference
 
@@ -165,18 +165,18 @@ Using the person below (three episodes) anchored at `T0 = 2026-02-15` (which fal
 
 Every row below was run through `define_window()` directly and verified against its actual output:
 
-| constructor / border offsets                                                                    | resulting window(s)                                                     |
-| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `in_current_pregnancy` (no border offsets set)                                                    | `[2025-11-01, 2026-08-01]` (episode 3's own unshifted span)             |
-| `in_current_pregnancy` (`after_end_episode_offset = 14`)                                          | `[2025-11-01, 2026-08-15]` (episode 3, end extended 14 days)            |
-| `in_prior_pregnancy` (no border offsets set)                                                      | `[2023-01-01, 2023-09-01]` and `[2024-03-01, 2024-11-15]`               |
-| `in_prior_pregnancy` (`before_start_episode_offset = 0, after_start_episode_offset = 90`)         | `[2023-01-01, 2023-04-01]` and `[2024-03-01, 2024-05-30]` (first 90 days of each prior episode; the end pair is unset, so it contributes nothing) |
-| `in_current_and_prior` (no border offsets set)                                                    | episode 3's span, plus both prior episodes' spans (3 windows total)     |
-| `outside_all_pregnancy` (`anchor_start_offset = -1172, anchor_end_offset = 0`)                    | `[2022-12-01, 2022-12-31]`, `[2023-09-02, 2024-02-29]`, `[2024-11-16, 2025-10-31]` |
+| constructor / border offsets                                                              | resulting window(s)                                                                                                                               |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `in_current_pregnancy` (no border offsets set)                                            | `[2025-11-01, 2026-08-01]` (episode 3's own unshifted span)                                                                                       |
+| `in_current_pregnancy` (`after_end_episode_offset = 14`)                                  | `[2025-11-01, 2026-08-15]` (episode 3, end extended 14 days)                                                                                      |
+| `in_prior_pregnancy` (no border offsets set)                                              | `[2023-01-01, 2023-09-01]` and `[2024-03-01, 2024-11-15]`                                                                                         |
+| `in_prior_pregnancy` (`before_start_episode_offset = 0, after_start_episode_offset = 90`) | `[2023-01-01, 2023-04-01]` and `[2024-03-01, 2024-05-30]` (first 90 days of each prior episode; the end pair is unset, so it contributes nothing) |
+| `in_current_and_prior` (no border offsets set)                                            | episode 3's span, plus both prior episodes' spans (3 windows total)                                                                               |
+| `outside_all_pregnancy` (`anchor_start_offset = -1172, anchor_end_offset = 0`)            | `[2022-12-01, 2022-12-31]`, `[2023-09-02, 2024-02-29]`, `[2024-11-16, 2025-10-31]`                                                                |
 
 Notes on `outside_all_pregnancy`: it searches `[T0 + anchor_start_offset, T0 + anchor_end_offset]` for the parts *not* covered by any episode. An episode always fences a gap, even the one containing `T0` itself, so there is no gap after episode 3 starts, even though `T0` is inside the search range.
 
-Notes on the `in_prior_pregnancy` "first 90 days" row: setting only the start pair (`before_start_episode_offset`/`after_start_episode_offset`) turns it into its own self-contained region and drops the end pair's contribution entirely — this is the general "exactly one pair fully specified" rule from [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>), not something specific to `in_prior_pregnancy`.
+Notes on the `in_prior_pregnancy` "first 90 days" row: setting only the start pair (`before_start_episode_offset`/`after_start_episode_offset`) turns it into its own self-contained region and drops the end pair's contribution entirely this is the general "exactly one pair fully specified" rule from [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>), not something specific to `in_prior_pregnancy`.
 
 ## Extending beyond pregnancy
 

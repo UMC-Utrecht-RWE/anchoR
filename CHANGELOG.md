@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+## [v1.5]
+
+### Removed (Breaking)
+- The entire old pregnancy/episode API is gone: the `IN_PRIOR_PREG`, `SINCE_START_CURRENT_PREG`, and `ANYTIME_CURRENT_PREG` constructors, the population `event_col` list-column a caller had to pre-nest themselves, and the `end_cap_offset`/`start_look_back`/`end_look_back` metadata columns. None of these names resolve to anything anymore. Existing episode metadata must be rewritten against the new constructors/columns below before calling `anchor()`; there is no compatibility alias.
+
+### Added
+- New `episodes` input table (`person_id`, `start_episode`, `end_episode`), passed as its own argument to `define_window()`/`anchor()`/`anchor_by_variable()`/`anchor_by_selector()`. anchoR now nests it onto `population` internally (`nest_episodes_onto_population()`); the caller no longer builds or manages the nested list-column by hand.
+- Four episode-based constructors replacing the removed ones: `in_current_pregnancy`, `in_prior_pregnancy`, `in_current_and_prior` (new — the union of the other two), `outside_all_pregnancy`. All four share one engine, `pregnancy_window_engine()`.
+- `classify_episodes()`: labels each of a person's episodes `"current"`/`"prior"`/`"future"` relative to the anchor date. Prior/future are relative to the current episode's own bounds when one exists; when there is no current episode, they fall back to being relative to the anchor date directly instead.
+- `episode_windows()`: the new border-offset formula for turning a selected episode into one or more windows. Six new metadata columns replace everything the removed columns used to do: `anchor_start_offset`/`anchor_end_offset` (read only by `outside_all_pregnancy`, defining its anchor-relative search range) and two independent border pairs, `before_start_episode_offset`/`after_start_episode_offset` and `before_end_episode_offset`/`after_end_episode_offset`, each relative to the selected episode's own start/end. A pair with only one side set shifts one edge of a shared window; a pair with both sides set becomes its own self-contained region instead, `[edge + before_offset, edge + after_offset]`; a pair with `before_*_offset` later than `after_*_offset` (an inverted region) now raises an error instead of silently producing a backwards window. See `documentation/definitions/Episode-Based Window Engine.md` for the complete rule.
+- `make_selector()`: define a custom `selector` (a SQL `SELECT` statement) from your own script, resolved by naming convention (`<NAME>` metadata value → `<name>_selector` object) exactly the way `make_constructor()` already resolved custom constructors. Supporting internals: `selector_object_name()`, `selector_is_resolvable()`, `resolve_selector_sql()`, `selector_sql_exists()`, `read_builtin_selector_sql()`. `read_selector_sql_query()`/`run_selector_query()`/`run_selector_queries()` gain a `selector_env` argument (default `globalenv()`) so a selector name can resolve to either a bundled `inst/sql/*.sql` template or a caller-defined `make_selector()` object.
+- `vignettes/custom-selectors.Rmd`: worked example for `make_selector()`, alongside the existing `custom-constructors` vignette.
+- `documentation/Quickstart.md`: a zero-jargon quickstart assuming no prior familiarity with R or the epidemiology vocabulary anchoR uses (T0, window, concept, selector, constructor), linked from both this README and `documentation/README.md`.
+- `CONTRIBUTING.md`: dev setup, the local inner loop, what each of the four CI workflows (`testthat`, `r_cmd_check`, `code_quality`, `test_coverage`) actually checks, and how to add a built-in constructor or selector to the package itself.
+- `documentation/definitions/Episodes.md`, `IN_CURRENT_PREG.md`, `IN_CURRENT_AND_PRIOR.md`: new definitions pages for the new table and constructors.
+
+### Changed
+- Every episode-window documentation page (`Tutorial_pregnancy_windows.md`, `examples/Pregnancy_window_worked_example.md`, `vignettes/episode-windows.Rmd`, and the four constructor definitions pages) rewritten end-to-end against the new engine, with every worked-example number re-verified by actually running it through `define_window()`. `documentation/definitions/Episode-Based Window Engine.md` is now the single canonical description of the border-offset formula; the other pages summarize and link back to it instead of each re-describing it, so it no longer drifts out of sync across pages the way the old formula's documentation had.
+- `Constructor.md`, `Metadata.md`, `Population.md`, `Input_population.md`, `Input_metadata.md` updated for the new constructor names and offset columns; `Constructor.md`'s links to the two removed constructor pages fixed.
+
+### Removed
+- `documentation/definitions/End Cap Offset.md`, `SINCE_START_CURRENT_PREG.md`, `ANYTIME_CURRENT_PREG.md`: deleted along with the mechanism/constructors they described.
+
+### Fixed
+- `looks_like_glob()` (used by `normalize_parquet_sources()` to decide whether a nonexistent-looking path might still be a glob pattern DuckDB can resolve) used a bracket-expression regex (`[\\*\\?\\[]`) written as if `\\*`/`\\?`/`\\[` were escaped literals inside the class; a bracket expression doesn't treat backslash as an escape character, so it actually matched a literal backslash instead, making it return `TRUE` for *any* Windows-style path (backslash path separators) whether or not it contained a real glob character. On Windows this silently let a nonexistent parquet path through instead of raising anchoR's "Concept parquet source does not exist" error. Rewritten as `[*?[]`, which matches only actual `*`/`?`/`[` glob characters.
 
 ## [v1.4.4]
 
@@ -22,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `range_count.sql` (the new selector described above) no longer wraps its bucketing `CASE` inside `COUNT(...)` (which just counted rows, identical to `COUNT(*)`, since every branch was non-`NULL`) and no longer references `w.value`, a column that doesn't exist on `population_windows`. It's now a two-step query: count matches, then join the count against `concept_ranges`. Also casts the looked-up bucket value through `BIGINT` before `VARCHAR` so it renders as `"2"` instead of `"2.0"` when `concept_ranges$new_value` is a double (the common case when read from a CSV).
 - `vignettes/selector-cookbook.Rmd` excludes the new `RANGE_COUNT` from its "every bundled selector" demo (it needs a `concept_ranges` table the vignette's single-`concepts`-table example doesn't provide) and no longer references the removed (original) `RANGE_COUNT` selector.
 - `load_concepts_table()` is now inside the per selector loop, so the filtering is much smaller again (each selector only filters on its own concept_ids). The connection itself is still opened just once, that part didn't change.
-- `looks_like_glob()` (used by `normalize_parquet_sources()` to decide whether a nonexistent-looking path might still be a glob pattern DuckDB can resolve) used a bracket-expression regex (`[\\*\\?\\[]`) written as if `\\*`/`\\?`/`\\[` were escaped literals inside the class; a bracket expression doesn't treat backslash as an escape character, so it actually matched a literal backslash instead, making it return `TRUE` for *any* Windows-style path (backslash path separators) whether or not it contained a real glob character. On Windows this silently let a nonexistent parquet path through instead of raising anchoR's "Concept parquet source does not exist" error. Rewritten as `[*?[]`, which matches only actual `*`/`?`/`[` glob characters.
+
 
 ## [v1.4.3]
 
@@ -88,7 +113,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # List of releases
 - unreleased: https://github.com/UMC-Utrecht-RWE/anchoR@main
-- v1.4.3 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.4
+- v1.5 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.5
+- v1.4.4 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.4
 - v1.4.3 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.3
 - v1.4.2 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.2
 - v1.4.1.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1.1
