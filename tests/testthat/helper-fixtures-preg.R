@@ -284,9 +284,15 @@ pregnancy_metadata_case6 <- function() {
 
 pregnancy_concepts_cases <- function() {
   data.table::data.table(
-    person_id = c("1", "1"),
-    concept_id = c("DEMO", "DEMO"),
-    date = as.Date(c("2020-07-01", "2021-09-15")), # inside case 1, case 4
-    value = c("TRUE", "TRUE")
+    person_id = "1",
+    concept_id = "DEMO",
+    date = as.Date(c(
+      "2025-08-01", # inside case1
+      "2025-02-01", # inside case2
+      "2026-02-01", # inside case3 (current-episode side)
+      "2026-05-07", # inside case4
+      "2026-08-20" # inside case5
+    )),
+    value = "TRUE"
   )
 }
