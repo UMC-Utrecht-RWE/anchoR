@@ -210,3 +210,180 @@ testthat::test_that("returns invisibly and returns the data.table", {
   )
   testthat::expect_identical(result, dt)
 })
+
+testthat::test_that("as_data_table errors when given a non-data-frame", {
+  testthat::expect_error(
+    as_data_table(list(a = 1), "population"),
+    "`population` must be a data frame.",
+    fixed = TRUE
+  )
+  testthat::expect_error(
+    as_data_table(1:3, "metadata"),
+    "`metadata` must be a data frame.",
+    fixed = TRUE
+  )
+})
+
+testthat::test_that("as_data_table copies rather than aliasing the input", {
+  original <- data.table::data.table(x = 1L)
+  copied <- as_data_table(original, "population")
+  copied[, x := 99L]
+
+  testthat::expect_equal(original$x, 1L)
+})
+
+testthat::test_that("looks_like_glob detects glob metacharacters", {
+  testthat::expect_true(looks_like_glob("concepts/*.parquet"))
+  testthat::expect_true(looks_like_glob("concepts/file?.parquet"))
+  testthat::expect_true(looks_like_glob("concepts/[abc].parquet"))
+  testthat::expect_false(looks_like_glob("concepts/file.parquet"))
+  testthat::expect_false(looks_like_glob("/plain/path"))
+})
+
+testthat::test_that("concepts_input_type identifies a data frame as a table", {
+  testthat::expect_equal(
+    concepts_input_type(data.table::data.table(x = 1)), "table"
+  )
+})
+
+testthat::test_that("concepts_input_type identifies a .duckdb path", {
+  testthat::expect_equal(concepts_input_type("concepts.duckdb"), "duckdb")
+  testthat::expect_equal(
+    concepts_input_type("path/to/CONCEPTS.DUCKDB"), "duckdb"
+  )
+})
+
+testthat::test_that("concepts_input_type falls back to parquet for other character input", { # nolint: line_length_linter.
+  testthat::expect_equal(concepts_input_type("concepts.parquet"), "parquet")
+  testthat::expect_equal(concepts_input_type("concepts/"), "parquet")
+  testthat::expect_equal(
+    concepts_input_type(c("a.parquet", "b.parquet")), "parquet"
+  )
+})
+
+testthat::test_that("concepts_input_type errors on unsupported input", {
+  testthat::expect_error(
+    concepts_input_type(123),
+    "`concepts` must be a data frame, a DuckDB file path, or parquet file location\\(s\\)\\." # nolint: line_length_linter.
+  )
+  testthat::expect_error(concepts_input_type(character()))
+})
+
+testthat::test_that("normalize_parquet_sources errors when concepts isn't a parquet source", { # nolint: line_length_linter.
+  testthat::expect_error(
+    normalize_parquet_sources("concepts.duckdb"),
+    "`concepts` is not a parquet source.",
+    fixed = TRUE
+  )
+})
+
+testthat::test_that("normalize_parquet_sources expands a directory of parquet files", { # nolint: line_length_linter.
+  tmp <- withr::local_tempdir()
+  file.create(file.path(tmp, "a.parquet"))
+  file.create(file.path(tmp, "b.parquet"))
+  file.create(file.path(tmp, "not_parquet.txt"))
+
+  result <- normalize_parquet_sources(tmp)
+
+  testthat::expect_setequal(
+    basename(result), c("a.parquet", "b.parquet")
+  )
+})
+
+testthat::test_that("normalize_parquet_sources errors on a directory with no parquet files", { # nolint: line_length_linter.
+  tmp <- withr::local_tempdir()
+
+  testthat::expect_error(
+    normalize_parquet_sources(tmp),
+    sprintf("No parquet files found under `%s`.", tmp),
+    fixed = TRUE
+  )
+})
+
+testthat::test_that("normalize_parquet_sources passes through an existing file unchanged", { # nolint: line_length_linter.
+  tmp <- withr::local_tempfile(fileext = ".parquet")
+  file.create(tmp)
+
+  testthat::expect_equal(normalize_parquet_sources(tmp), tmp)
+})
+
+testthat::test_that("normalize_parquet_sources passes through a glob pattern unchanged", { # nolint: line_length_linter.
+  glob <- file.path(withr::local_tempdir(), "*.parquet")
+
+  testthat::expect_equal(normalize_parquet_sources(glob), glob)
+})
+
+testthat::test_that("normalize_parquet_sources errors when a path neither exists nor looks like a glob", { # nolint: line_length_linter.
+  missing_path <- file.path(withr::local_tempdir(), "missing.parquet")
+
+  testthat::expect_error(
+    normalize_parquet_sources(missing_path),
+    sprintf("Concept parquet source does not exist: %s.", missing_path),
+    fixed = TRUE
+  )
+})
+
+testthat::test_that("concepts_to_data_table passes a table straight through as_data_table", { # nolint: line_length_linter.
+  result <- concepts_to_data_table(minimal_concepts())
+
+  testthat::expect_true(data.table::is.data.table(result))
+  testthat::expect_equal(result$person_id, minimal_concepts()$person_id)
+  testthat::expect_true(inherits(result$date, "Date"))
+})
+
+testthat::test_that("concepts_to_data_table adds a value column when missing", {
+  no_value <- minimal_concepts()[, .(person_id, concept_id, date)]
+
+  result <- concepts_to_data_table(no_value)
+
+  testthat::expect_true("value" %in% names(result))
+  testthat::expect_true(all(is.na(result$value)))
+})
+
+testthat::test_that("concepts_to_data_table errors on a missing required column", { # nolint: line_length_linter.
+  bad <- minimal_concepts()[, .(person_id, date)]
+
+  testthat::expect_error(
+    concepts_to_data_table(bad),
+    "`concepts` is missing required columns: concept_id\\."
+  )
+})
+
+testthat::test_that("concepts_to_data_table reads from a DuckDB file", {
+  path <- withr::local_tempfile(fileext = ".duckdb")
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = path)
+  DBI::dbWriteTable(con, "concept_table", minimal_concepts())
+  DBI::dbDisconnect(con, shutdown = TRUE)
+
+  result <- concepts_to_data_table(path)
+
+  testthat::expect_true(data.table::is.data.table(result))
+  testthat::expect_setequal(
+    names(result), c("person_id", "concept_id", "date", "value")
+  )
+  testthat::expect_equal(nrow(result), nrow(minimal_concepts()))
+  testthat::expect_true(inherits(result$date, "Date"))
+})
+
+testthat::test_that("concepts_to_data_table errors when the DuckDB file doesn't exist", { # nolint: line_length_linter.
+  missing_path <- file.path(withr::local_tempdir(), "missing.duckdb")
+
+  testthat::expect_error(
+    concepts_to_data_table(missing_path),
+    sprintf("Concept database path does not exist: %s.", missing_path),
+    fixed = TRUE
+  )
+})
+
+testthat::test_that("concepts_to_data_table reads from a parquet file", {
+  path <- example_concepts_parquet(minimal_concepts())
+
+  result <- concepts_to_data_table(path)
+
+  testthat::expect_true(data.table::is.data.table(result))
+  testthat::expect_setequal(
+    names(result), c("person_id", "concept_id", "date", "value")
+  )
+  testthat::expect_equal(nrow(result), nrow(minimal_concepts()))
+  testthat::expect_true(inherits(result$date, "Date"))
+})
