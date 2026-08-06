@@ -2,9 +2,9 @@
 
 Every episode-based constructor is this one engine, pre-configured with an `episode_select` (`"CURRENT"`, `"PRIOR"`, `"CURRENT_AND_PRIOR"`, or `"OUTSIDE_ALL"`). Adding a new named shape later means adding a short wrapper around this engine, not a new bespoke implementation.
 
-Episodes come from the [Episodes](Episodes.md) input table, nested onto [Population](Population.md) internally (one small `data.table(start_episode, end_episode)` per person, in a `.episodes` list-column) before any constructor runs a caller only ever deals with the flat `episodes` table.
+Episodes come from the [Episodes](Episodes.md) input table, nested onto [Population](Population.md) internally (one small `data.table(start_episode, end_episode)` per person, in a `.episodes` list-column) before any constructor runs; a caller only ever deals with the flat `episodes` table.
 
-There are two independent steps: **which episode(s) are selected**, then **where each selected episode's window(s) sit**.
+There are three independent steps: **which episode(s) are selected**, **where each selected episode's window(s) sit**, and **clipping every resulting window to a hard anchor-relative boundary**.
 
 ## Step 1: classifying episodes relative to the anchor
 
@@ -53,6 +53,18 @@ Worked examples, episode `[2025-01-07, 2025-05-07]`:
 
 If a selected episode's engine call produces two regions (both pairs fully specified) or a constructor selects several episodes (e.g. `IN_PRIOR_PREG` with two prior episodes), each region/episode becomes its own candidate [Window](Window.md) row. See "Multiple candidate windows" in the tutorial for how the [Selector](Selector.md) then treats them.
 
-## `OUTSIDE_ALL_PREG`: a different job entirely
+## Step 3: clipping to the hard anchor-relative boundary (all four constructors)
 
-`OUTSIDE_ALL` doesn't select or window individual episodes it finds the gaps *between all* of a person's episodes inside `[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]`, and returns each gap as its own candidate window. The four border offsets above are not read at all for this constructor. An episode always fences the gaps around it, even the one containing the anchor itself, so there is no gap starting exactly at the anchor if the anchor falls inside an ongoing episode. See [OUTSIDE_ALL_PREG](OUTSIDE_ALL_PREG.md) for the search-range mechanics.
+Independently of steps 1–2, `anchor_start_offset`/`anchor_end_offset` define a hard boundary, `[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]`, that **every** candidate window from **every** episode-based constructor must fall inside not just `IN_CURRENT_PREG`/`IN_PRIOR_PREG`/`IN_CURRENT_AND_PRIOR`'s border-offset windows, but `OUTSIDE_ALL_PREG`'s gaps too. `clip_to_anchor_bounds()` applies each side independently, and only when it's not `NA` (the same convention the border-offset pairs use):
+
+- a set `anchor_start_offset` raises `window_start` up to at least the boundary's lower edge (`window_start := pmax(window_start, anchor_start_col + anchor_start_offset)`);
+- a set `anchor_end_offset` lowers `window_end` down to at most the boundary's upper edge (`window_end := pmin(window_end, anchor_end_col + anchor_end_offset)`);
+- leaving either `NA` (the default) means that side of the boundary isn't enforced at all.
+
+A window entirely outside the boundary comes out with `window_start > window_end`, which `finalize_windows()` marks invalid the same way any other empty window is this step never errors and never drops a row itself, it only narrows a window's bounds.
+
+For `OUTSIDE_ALL_PREG` this step is a no-op: its search range for `outside_all_episode_gaps()` is already exactly `[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]`, so every gap it returns already satisfies the boundary by construction. For the other three constructors, this is what makes `anchor_start_offset`/`anchor_end_offset` behave as a project-wide hard time boundary e.g. "no episode-based window may extend outside `[T0 - 1, T0 + 1]`" applied uniformly regardless of which episode(s) the border-offset formula selected or how it shaped their windows.
+
+## `OUTSIDE_ALL_PREG`: a different job for steps 1–2
+
+`OUTSIDE_ALL` doesn't select or window individual episodes it finds the gaps *between all* of a person's episodes inside `[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]`, and returns each gap as its own candidate window. The four border offsets from step 2 are not read at all for this constructor. An episode always fences the gaps around it, even the one containing the anchor itself, so there is no gap starting exactly at the anchor if the anchor falls inside an ongoing episode. See [OUTSIDE_ALL_PREG](OUTSIDE_ALL_PREG.md) for the search-range mechanics.

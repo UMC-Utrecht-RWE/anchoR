@@ -189,6 +189,7 @@ cases_window_dt <- function(
   constructor,
   before_start = NA_real_, after_start = NA_real_,
   before_end = NA_real_, after_end = NA_real_,
+  anchor_start_offset = NA_real_, anchor_end_offset = NA_real_,
   t0 = as.Date("2026-03-07"),
   episodes = NULL
 ) {
@@ -202,8 +203,8 @@ cases_window_dt <- function(
     constructor = constructor,
     anchor_start_col = "T0",
     anchor_end_col = "T0",
-    anchor_start_offset = NA_real_,
-    anchor_end_offset = NA_real_,
+    anchor_start_offset = anchor_start_offset,
+    anchor_end_offset = anchor_end_offset,
     before_start_episode_offset = before_start,
     after_start_episode_offset = after_start,
     before_end_episode_offset = before_end,
@@ -234,6 +235,50 @@ testthat::test_that("pregnancy_window_engine PRIOR selects the prior episode", {
     out$window_start, as.Date(c("2024-12-31", "2025-04-30"))
   )
   testthat::expect_equal(out$window_end, as.Date(c("2025-01-14", "2025-05-14")))
+})
+
+testthat::test_that("pregnancy_window_engine clips a border-offset window to anchor_start_offset", { # nolint: line_length_linter.
+  # T0 = 2026-03-07, anchor_start_offset = 0 -> hard lower bound = T0. The
+  # current episode's first region ([2025-12-31, 2026-01-14], entirely
+  # before T0) gets its start raised to T0, making it invalid (start > end);
+  # the second region ([2026-04-30, 2026-05-14], already after T0) is
+  # untouched.
+  out <- pregnancy_window_engine(
+    cases_window_dt(
+      "in_current_pregnancy", -7, 7, -7, 7,
+      anchor_start_offset = 0
+    ),
+    episode_select = "CURRENT"
+  )
+  testthat::expect_equal(
+    out$window_start, as.Date(c("2026-03-07", "2026-04-30"))
+  )
+  testthat::expect_equal(out$window_end, as.Date(c("2026-01-14", "2026-05-14")))
+  window_valid <- !is.na(out$window_start) & !is.na(out$window_end) &
+    out$window_start <= out$window_end
+  testthat::expect_equal(window_valid, c(FALSE, TRUE))
+})
+
+testthat::test_that("pregnancy_window_engine clips a border-offset window to anchor_end_offset", { # nolint: line_length_linter.
+  # T0 = 2026-03-07, anchor_end_offset = -365 -> hard upper bound =
+  # 2025-03-07. The prior episode's first region ([2024-12-31, 2025-01-14],
+  # already before that bound) is untouched; the second region
+  # ([2025-04-30, 2025-05-14], entirely after it) gets its end lowered to
+  # 2025-03-07, making it invalid (start > end).
+  out <- pregnancy_window_engine(
+    cases_window_dt(
+      "in_prior_pregnancy", -7, 7, -7, 7,
+      anchor_end_offset = -365
+    ),
+    episode_select = "PRIOR"
+  )
+  testthat::expect_equal(
+    out$window_start, as.Date(c("2024-12-31", "2025-04-30"))
+  )
+  testthat::expect_equal(out$window_end, as.Date(c("2025-01-14", "2025-03-07")))
+  window_valid <- !is.na(out$window_start) & !is.na(out$window_end) &
+    out$window_start <= out$window_end
+  testthat::expect_equal(window_valid, c(TRUE, FALSE))
 })
 
 testthat::test_that("pregnancy_window_engine CURRENT_AND_PRIOR unions both episodes' windows", { # nolint: line_length_linter.

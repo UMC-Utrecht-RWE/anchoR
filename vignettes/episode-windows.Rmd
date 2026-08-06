@@ -63,6 +63,32 @@ Every episode-based window is built from two independent border pairs: `before_s
 
 `outside_all_pregnancy` works differently: it doesn't use the before/after episode offsets at all, only `anchor_start_offset`/`anchor_end_offset`, which define the overall search range (`[T0 - 1172, T0]` above) that the gaps between episodes are computed within.
 
+`anchor_start_offset`/`anchor_end_offset` aren't only `outside_all_pregnancy`'s search range, though they're also a hard boundary applied to *every* constructor's window: `[T0 + anchor_start_offset, T0 + anchor_end_offset]`, clipped in independently of the border-offset formula above. Left `NA` (as for `current`/`prior`/`current_and_prior` in the metadata above), that boundary is simply not enforced. Setting it clips whatever window the border-offset formula produced, even down to nothing:
+
+```{r anchor-clip}
+clipped_metadata <- data.table(
+    variable_id = "current_clipped",
+    concept_id = "DEMO",
+    constructor = "in_current_pregnancy",
+    selector = "ALL",
+    start_offset = 0L,
+    end_offset = 0L,
+    anchor_start_offset = -30L, # boundary: 30 days before T0 ...
+    anchor_end_offset = 0L, # ... through T0 itself
+    before_start_episode_offset = NA_real_,
+    after_start_episode_offset = NA_real_,
+    before_end_episode_offset = NA_real_,
+    after_end_episode_offset = NA_real_
+)
+
+define_window(population, clipped_metadata, episodes = episodes)[
+    window_valid == TRUE,
+    .(variable_id, window_start, window_end)
+]
+```
+
+The current episode's own unshifted span (`[2025-11-01, 2026-08-01]`) gets clipped down to `[2026-01-16, 2026-02-15]`, the last 30 days before `T0`.
+
 The internal engine can produce several candidate windows for one metadata row (`prior` and `current_and_prior` both do, one per selected episode). Selectors aggregate matches from those windows into the same output key. Candidate windows are not deduplicated: if they overlap, one concept event can join more than once and affect `COUNT` or `ALL`. Keep episode windows non-overlapping when distinct-event counts are required.
 
 For applications unrelated to pregnancy, either reuse these constructors (the underlying episodes can be any repeatable period), or create project-specific names with `make_constructor()` when the pregnancy-oriented vocabulary would be confusing.

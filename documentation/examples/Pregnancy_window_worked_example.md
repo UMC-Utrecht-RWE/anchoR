@@ -117,6 +117,18 @@ make_windows("in_current_and_prior")
 | 2023-01-01   | 2023-09-01 | A (prior)     |
 | 2024-03-01   | 2024-11-15 | B (prior)     |
 
+## The hard anchor-relative boundary
+
+`anchor_start_offset`/`anchor_end_offset` clip *every* constructor's window to `[T0 + anchor_start_offset, T0 + anchor_end_offset]`, not just `outside_all_pregnancy`'s search range. Applied to `in_current_pregnancy` with no border offsets (episode C's unshifted span, `[2025-11-01, 2026-08-01]`) and `anchor_start_offset = -30, anchor_end_offset = 0`:
+
+```r
+make_windows("in_current_pregnancy", anchor_start_offset = -30, anchor_end_offset = 0)
+```
+
+| window_start | window_end | note                                             |
+| ------------ | ---------- | ------------------------------------------------- |
+| 2026-01-16   | 2026-02-15 | episode C's span, clipped to the 30 days before T0 |
+
 ## [outside_all_pregnancy](../definitions/OUTSIDE_ALL_PREG.md)
 
 `anchor_start_offset = -1172, anchor_end_offset = 0`: search range `[2022-12-01, 2026-02-15]`. Three gaps come back, fenced by A, B, and C; none touches `T0` since it sits inside the still-ongoing episode C. This constructor doesn't read the four border-offset columns at all only `anchor_start_offset`/`anchor_end_offset` matter, and they define the search range itself:

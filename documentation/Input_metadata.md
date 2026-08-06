@@ -22,7 +22,7 @@
 | `window_name`                                               | `NA_character_` | Distinguishes multiple windows for one variable.                                                                          |
 | `anchor_start_col`                                          | `anchor_col`    | Population column used as the start anchor. Alias: `anchor_date_start`.                                                   |
 | `anchor_end_col`                                            | `anchor_col`    | Population column used as the end anchor. Alias: `anchor_date_end`.                                                       |
-| `anchor_start_offset`, `anchor_end_offset`                  | `NA_real_`      | Episode-based constructors only: `OUTSIDE_ALL_PREG`'s anchor-relative search range (unused by the other three).           |
+| `anchor_start_offset`, `anchor_end_offset`                  | `NA_real_`      | Episode-based constructors only: a hard `[anchor + offset, anchor + offset]` boundary every candidate window is clipped to, for all four constructors (it's also `OUTSIDE_ALL_PREG`'s own search range, so for that one the clip is a no-op). |
 | `before_start_episode_offset`, `after_start_episode_offset` | `NA_real_`      | Episode-based constructors only (not `outside_all_pregnancy`): border offsets relative to a selected episode's own start. |
 | `before_end_episode_offset`, `after_end_episode_offset`     | `NA_real_`      | Episode-based constructors only (not `outside_all_pregnancy`): border offsets relative to a selected episode's own end.   |
 
