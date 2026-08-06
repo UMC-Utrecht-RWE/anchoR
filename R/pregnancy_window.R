@@ -90,41 +90,60 @@ classify_episodes <- function(episodes, anchor) {
 #'
 #' Each pair: `before_start_offset`/`after_start_offset` for
 #' `start_episode`, `before_end_offset`/`after_end_offset` for `end_episode`.
-#' It is read as up to two independent borders relative to that edge:
-#' `edge + offset` (`0` means the border sits exactly on the edge; `NA`
-#' means that particular border isn't set). A pair with **both** sides set
-#' becomes its own self-contained region, `[edge + before_offset,
-#' edge + after_offset]` (a single calendar day when both offsets are `0`);
-#' `before_offset` must not be later than `after_offset`, or that region
-#' would be inverted, which is an error.
+#' `before_start_offset` and `after_end_offset` are the *outer* sides (they
+#' point away from the episode); `after_start_offset` and
+#' `before_end_offset` are the *inner* sides (they point into it).
 #'
-#' What happens with the *other* pair depends on whether either pair forms
-#' a region:
-#' - **Neither pair fully specified**: both edges contribute to one shared
-#'   window, an edge with neither side set contributes `edge` itself,
-#'   unshifted; one with exactly one side set contributes `edge + that
-#'   offset` (whichever side, no ambiguity with only one value).
-#' - **Exactly one pair fully specified**: that pair's region is the only
-#'   output; the other pair (whether fully unset or only partially set)
-#'   contributes nothing.
-#' - **Both pairs fully specified**: two regions, one per pair.
+#' Each pair's own contribution is decided independently:
+#' - **Both sides set** ("full"): always its own self-contained region,
+#'   `[edge + before_offset, edge + after_offset]`, regardless of what the
+#'   other pair does. `before_offset` must not be later than
+#'   `after_offset`, or the region would be inverted, which is an error.
+#' - **Only its outer side set** (and not full): this pair wants to join a
+#'   *shared window* instead of forming its own region -- see below.
+#' - **Only its inner side set** (and not full): its own region, missing
+#'   side defaulting to `0` -- *unless* the other pair's outer side is set
+#'   (and that other pair isn't full either), in which case shared-window
+#'   mode is active and this pair's single value is used as a plain point
+#'   in that shared window instead of forming its own region.
+#' - **Nothing set**: contributes nothing of its own; if shared-window mode
+#'   is active, it contributes the unshifted edge as that window's point.
+#'
+#' Shared-window mode triggers whenever *either* pair's only set side is
+#' its outer one (and that pair isn't full); when it triggers, every
+#' non-full pair contributes a single point to one shared window (its own
+#' set side if it has exactly one, or the unshifted edge if it has none) --
+#' this is the only way one pair's value and the other pair's value
+#' combine into a single window. A full pair never joins the shared
+#' window; it always keeps its own separate region alongside it.
+#'
+#' If neither pair has anything set at all, the result is one shared
+#' window: the episode's own unshifted span, `[start_episode,
+#' end_episode]`.
 #'
 #' @param start_episode,end_episode The episode's own bounds (single Dates).
 #' @param before_start_offset,after_start_offset Single integer offsets (or
 #'   `NA`) for the `start_episode` border.
 #' @param before_end_offset,after_end_offset Single integer offsets (or
 #'   `NA`) for the `end_episode` border.
-#' @return A data.table with one or two rows of `window_start`/`window_end`.
+#' @return A data.table with one or more rows of `window_start`/`window_end`.
 #' @keywords internal
 episode_windows <- function(
   start_episode, end_episode,
   before_start_offset, after_start_offset,
   before_end_offset, after_end_offset
 ) {
-  start_both_set <- !is.na(before_start_offset) && !is.na(after_start_offset)
-  end_both_set <- !is.na(before_end_offset) && !is.na(after_end_offset)
+  start_has_before <- !is.na(before_start_offset)
+  start_has_after <- !is.na(after_start_offset)
+  end_has_before <- !is.na(before_end_offset)
+  end_has_after <- !is.na(after_end_offset)
 
-  if (start_both_set && before_start_offset > after_start_offset) {
+  start_full <- start_has_before && start_has_after
+  end_full <- end_has_before && end_has_after
+  start_empty <- !start_has_before && !start_has_after
+  end_empty <- !end_has_before && !end_has_after
+
+  if (start_full && before_start_offset > after_start_offset) {
     stop_log(
       paste(
         "`before_start_episode_offset` must not be later than",
@@ -132,7 +151,7 @@ episode_windows <- function(
       )
     )
   }
-  if (end_both_set && before_end_offset > after_end_offset) {
+  if (end_full && before_end_offset > after_end_offset) {
     stop_log(
       paste(
         "`before_end_episode_offset` must not be later than",
@@ -141,50 +160,104 @@ episode_windows <- function(
     )
   }
 
-  if (start_both_set && end_both_set) {
+  if (start_empty && end_empty) {
+    # Neither pair has anything set: whole unshifted episode span.
     return(data.table::data.table(
-      window_start = as.Date(c(
-        start_episode + before_start_offset, end_episode + before_end_offset
-      )),
-      window_end = as.Date(c(
-        start_episode + after_start_offset, end_episode + after_end_offset
-      ))
+      window_start = as.Date(start_episode),
+      window_end = as.Date(end_episode)
     ))
   }
 
-  if (start_both_set) {
-    return(data.table::data.table(
+  # A non-full pair's outer side, set alone, pulls the whole computation
+  # into shared-window mode; a full pair never triggers it (it already has
+  # its own region).
+  start_triggers_shared <- start_has_before && !start_full
+  end_triggers_shared <- end_has_after && !end_full
+  shared_mode <- start_triggers_shared || end_triggers_shared
+
+  regions <- vector("list", 3L)
+
+  if (start_full) {
+    regions[[1]] <- data.table::data.table(
       window_start = as.Date(start_episode + before_start_offset),
       window_end = as.Date(start_episode + after_start_offset)
-    ))
+    )
+  } else if (!start_empty && !shared_mode) {
+    # Inner side alone (after_start_offset), shared mode not active: its
+    # own region, missing (outer) side defaulting to 0.
+    before <- 0
+    after <- after_start_offset
+    if (before > after) {
+      stop_log(
+        paste(
+          "`before_start_episode_offset` must not be later than",
+          "`after_start_episode_offset`."
+        )
+      )
+    }
+    regions[[1]] <- data.table::data.table(
+      window_start = as.Date(start_episode + before),
+      window_end = as.Date(start_episode + after)
+    )
   }
-  if (end_both_set) {
-    return(data.table::data.table(
+
+  if (end_full) {
+    regions[[2]] <- data.table::data.table(
       window_start = as.Date(end_episode + before_end_offset),
       window_end = as.Date(end_episode + after_end_offset)
-    ))
+    )
+  } else if (!end_empty && !shared_mode) {
+    # Inner side alone (before_end_offset), shared mode not active: its
+    # own region, missing (outer) side defaulting to 0.
+    before <- before_end_offset
+    after <- 0
+    if (before > after) {
+      stop_log(
+        paste(
+          "`before_end_episode_offset` must not be later than",
+          "`after_end_episode_offset`."
+        )
+      )
+    }
+    regions[[2]] <- data.table::data.table(
+      window_start = as.Date(end_episode + before),
+      window_end = as.Date(end_episode + after)
+    )
   }
 
-  # Neither pair fully specified: contribute to one shared window.
-  start_offset <- if (!is.na(before_start_offset)) {
-    before_start_offset
-  } else if (!is.na(after_start_offset)) {
-    after_start_offset
-  } else {
-    0
-  }
-  end_offset <- if (!is.na(before_end_offset)) {
-    before_end_offset
-  } else if (!is.na(after_end_offset)) {
-    after_end_offset
-  } else {
-    0
+  if (shared_mode) {
+    # Only non-full pairs participate: their one set side (or the
+    # unshifted edge, if empty) becomes the shared window's point. A full
+    # pair already got its own region above and sits this out.
+    start_point <- if (start_full) {
+      NA_real_
+    } else if (start_has_before) {
+      before_start_offset
+    } else if (start_has_after) {
+      after_start_offset
+    } else {
+      0
+    }
+    end_point <- if (end_full) {
+      NA_real_
+    } else if (end_has_after) {
+      after_end_offset
+    } else if (end_has_before) {
+      before_end_offset
+    } else {
+      0
+    }
+    regions[[3]] <- data.table::data.table(
+      window_start = as.Date(
+        start_episode + (if (is.na(start_point)) 0 else start_point)
+      ),
+      window_end = as.Date(
+        end_episode + (if (is.na(end_point)) 0 else end_point)
+      )
+    )
   }
 
-  data.table::data.table(
-    window_start = as.Date(start_episode + start_offset),
-    window_end = as.Date(end_episode + end_offset)
-  )
+  data.table::rbindlist(Filter(Negate(is.null), regions))
 }
 
 #' Compute the "outside all episodes" gap windows

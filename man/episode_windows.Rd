@@ -23,29 +23,42 @@ episode_windows(
 \code{NA}) for the \code{end_episode} border.}
 }
 \value{
-A data.table with one or two rows of \code{window_start}/\code{window_end}.
+A data.table with one or more rows of \code{window_start}/\code{window_end}.
 }
 \description{
 Each pair: \code{before_start_offset}/\code{after_start_offset} for
 \code{start_episode}, \code{before_end_offset}/\code{after_end_offset} for \code{end_episode}.
-It is read as up to two independent borders relative to that edge:
-\code{edge + offset} (\code{0} means the border sits exactly on the edge; \code{NA}
-means that particular border isn't set). A pair with \strong{both} sides set
-becomes its own self-contained region, \verb{[edge + before_offset, edge + after_offset]} (a single calendar day when both offsets are \code{0});
-\code{before_offset} must not be later than \code{after_offset}, or that region
-would be inverted, which is an error.
+\code{before_start_offset} and \code{after_end_offset} are the \emph{outer} sides (they
+point away from the episode); \code{after_start_offset} and
+\code{before_end_offset} are the \emph{inner} sides (they point into it).
 }
 \details{
-What happens with the \emph{other} pair depends on whether either pair forms
-a region:
+Each pair's own contribution is decided independently:
 \itemize{
-\item \strong{Neither pair fully specified}: both edges contribute to one shared
-window, an edge with neither side set contributes \code{edge} itself,
-unshifted; one with exactly one side set contributes \verb{edge + that offset} (whichever side, no ambiguity with only one value).
-\item \strong{Exactly one pair fully specified}: that pair's region is the only
-output; the other pair (whether fully unset or only partially set)
-contributes nothing.
-\item \strong{Both pairs fully specified}: two regions, one per pair.
+\item \strong{Both sides set} ("full"): always its own self-contained region,
+\verb{[edge + before_offset, edge + after_offset]}, regardless of what the
+other pair does. \code{before_offset} must not be later than
+\code{after_offset}, or the region would be inverted, which is an error.
+\item \strong{Only its outer side set} (and not full): this pair wants to join a
+\emph{shared window} instead of forming its own region -- see below.
+\item \strong{Only its inner side set} (and not full): its own region, missing
+side defaulting to \code{0} -- \emph{unless} the other pair's outer side is set
+(and that other pair isn't full either), in which case shared-window
+mode is active and this pair's single value is used as a plain point
+in that shared window instead of forming its own region.
+\item \strong{Nothing set}: contributes nothing of its own; if shared-window mode
+is active, it contributes the unshifted edge as that window's point.
 }
+
+Shared-window mode triggers whenever \emph{either} pair's only set side is
+its outer one (and that pair isn't full); when it triggers, every
+non-full pair contributes a single point to one shared window (its own
+set side if it has exactly one, or the unshifted edge if it has none) --
+this is the only way one pair's value and the other pair's value
+combine into a single window. A full pair never joins the shared
+window; it always keeps its own separate region alongside it.
+
+If neither pair has anything set at all, the result is one shared
+window: the episode's own unshifted span, \verb{[start_episode, end_episode]}.
 }
 \keyword{internal}

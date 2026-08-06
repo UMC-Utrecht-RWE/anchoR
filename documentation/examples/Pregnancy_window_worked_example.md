@@ -62,7 +62,7 @@ make_windows("in_current_pregnancy")
 | ------------ | ---------- |
 | 2025-11-01   | 2026-08-01 |
 
-Extending 14 days past the episode's own end (`after_end_episode_offset = 14`, the end pair's only side set):
+Extending 14 days past the episode's own end (`after_end_episode_offset = 14` alone — this is the end pair's *outer* side, so it shares a window with the start pair's unshifted default rather than forming its own region):
 
 ```r
 make_windows("in_current_pregnancy", after_end_episode_offset = 14)
@@ -87,7 +87,7 @@ make_windows("in_prior_pregnancy")
 
 ### `in_prior_pregnancy`, restricted to the first 90 days of each prior episode
 
-Setting *both* sides of the start pair (`before_start_episode_offset = 0, after_start_episode_offset = 90`) turns it into its own self-contained region, `[start_episode, start_episode + 90]`; the end pair is left unset, so per the "exactly one pair fully specified" rule it contributes nothing:
+Setting *both* sides of the start pair (`before_start_episode_offset = 0, after_start_episode_offset = 90`) always makes it its own self-contained region, `[start_episode, start_episode + 90]`, regardless of the end pair — the end pair here is left unset, so it contributes nothing:
 
 ```r
 make_windows(
