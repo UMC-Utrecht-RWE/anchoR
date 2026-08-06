@@ -1,8 +1,13 @@
 Package: anchoR
 Title: Anchoring Utilities for Epidemiologic Study Design
 Version: 1.4.5
-Authors@R:
-    person("Mattia", "Cinelli", , "m.cinelli@umcutrecht.nl", role = c("aut", "cre"), comment = c(ORCID = "0000-0001-9306-8079"))
+Authors@R: c(
+    person("Mattia", "Cinelli", , "m.cinelli@umcutrecht.nl", role = c("aut", "cre"), comment = c(ORCID = "0000-0001-9306-8079")),
+    person("Albert", "Cid Royo", email = "A.CidRoyo@umcutrecht.nl", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-1863-3450")),
+    person("Emmy", "Manders", email = "E.Manders-2@umcutrecht.nl", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-7193-8608")),
+    person("Solomon", "Ioannou", email = "S.Ioannou-2@umcutrecht.nl", role = c("aut", "cre"), comment = c(ORCID = "0000-0003-1715-288X"))
+)
+
 Author: Mattia Cinelli [aut, cre] (<https://orcid.org/0000-0001-9306-8079>)
 Maintainer: Mattia Cinelli <m.cinelli@umcutrecht.nl>
 Description:

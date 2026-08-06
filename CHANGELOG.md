@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+## [v1.4.5]
+### Fixed
+- `R/duckdb_helpers.R::load_concepts_table()` no longer errors when called a second time on the same DuckDB connection. It now checks PRAGMA `database_list` and skips the ATTACH if concepts_db is already attached, instead of unconditionally re-attaching (which DuckDB rejects).
+- `R/anchor.R::anchor_by_selector()` and `load_concepts_table()` moved from once-before-the-loop (filtering on all metadata's concept_ids) to inside the per-selector loop (filtering on just that selector's concept_ids), shrinking the filtered set per selector. This is what made above fix necessary, since the table now gets loaded multiple times per connection.
+- `inst/sql/range_count.sql`'s match-counting query switched from `INNER JOIN + COUNT(*)` to `LEFT JOIN + COUNT(c.person_id)`, so a person with zero matching concepts rows in the window gets a true raw_count = 0 instead of being dropped entirely (which was pushing them into a generic "missing" fallback with the wrong bucket value).
+
+## Added
+- `R/get_anchor_result.R`: boolean-variable imputation restored in `imputing_missing()` the missing boolean values are now stamped `FALSE` (this logic had been lost in an earlier PR) and the column is coerced back to logical.
 
 ## [v1.4.4]
 
