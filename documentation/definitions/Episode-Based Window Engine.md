@@ -24,27 +24,32 @@ Once an episode is selected, `episode_windows()` turns it into one or more candi
 - **Start pair**: `before_start_episode_offset` (**outer** — points away from the episode, before it starts) / `after_start_episode_offset` (**inner** — points into the episode).
 - **End pair**: `before_end_episode_offset` (**inner** — points into the episode) / `after_end_episode_offset` (**outer** — points away from the episode, after it ends).
 
-Each side is read as `edge + offset` (`0` means "exactly on the edge"; `NA` means "this side isn't set"). The rule, in order:
+Each side is read as `edge + offset` (`0` means "exactly on the edge"; `NA` means "this side isn't set"). Each pair's own contribution is decided independently, then a shared window (if triggered) is layered on top:
 
-1. **A pair with both sides set** is always its own self-contained region, `[edge + before_offset, edge + after_offset]`, regardless of what the other pair does. `before_offset` must not be later than `after_offset`, or that region would be inverted, which is an error.
-2. Otherwise, if **either pair's outer side is set alone** (`before_start_episode_offset` alone, or `after_end_episode_offset` alone), the *whole computation* becomes **one shared window**: that side's offset defines its edge directly (`start_episode + before_start_episode_offset`, or `end_episode + after_end_episode_offset`); the *other* pair contributes whichever single value it has — regardless of which side it is — as a plain point for the opposite edge, or the unshifted edge if that other pair has nothing set at all. This is the only way one pair's value and the other pair's value combine into a single window.
-3. Otherwise (no outer side set anywhere, so any pair with content only has its **inner** side set), each such pair forms its **own region** instead, missing side defaulting to `0`; a pair with nothing set contributes nothing.
-4. If **neither pair has anything set**, the result is one shared window: the episode's own unshifted span, `[start_episode, end_episode]`.
+1. **A pair with both sides set** ("full") is always its own self-contained region, `[edge + before_offset, edge + after_offset]`, regardless of what the other pair does — it never joins a shared window, and it never suppresses the other pair's own contribution either. `before_offset` must not be later than `after_offset`, or that region would be inverted, which is an error.
+2. A non-full pair whose only set side is its **outer** one (`before_start_episode_offset` alone, or `after_end_episode_offset` alone) pulls the *whole computation* into **shared-window mode**.
+3. In shared-window mode, every non-full pair contributes exactly one point to a single shared window: its one set side if it has exactly one (regardless of whether that side is nominally "outer" or "inner"), or the unshifted edge if it has nothing set. A full pair sits this out — see rule 1 — so the shared window's edge on that side falls back to the unshifted edge too.
+4. Outside shared-window mode, a non-full pair with only its **inner** side set (`after_start_episode_offset` alone, or `before_end_episode_offset` alone) forms its **own region** instead, missing side defaulting to `0`. A pair with nothing set contributes nothing (no region, no shared-window point).
+5. If **neither pair has anything set**, the result is one window: the episode's own unshifted span, `[start_episode, end_episode]`.
 
 Worked examples, episode `[2025-01-07, 2025-05-07]`:
 
 | `before_start` | `after_start` | `before_end` | `after_end` | rule | result |
 | --------------- | -------------- | ------------- | ------------- | ---- | ------ |
-| `NA` | `NA` | `NA` | `NA` | (4) neither set | one window, `[2025-01-07, 2025-05-07]` |
-| `0` | `NA` | `NA` | `0` | (2) both outer sides set alone | one shared window, `[2025-01-07, 2025-05-07]` (each edge pinned) |
-| `-31` | `NA` | `NA` | `31` | (2) both outer | one shared window, `[2024-12-07, 2025-06-07]` |
-| `NA` | `0` | `0` | `NA` | (3) both inner, no outer anywhere | two single-day regions, `[2025-01-07, 2025-01-07]` and `[2025-05-07, 2025-05-07]` |
-| `NA` | `31` | `-31` | `NA` | (3) both inner | two regions, `[2025-01-07, 2025-02-07]` and `[2025-04-06, 2025-05-07]` |
-| `-7` | `NA` | `-7` | `NA` | (2) start's outer side set alone; end's only side is its *inner* one, but outer-mode is already active, so it's used as a plain point anyway | one shared window, `[2024-12-31, 2025-04-30]` |
-| `NA` | `50` | `NA` | `NA` | (3) start's inner side alone, end pair fully empty | one region, `[2025-01-07, 2025-02-26]`; end contributes nothing |
-| `-7` | `7` | `-7` | `7` | (1) both pairs fully specified | two regions: `[2024-12-31, 2025-01-14]` and `[2025-04-30, 2025-05-14]` |
+| `NA` | `NA` | `NA` | `NA` | (5) neither set | one window, `[2025-01-07, 2025-05-07]` |
+| `0` | `NA` | `NA` | `0` | (2)+(3) both outer sides set alone | one shared window, `[2025-01-07, 2025-05-07]` (each edge pinned) |
+| `-31` | `NA` | `NA` | `31` | (2)+(3) both outer | one shared window, `[2024-12-07, 2025-06-07]` |
+| `NA` | `0` | `0` | `NA` | (4) both inner, no outer anywhere | two single-day regions, `[2025-01-07, 2025-01-07]` and `[2025-05-07, 2025-05-07]` |
+| `NA` | `31` | `-31` | `NA` | (4) both inner | two regions, `[2025-01-07, 2025-02-07]` and `[2025-04-06, 2025-05-07]` |
+| `-7` | `NA` | `-7` | `NA` | (2)+(3) start's outer side alone triggers shared mode; end's only side is its *inner* one, but it's used as a plain point anyway once shared mode is active | one shared window, `[2024-12-31, 2025-04-30]` |
+| `NA` | `50` | `NA` | `NA` | (4) start's inner side alone, end pair fully empty | one region, `[2025-01-07, 2025-02-26]`; end contributes nothing |
+| `-7` | `7` | `-7` | `7` | (1) both pairs full | two regions: `[2024-12-31, 2025-01-14]` and `[2025-04-30, 2025-05-14]` |
+| `-7` | `7` | `-7` | `NA` | (1) start full, (4) end inner-alone, not shared (nothing triggers it) | two regions: start's own `[2024-12-31, 2025-01-14]` **and** end's own `[2025-04-30, 2025-05-07]` — the full pair does not suppress the other one |
+| `NA` | `7` | `-7` | `7` | (1) end full, (4) start inner-alone | two regions: `[2025-01-07, 2025-01-14]` and `[2025-04-30, 2025-05-14]` |
 
-The fifth row (`-7`/`NA`/`-7`/`NA`) is the case worth internalizing: `before_end_episode_offset` is normally "inner" (rule 3, own region) — but because the *start* pair's outer side (`before_start_episode_offset`) is set, the whole computation is already in shared-window mode (rule 2), and `before_end_episode_offset`'s value gets used as a plain point instead of forming its own region. Which side "wins" when the two pairs disagree is entirely about whether an outer side is set *anywhere*, not about which pair.
+The sixth row (`-7`/`NA`/`-7`/`NA`) is the case worth internalizing for shared-window mode: `before_end_episode_offset` is normally "inner" (rule 4, own region) — but because the *start* pair's outer side (`before_start_episode_offset`) is set, the whole computation is already in shared-window mode (rule 2), and `before_end_episode_offset`'s value gets used as a plain point instead of forming its own region. Which side "wins" when the two pairs disagree is entirely about whether an outer side is set *anywhere* on a non-full pair, not about which pair.
+
+The last two rows are the case worth internalizing for full pairs: a full pair (both sides set) *always* keeps its own region, and never absorbs or suppresses whatever the other pair independently contributes — even when that other pair only has one side set. A full pair and a non-full, non-empty pair together always produce two regions, never one.
 
 If a selected episode's engine call produces two regions (rule 1, or two pairs each independently "inner-only" under rule 3) or a constructor selects several episodes (e.g. `IN_PRIOR_PREG` with two prior episodes), each region/episode becomes its own candidate [Window](Window.md) row. See "Multiple candidate windows" in the tutorial for how the [Selector](Selector.md) then treats them.
 

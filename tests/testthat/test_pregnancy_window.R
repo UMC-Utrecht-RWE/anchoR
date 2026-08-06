@@ -141,6 +141,33 @@ testthat::test_that("episode_windows: both pairs set -> two regions", {
   testthat::expect_equal(w$window_end, as.Date(c("2025-01-14", "2025-05-14")))
 })
 
+testthat::test_that("episode_windows: a fully-specified pair still gets the other pair's inner-only region alongside it", { # nolint: line_length_linter.
+  # Regression test: a pair with both sides set ("full") must not suppress
+  # the other pair's own contribution when that other pair has only its
+  # inner side set (and shared mode isn't triggered by anything). Both
+  # pairs' own regions should appear, not just the full one's.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    -7, 7, -7, NA_real_
+  )
+  testthat::expect_equal(nrow(w), 2L)
+  testthat::expect_equal(
+    w$window_start, as.Date(c("2024-12-31", "2025-04-30"))
+  )
+  testthat::expect_equal(w$window_end, as.Date(c("2025-01-14", "2025-05-07")))
+
+  # Same thing with the full/inner-only pairs swapped.
+  w2 <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    NA_real_, 7, -7, 7
+  )
+  testthat::expect_equal(nrow(w2), 2L)
+  testthat::expect_equal(
+    w2$window_start, as.Date(c("2025-01-07", "2025-04-30"))
+  )
+  testthat::expect_equal(w2$window_end, as.Date(c("2025-01-14", "2025-05-14")))
+})
+
 testthat::test_that("episode_windows: 0/0 on both pairs collapses each region to a single day", { # nolint: line_length_linter.
   w <- episode_windows(
     as.Date("2025-01-07"), as.Date("2025-05-07"),
