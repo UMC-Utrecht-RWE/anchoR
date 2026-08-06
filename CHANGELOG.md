@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `looks_like_glob()` (used by `normalize_parquet_sources()` to decide whether a nonexistent-looking path might still be a glob pattern DuckDB can resolve) used a bracket-expression regex (`[\\*\\?\\[]`) written as if `\\*`/`\\?`/`\\[` were escaped literals inside the class; a bracket expression doesn't treat backslash as an escape character, so it actually matched a literal backslash instead, making it return `TRUE` for *any* Windows-style path (backslash path separators) whether or not it contained a real glob character. On Windows this silently let a nonexistent parquet path through instead of raising anchoR's "Concept parquet source does not exist" error. Rewritten as `[*?[]`, which matches only actual `*`/`?`/`[` glob characters.
 
+## [v1.4.5]
+### Fixed
+- `R/duckdb_helpers.R::load_concepts_table()` no longer errors when called a second time on the same DuckDB connection. It now checks PRAGMA `database_list` and skips the ATTACH if concepts_db is already attached, instead of unconditionally re-attaching (which DuckDB rejects).
+- `R/anchor.R::anchor_by_selector()` and `load_concepts_table()` moved from once-before-the-loop (filtering on all metadata's concept_ids) to inside the per-selector loop (filtering on just that selector's concept_ids), shrinking the filtered set per selector. This is what made above fix necessary, since the table now gets loaded multiple times per connection.
+- `inst/sql/range_count.sql`'s match-counting query switched from `INNER JOIN + COUNT(*)` to `LEFT JOIN + COUNT(c.person_id)`, so a person with zero matching concepts rows in the window gets a true raw_count = 0 instead of being dropped entirely (which was pushing them into a generic "missing" fallback with the wrong bucket value).
+
+## Added
+- `R/get_anchor_result.R`: boolean-variable imputation restored in `imputing_missing()` the missing boolean values are now stamped `FALSE` (this logic had been lost in an earlier PR) and the column is coerced back to logical.
+
 ## [v1.4.4]
 
 ### Removed
@@ -45,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `range_count.sql` (the new selector described above) no longer wraps its bucketing `CASE` inside `COUNT(...)` (which just counted rows, identical to `COUNT(*)`, since every branch was non-`NULL`) and no longer references `w.value`, a column that doesn't exist on `population_windows`. It's now a two-step query: count matches, then join the count against `concept_ranges`. Also casts the looked-up bucket value through `BIGINT` before `VARCHAR` so it renders as `"2"` instead of `"2.0"` when `concept_ranges$new_value` is a double (the common case when read from a CSV).
+- `range_count.sql` counted matches via `INNER JOIN concepts` + `COUNT(*)`, so a person with zero matching `concepts` rows in the window produced no row at all instead of a count of `0` — making the bucket whose `lower_range`/`upper_range` covers 0 structurally unreachable, and pushing those subjects into `get_anchor_result(impute_missing = TRUE)`'s generic "missing" fallback (which stamps categorical values with a literal `0`, not the correct bucket `new_value`). Downstream, this showed up as a real category vanishing from `RANGE_COUNT`-derived table rows while an unlabeled `0` appeared instead. Switched to `LEFT JOIN` + `COUNT(c.person_id)` so zero-match subjects get a true `raw_count = 0` row and are bucketed against `concept_ranges` like everyone else.
 - `vignettes/selector-cookbook.Rmd` excludes the new `RANGE_COUNT` from its "every bundled selector" demo (it needs a `concept_ranges` table the vignette's single-`concepts`-table example doesn't provide) and no longer references the removed (original) `RANGE_COUNT` selector.
 - `load_concepts_table()` is now inside the per selector loop, so the filtering is much smaller again (each selector only filters on its own concept_ids). The connection itself is still opened just once, that part didn't change.
 
@@ -114,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # List of releases
 - unreleased: https://github.com/UMC-Utrecht-RWE/anchoR@main
 - v1.5 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.5
+- v1.4.5 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.5
 - v1.4.4 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.4
 - v1.4.3 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.3
 - v1.4.2 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.2
