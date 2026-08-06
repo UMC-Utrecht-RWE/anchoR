@@ -56,10 +56,13 @@ define_window(population, metadata, episodes = episodes)[
 ]
 ```
 
-Every episode-based window is built from two independent border pairs: `before_start_episode_offset`/`after_start_episode_offset` (relative to the episode's own `start_episode`) and `before_end_episode_offset`/`after_end_episode_offset` (relative to `end_episode`). Each pair is read as `edge + offset`, `NA` meaning that side isn't set:
+Every episode-based window is built from two independent border pairs: `before_start_episode_offset`/`after_start_episode_offset` (relative to the episode's own `start_episode`) and `before_end_episode_offset`/`after_end_episode_offset` (relative to `end_episode`). Each pair is read as `edge + offset`, `NA` meaning that side isn't set. `before_start_episode_offset` and `after_end_episode_offset` are the two "outer" sides (they point away from the episode); `after_start_episode_offset` and `before_end_episode_offset` are the "inner" sides (they point into it):
 
-- **At most one side of a pair set** (as above, every pair here has only one non-`NA` side): that edge contributes `edge + offset` to a single shared window. `current`'s `before_start_episode_offset = 0` pins the window's start to the episode's own start; `after_end_episode_offset = 14` extends the end 14 days past the episode's own end.
-- **Both sides of a pair set**: that pair stops contributing to the shared window and instead becomes its own self-contained region near that edge, `[edge + before_offset, edge + after_offset]` see `documentation/definitions/Episode-Based Window Engine.md` for the full rule, including what happens when only one pair is fully specified.
+- **Either outer side set alone** (as above: `current`'s `before_start_episode_offset = 0` and `after_end_episode_offset = 14`): the whole window becomes one shared window, that side's offset defining its edge directly, the other pair contributing whichever single value it has (or the unshifted edge, if it has nothing) for the opposite edge. `current`'s start is pinned to the episode's own start (`before_start_episode_offset = 0`); its end is 14 days past the episode's own end (`after_end_episode_offset = 14`).
+- **Only an inner side set, with no outer side set anywhere**: each such pair becomes its own self-contained region instead, `[edge + before_offset, edge + after_offset]` (missing side defaulting to `0`), rather than joining a shared window.
+- **Both sides of a pair set**: that pair is always its own self-contained region, regardless of the other pair.
+
+See `documentation/definitions/Episode-Based Window Engine.md` for the complete rule, including what happens when the two pairs disagree (one outer, one inner).
 
 `outside_all_pregnancy` works differently: it doesn't use the before/after episode offsets at all, only `anchor_start_offset`/`anchor_end_offset`, which define the overall search range (`[T0 - 1172, T0]` above) that the gaps between episodes are computed within.
 

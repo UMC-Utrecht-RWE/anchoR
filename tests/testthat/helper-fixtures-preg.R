@@ -149,20 +149,30 @@ pregnancy_population_complex <- function() {
 # to every constructor (see the clip rule in `documentation/definitions/
 # Episode-Based Window Engine.md`), not just `outside_all_pregnancy`; every
 # row below was re-verified against the current engine via `define_window()`.
-# - complex_current: border offsets give [start_episode + 30, end_episode +
-#   30], then clipped to the hard boundary [T0 - 400, T0 + 400].
-#   person 1 @ 2021-04-02: [2021-03-17, 2021-06-19] (unclipped -- the
-#   boundary is wide enough here).
+# - complex_current: `before_start_episode_offset = -30` and
+#   `after_end_episode_offset = 30` are each set alone -- both are "outer"
+#   sides (see `documentation/definitions/Episode-Based Window Engine.md`),
+#   so setting either one alone makes the whole thing one shared window:
+#   `[start_episode - 30, end_episode + 30]`, then clipped to the hard
+#   boundary [T0 - 400, T0 + 400] (wide enough to be a no-op here).
+#   person 1 @ 2021-04-02: [2021-01-16, 2021-06-19].
 #   person 1 @ 2022-08-16 and person 2 @ 2022-08-16 (same episode 3 dates):
-#     [2022-03-31, 2022-12-31].
-#   person 3 @ 2021-04-02: [2021-03-17, 2021-10-14].
+#     [2022-01-30, 2022-12-31].
+#   person 3 @ 2021-04-02: [2021-01-16, 2021-10-14].
 #   person 1 @ 2021-01-01: no row (no current episode).
-# - complex_prior: border offsets give [start_episode + 60, end_episode - 60]
+# - complex_prior: `after_start_episode_offset = 60` and
+#   `before_end_episode_offset = -60` are both "inner" sides (unlike
+#   complex_current's outer ones above), and neither outer side
+#   (`before_start_episode_offset`/`after_end_episode_offset`) is set
+#   anywhere on this row, so they do NOT combine into a shared window --
+#   each forms its own region instead: `[start_episode, start_episode +
+#   60]` and `[end_episode - 60, end_episode]`, two regions per prior
+#   episode.
 #   NOTE: with `anchor_start_offset = anchor_end_offset = 0`, the hard
-#   boundary here is exactly `[T0, T0]`, and none of the prior-episode
-#   windows land on T0 -- **every complex_prior row is invalid**, verified
-#   against `define_window()`; `LATEST` produces no result for it end to
-#   end. This is left as-is to illustrate the failure mode, the same way
+#   boundary here is exactly `[T0, T0]`, and neither region ever reaches
+#   that far -- **every complex_prior row is invalid**, verified against
+#   `define_window()`; `LATEST` produces no result for it end to end. This
+#   is left as-is to illustrate the failure mode, the same way
 #   `pregnancy_metadata_simple()`'s `simple_prior` does.
 # - complex_current_and_prior: boundary [T0 - 3000, T0]. Prior-episode
 #   windows (unshifted spans, e.g. [2020-01-01, 2020-09-01]) are already
@@ -202,15 +212,15 @@ pregnancy_metadata_complex <- function() {
     end_offset = 0L,
     anchor_start_offset = c(-400L, 0L, -3000L, -3000L),
     anchor_end_offset = c(400L, 0L, 0L, 0L),
-    before_start_episode_offset = c(30L, NA_real_, NA_real_, NA_real_),
+    before_start_episode_offset = c(-30L, NA_real_, NA_real_, NA_real_),
     after_start_episode_offset = c(NA_real_, 60L, NA_real_, NA_real_),
-    before_end_episode_offset = c(NA_real_, 60L, NA_real_, NA_real_),
+    before_end_episode_offset = c(NA_real_, -60L, NA_real_, NA_real_),
     after_end_episode_offset = c(30L, NA_real_, NA_real_, NA_real_)
   )
 }
 
 # GEST_DIAB_CURRENT: one record inside complex_current's window for person 1
-# @ 2022-08-16 ([2022-03-31, 2022-12-31]); it also lands inside
+# @ 2022-08-16 ([2022-01-30, 2022-12-31]); it also lands inside
 # complex_current_and_prior's clipped current-episode window for the same
 # person/date ([2022-03-01, 2022-08-16]), so it matches both variables.
 # GEST_DIAB_PRIOR: NOTE -- with complex_prior now entirely invalid (see the

@@ -28,26 +28,30 @@ A data.table with one or two rows of \code{window_start}/\code{window_end}.
 \description{
 Each pair: \code{before_start_offset}/\code{after_start_offset} for
 \code{start_episode}, \code{before_end_offset}/\code{after_end_offset} for \code{end_episode}.
-A pair is \strong{unset} only when \emph{both} sides are \code{NA}. Any other pair (one
-or both sides given) is \strong{set}: its missing side (if any) defaults to
-\code{0}, and it becomes its own self-contained region, \verb{[edge + before_offset, edge + after_offset]} (a single calendar day when both
-offsets resolve to the same value). \code{before_offset} must not be later
-than \code{after_offset} after defaulting, or that region would be inverted,
-which is an error -- this also catches, e.g., a lone \code{before_start_offset = 30} (which would default to \verb{[edge + 30, edge + 0]}, backwards).
+\code{before_start_offset} and \code{after_end_offset} are the \emph{outer} sides (they
+point away from the episode); \code{after_start_offset} and
+\code{before_end_offset} are the \emph{inner} sides (they point into it).
 }
 \details{
-Combining the two pairs:
 \itemize{
-\item \strong{Neither pair set}: one shared window, the episode's own unshifted
-span, \verb{[start_episode, end_episode]}.
-\item \strong{Exactly one pair set}: only that pair's region is emitted; the
-other (fully unset) pair contributes nothing.
-\item \strong{Both pairs set}: two independent regions, one per pair.
+\item \strong{Both sides of a pair set}: that pair is a self-contained region,
+\verb{[edge + before_offset, edge + after_offset]}; \code{before_offset} must
+not be later than \code{after_offset}, or the region would be inverted,
+which is an error.
+\item \strong{Only an outer side set} (\code{before_start_offset} alone, or
+\code{after_end_offset} alone): the \emph{whole computation} becomes one shared
+window. That offset defines its edge directly; the other pair
+contributes whichever single value it has (regardless of which side
+it is) as a plain point for the opposite edge, or the unshifted edge
+if it has nothing set at all. This is the only way two different
+pairs' values combine into one window.
+\item \strong{Only an inner side set, and no outer side is set anywhere}
+(\code{after_start_offset} alone and/or \code{before_end_offset} alone, with
+neither \code{before_start_offset} nor \code{after_end_offset} given): each such
+pair forms its own region instead, missing side defaulting to \code{0}; a
+pair with nothing set contributes nothing.
+\item \strong{Neither pair has anything set}: one shared window, the episode's
+own unshifted span, \verb{[start_episode, end_episode]}.
 }
-
-There is no longer a way to combine one side of the start pair with one
-side of the end pair into a single shared window as anything other than
-the fully-unset case above -- setting \emph{any} side of a pair always makes
-that pair self-contained.
 }
 \keyword{internal}

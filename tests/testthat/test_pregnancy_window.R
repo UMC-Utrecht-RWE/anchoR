@@ -76,31 +76,57 @@ testthat::test_that("episode_windows: neither pair set falls back to the episode
   testthat::expect_equal(w$window_end, as.Date("2025-05-07"))
 })
 
-testthat::test_that("episode_windows: one side per pair set (outward side) matches the unshifted span", { # nolint: line_length_linter.
+testthat::test_that("episode_windows: outer side of each pair set (before_start + after_end) shares one window", { # nolint: line_length_linter.
+  # before_start_offset and after_end_offset are the two "outer" sides;
+  # either one set alone makes the whole thing one shared window, here
+  # pinning both edges to the episode's own unshifted span.
   w <- episode_windows(
     as.Date("2025-01-07"), as.Date("2025-05-07"),
     0, NA_real_, NA_real_, 0
   )
+  testthat::expect_equal(nrow(w), 1L)
   testthat::expect_equal(w$window_start, as.Date("2025-01-07"))
   testthat::expect_equal(w$window_end, as.Date("2025-05-07"))
 })
 
-testthat::test_that("episode_windows: one side per pair set (inward side) also matches the unshifted span", { # nolint: line_length_linter.
+testthat::test_that("episode_windows: inner side of each pair set (after_start + before_end), neither outer side set, gives two single-day regions", { # nolint: line_length_linter.
+  # after_start_offset and before_end_offset are the "inner" sides; with
+  # no outer side (before_start_offset/after_end_offset) set anywhere,
+  # each inner-only pair forms its own region instead, missing side
+  # defaulting to 0.
   w <- episode_windows(
     as.Date("2025-01-07"), as.Date("2025-05-07"),
     NA_real_, 0, 0, NA_real_
   )
-  testthat::expect_equal(w$window_start, as.Date("2025-01-07"))
-  testthat::expect_equal(w$window_end, as.Date("2025-05-07"))
+  testthat::expect_equal(nrow(w), 2L)
+  testthat::expect_equal(
+    w$window_start, as.Date(c("2025-01-07", "2025-05-07"))
+  )
+  testthat::expect_equal(w$window_end, as.Date(c("2025-01-07", "2025-05-07")))
 })
 
-testthat::test_that("episode_windows: a single offset per pair shifts both edges of one shared window", { # nolint: line_length_linter.
+testthat::test_that("episode_windows: before_start_offset alone shares a window even when the end pair's only side is its inner one", { # nolint: line_length_linter.
+  # before_start_offset (outer) triggers shared-window mode by itself;
+  # before_end_offset (normally inner-only-forms-its-own-region) gets used
+  # as a plain point for the shared window's end instead, since shared
+  # mode is already active.
   w <- episode_windows(
     as.Date("2025-01-07"), as.Date("2025-05-07"),
     -7, NA_real_, -7, NA_real_
   )
+  testthat::expect_equal(nrow(w), 1L)
   testthat::expect_equal(w$window_start, as.Date("2024-12-31"))
   testthat::expect_equal(w$window_end, as.Date("2025-04-30"))
+})
+
+testthat::test_that("episode_windows: after_start_offset alone, end pair fully unset, is its own region", { # nolint: line_length_linter.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    NA_real_, 50, NA_real_, NA_real_
+  )
+  testthat::expect_equal(nrow(w), 1L)
+  testthat::expect_equal(w$window_start, as.Date("2025-01-07"))
+  testthat::expect_equal(w$window_end, as.Date("2025-02-26"))
 })
 
 testthat::test_that("episode_windows: both pairs set -> two regions", {
