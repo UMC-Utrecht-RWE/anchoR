@@ -28,24 +28,26 @@ A data.table with one or two rows of \code{window_start}/\code{window_end}.
 \description{
 Each pair: \code{before_start_offset}/\code{after_start_offset} for
 \code{start_episode}, \code{before_end_offset}/\code{after_end_offset} for \code{end_episode}.
-It is read as up to two independent borders relative to that edge:
-\code{edge + offset} (\code{0} means the border sits exactly on the edge; \code{NA}
-means that particular border isn't set). A pair with \strong{both} sides set
-becomes its own self-contained region, \verb{[edge + before_offset, edge + after_offset]} (a single calendar day when both offsets are \code{0});
-\code{before_offset} must not be later than \code{after_offset}, or that region
-would be inverted, which is an error.
+A pair is \strong{unset} only when \emph{both} sides are \code{NA}. Any other pair (one
+or both sides given) is \strong{set}: its missing side (if any) defaults to
+\code{0}, and it becomes its own self-contained region, \verb{[edge + before_offset, edge + after_offset]} (a single calendar day when both
+offsets resolve to the same value). \code{before_offset} must not be later
+than \code{after_offset} after defaulting, or that region would be inverted,
+which is an error -- this also catches, e.g., a lone \code{before_start_offset = 30} (which would default to \verb{[edge + 30, edge + 0]}, backwards).
 }
 \details{
-What happens with the \emph{other} pair depends on whether either pair forms
-a region:
+Combining the two pairs:
 \itemize{
-\item \strong{Neither pair fully specified}: both edges contribute to one shared
-window, an edge with neither side set contributes \code{edge} itself,
-unshifted; one with exactly one side set contributes \verb{edge + that offset} (whichever side, no ambiguity with only one value).
-\item \strong{Exactly one pair fully specified}: that pair's region is the only
-output; the other pair (whether fully unset or only partially set)
-contributes nothing.
-\item \strong{Both pairs fully specified}: two regions, one per pair.
+\item \strong{Neither pair set}: one shared window, the episode's own unshifted
+span, \verb{[start_episode, end_episode]}.
+\item \strong{Exactly one pair set}: only that pair's region is emitted; the
+other (fully unset) pair contributes nothing.
+\item \strong{Both pairs set}: two independent regions, one per pair.
 }
+
+There is no longer a way to combine one side of the start pair with one
+side of the end pair into a single shared window as anything other than
+the fully-unset case above -- setting \emph{any} side of a pair always makes
+that pair self-contained.
 }
 \keyword{internal}
