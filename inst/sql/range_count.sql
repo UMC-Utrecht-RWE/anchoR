@@ -5,10 +5,10 @@ WITH raw_counts AS (
         w.variable_id,
         w.concept_id,
         w.window_name,
-        COUNT(*) AS raw_count,
+        COUNT(c.person_id) AS raw_count,
         MAX(c.date) AS date
     FROM population_windows AS w
-    INNER JOIN concepts AS c
+    LEFT JOIN concepts AS c
         ON c.person_id = w.person_id
        AND c.concept_id = w.concept_id
        AND c.date BETWEEN w.window_start AND w.window_end

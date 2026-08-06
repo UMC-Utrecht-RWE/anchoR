@@ -86,8 +86,11 @@ testthat::test_that(
     )
     data.table::setorder(result, person_id)
 
-    testthat::expect_equal(result$person_id, c("p2", "p3", "p4"))
-    testthat::expect_equal(result$value, c("2", "3", "4"))
-    testthat::expect_equal(result$n, c(1, 3, 5))
+    # p1 has 0 matching concept rows, which is itself a valid, countable
+    # outcome (falls in the lower_range=0/upper_range=0 bucket) and must not
+    # be silently dropped from the result.
+    testthat::expect_equal(result$person_id, c("p1", "p2", "p3", "p4"))
+    testthat::expect_equal(result$value, c("1", "2", "3", "4"))
+    testthat::expect_equal(result$n, c(0, 1, 3, 5))
   }
 )
