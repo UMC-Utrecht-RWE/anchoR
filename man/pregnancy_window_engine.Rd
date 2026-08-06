@@ -30,8 +30,13 @@ For \code{"CURRENT"}/\code{"PRIOR"}/\code{"CURRENT_AND_PRIOR"}, episodes are fir
 classified relative to the anchor (see \code{classify_episodes()}), then each
 selected episode independently contributes its own window(s) via
 \code{episode_windows()}, purely from its own \code{start_episode}/\code{end_episode}
-and the row's four border offsets.
-\code{"OUTSIDE_ALL"} is different: it finds the gaps \emph{between all} of a
-person's episodes inside \verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]}; the border offsets are not used.
+and the row's four border offsets. \code{"OUTSIDE_ALL"} is different: it
+finds the gaps \emph{between all} of a person's episodes inside
+\verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]} directly; the border offsets are not used.
+Regardless of \code{episode_select}, every candidate window is then clipped
+to that same \verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]} boundary via \code{clip_to_anchor_bounds()} -- for
+\code{"OUTSIDE_ALL"} this is a no-op (the gaps are already computed inside
+that range), for the other three it's what makes \code{anchor_start_offset}/
+\code{anchor_end_offset} a hard, constructor-independent time boundary.
 }
 \keyword{internal}

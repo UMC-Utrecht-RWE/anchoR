@@ -243,6 +243,45 @@ outside_all_episode_gaps <- function(episodes, range_start, range_end) {
   )
 }
 
+#' Clip candidate windows to the project's hard anchor-relative boundary
+#'
+#' `anchor_start_offset`/`anchor_end_offset` define a hard boundary,
+#' `[anchor_start_val + anchor_start_offset, anchor_end_val +
+#' anchor_end_offset]`, that every episode-based window must fall inside,
+#' regardless of constructor. Each side is applied independently and only
+#' when not `NA` (the same convention the border-offset pairs use): a set
+#' `anchor_start_offset` raises `window_start` up to at least the
+#' boundary's lower edge; a set `anchor_end_offset` lowers `window_end`
+#' down to at most the boundary's upper edge. A window entirely outside the
+#' boundary comes out with `window_start > window_end`, left for
+#' `finalize_windows()` to mark invalid, the same as any other empty
+#' window; this function never drops rows itself.
+#'
+#' @param windows A data.table with `window_start`/`window_end` columns.
+#' @param anchor_start_val,anchor_end_val The row's own anchor date(s)
+#'   (single Dates), from `anchor_start_col`/`anchor_end_col`.
+#' @param anchor_start_offset,anchor_end_offset Single offsets (or `NA`).
+#' @return `windows`, with `window_start`/`window_end` clipped in place.
+#' @keywords internal
+clip_to_anchor_bounds <- function(
+  windows, anchor_start_val, anchor_start_offset,
+  anchor_end_val, anchor_end_offset
+) {
+  if (!is.na(anchor_start_offset)) {
+    windows[
+      , window_start := pmax(
+        window_start, anchor_start_val + anchor_start_offset
+      )
+    ]
+  }
+  if (!is.na(anchor_end_offset)) {
+    windows[
+      , window_end := pmin(window_end, anchor_end_val + anchor_end_offset)
+    ]
+  }
+  windows[]
+}
+
 #' Episode-Based Window Engine
 #'
 #' Shared engine behind every episode-based constructor.
@@ -256,10 +295,16 @@ outside_all_episode_gaps <- function(episodes, range_start, range_end) {
 #' classified relative to the anchor (see `classify_episodes()`), then each
 #' selected episode independently contributes its own window(s) via
 #' `episode_windows()`, purely from its own `start_episode`/`end_episode`
-#' and the row's four border offsets.
-#' `"OUTSIDE_ALL"` is different: it finds the gaps *between all* of a
-#' person's episodes inside `[anchor_start_col + anchor_start_offset,
-#' anchor_end_col + anchor_end_offset]`; the border offsets are not used.
+#' and the row's four border offsets. `"OUTSIDE_ALL"` is different: it
+#' finds the gaps *between all* of a person's episodes inside
+#' `[anchor_start_col + anchor_start_offset, anchor_end_col +
+#' anchor_end_offset]` directly; the border offsets are not used.
+#' Regardless of `episode_select`, every candidate window is then clipped
+#' to that same `[anchor_start_col + anchor_start_offset, anchor_end_col +
+#' anchor_end_offset]` boundary via `clip_to_anchor_bounds()` -- for
+#' `"OUTSIDE_ALL"` this is a no-op (the gaps are already computed inside
+#' that range), for the other three it's what makes `anchor_start_offset`/
+#' `anchor_end_offset` a hard, constructor-independent time boundary.
 #'
 #' @param window_dt A data.table produced by `cross_join_population_metadata()`,
 #'   with `.episodes` already nested onto it.
@@ -274,10 +319,10 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
   for (i in seq_len(nrow(window_dt))) {
     row <- window_dt[i]
     anchor_start_val <- row[[row$anchor_start_col]]
+    anchor_end_val <- row[[row$anchor_end_col]]
     episodes <- data.table::as.data.table(row$.episodes[[1]])
 
     if (episode_select == "OUTSIDE_ALL") {
-      anchor_end_val <- row[[row$anchor_end_col]]
       windows <- outside_all_episode_gaps(
         episodes,
         anchor_start_val + row$anchor_start_offset,
@@ -313,6 +358,12 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
     if (nrow(windows) == 0L) {
       next
     }
+
+    windows <- clip_to_anchor_bounds(
+      windows,
+      anchor_start_val, row$anchor_start_offset,
+      anchor_end_val, row$anchor_end_offset
+    )
 
     output_rows[[i]] <- cbind(row[rep(1L, nrow(windows))], windows)
   }
