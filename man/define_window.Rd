@@ -20,7 +20,7 @@ define_window(
 \code{anchor_start_col} or \code{anchor_end_col}.}
 
 \item{constructor_env}{Environment to search for user-defined window
-constructors that are not built into anchoR. Defaults to the global
+constructors that are not built into anchor. Defaults to the global
 environment, so a constructor made with \code{make_constructor()} and
 assigned at the top level (e.g. \code{my_window <- make_constructor(...)})
 is found automatically. Pass a different environment (or a small one

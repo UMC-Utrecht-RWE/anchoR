@@ -99,10 +99,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `documentation` Folder containing a more procise and extend documentation.
 
 # List of releases
-- unreleased: https://github.com/UMC-Utrecht-RWE/anchoR@main
-- v1.4.3 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.4
-- v1.4.3 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.3
-- v1.4.2 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.2
-- v1.4.1.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1.1
-- v1.4.1 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4.1
-- v1.4 https://github.com/UMC-Utrecht-RWE/anchoR/releases/tag/v1.4
+- unreleased: https://github.com/UMC-Utrecht-RWE/anchor@main
+- v1.4.3 https://github.com/UMC-Utrecht-RWE/anchor/releases/tag/v1.4.4
+- v1.4.3 https://github.com/UMC-Utrecht-RWE/anchor/releases/tag/v1.4.3
+- v1.4.2 https://github.com/UMC-Utrecht-RWE/anchor/releases/tag/v1.4.2
+- v1.4.1.1 https://github.com/UMC-Utrecht-RWE/anchor/releases/tag/v1.4.1.1
+- v1.4.1 https://github.com/UMC-Utrecht-RWE/anchor/releases/tag/v1.4.1
+- v1.4 https://github.com/UMC-Utrecht-RWE/anchor/releases/tag/v1.4

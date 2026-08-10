@@ -353,7 +353,7 @@ event_concepts <- function() {
 #   per person.
 # - pregnancy_metadata()'s start_offset/end_offset are placeholders for this
 #   engine (the real per-row parameters lived in its free-text
-#   `other_arguments`, which anchoR deliberately does not parse -- see
+#   `other_arguments`, which anchor deliberately does not parse -- see
 #   R/pregnancy_window.R). Each row below is that same other_arguments text
 #   translated by hand into start_offset/end_offset/end_cap_offset.
 pregnancy_population_with_events <- function() { # nolint

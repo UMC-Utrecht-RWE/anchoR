@@ -10,14 +10,14 @@ The persisted anchor field is always named `T0`, even when anchoring used a diff
 get_anchor_result(metadata, anchor_hive_path, result_shape = "long")
 ```
 
-| column | type | meaning |
-| --- | --- | --- |
-| `person_id` | character | Person identifier. |
-| `T0` | `Date` | Anchor date used for the output row. |
-| `variable_id` | character | Metadata variable identifier. |
-| `window_name` | character | Metadata window label, possibly `NA`. |
-| `date` | `Date` | Date selected by the selector. |
-| `value` | character | Value or aggregate returned by the selector. |
+| column        | type      | meaning                                      |
+| ------------- | --------- | -------------------------------------------- |
+| `person_id`   | character | Person identifier.                           |
+| `T0`          | `Date`    | Anchor date used for the output row.         |
+| `variable_id` | character | Metadata variable identifier.                |
+| `window_name` | character | Metadata window label, possibly `NA`.        |
+| `date`        | `Date`    | Date selected by the selector.               |
+| `value`       | character | Value or aggregate returned by the selector. |
 
 Long output is sparse: a window with no matching concept record contributes no row. All built-in selectors except `ALL` return at most one row per key.
 
@@ -62,7 +62,7 @@ Repeating a `variable_id` for distinct `window_name` values is supported and is 
 - `is_expected_missing`; and
 - `variable_type`.
 
-Rows with `is_expected_missing = TRUE` remain missing. Other boolean types (`TF`, `BOOL`, `BOOLEAN`, `LOGICAL`) are imputed to `FALSE`; categorical types (`CAT`, `FACTOR`) are imputed to `0`. Dates and other variable types are not imputed. When required metadata fields are only partly supplied, anchoR warns and skips imputation.
+Rows with `is_expected_missing = TRUE` remain missing. Other boolean types (`TF`, `BOOL`, `BOOLEAN`, `LOGICAL`) are imputed to `FALSE`; categorical types (`CAT`, `FACTOR`) are imputed to `0`. Dates and other variable types are not imputed. When required metadata fields are only partly supplied, anchor warns and skips imputation.
 
 ## Empty and sparse hives
 

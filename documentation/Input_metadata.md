@@ -13,7 +13,7 @@
 | `start_offset` | integer-like | Inclusive window-start offset in days.                                                        |
 | `end_offset`   | integer-like | Inclusive window-end offset in days.                                                          |
 
-`start_offset` and `end_offset` are converted with `as.integer()`. Fractional values are truncated toward zero, so validate or round them before calling anchoR if fractions have scientific meaning.
+`start_offset` and `end_offset` are converted with `as.integer()`. Fractional values are truncated toward zero, so validate or round them before calling anchor if fractions have scientific meaning.
 
 ## Optional columns and defaults
 
@@ -50,7 +50,7 @@ This requests two independently labelled windows for the same variable. `anchor(
 
 Older BRIDGE-derived files may use names such as these:
 
-| legacy name                    | canonical anchoR name                |
+| legacy name                    | canonical anchor name                |
 | ------------------------------ | ------------------------------------ |
 | `date_extraction_func`         | `selector` (automatic alias)         |
 | `anchor_date_start`            | `anchor_start_col` (automatic alias) |
@@ -77,6 +77,6 @@ data.table::setnames(
 - Referenced anchor and episode columns must exist in `population`.
 - Anchor columns should be `Date` values (or `YYYY-mm-dd` character values for the primary `anchor_col`).
 - Rows with missing `concept_id` cannot match concept records and should normally be removed or handled upstream.
-- Additional descriptive columns are allowed, but validation retains only the columns used by anchoR.
+- Additional descriptive columns are allowed, but validation retains only the columns used by anchor.
 
 See [Tutorial_standard_windows.md](Tutorial_standard_windows.md) for ordinary windows and [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) for episode-based metadata.

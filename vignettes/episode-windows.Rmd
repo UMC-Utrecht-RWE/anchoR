@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r setup, message=FALSE}
-library(anchoR)
+library(anchor)
 library(data.table)
 ```
 
@@ -18,14 +18,14 @@ Each population row holds a list-column whose element is a table with `event_sta
 
 ```{r population}
 episodes <- data.table(
-  event_start = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
-  event_end = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01"))
+    event_start = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
+    event_end = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01"))
 )
 
 population <- data.table(
-  person_id = "1",
-  T0 = as.Date("2026-02-15"),
-  pregnancy_episodes = list(episodes)
+    person_id = "1",
+    T0 = as.Date("2026-02-15"),
+    pregnancy_episodes = list(episodes)
 )
 ```
 
@@ -33,21 +33,21 @@ The four constructors select prior episodes, the current episode through the anc
 
 ```{r metadata}
 metadata <- data.table(
-  variable_id = c("prior", "since_start", "anytime", "outside"),
-  concept_id = "DEMO",
-  constructor = c(
-    "IN_PRIOR_PREG", "SINCE_START_CURRENT_PREG",
-    "ANYTIME_CURRENT_PREG", "OUTSIDE_ALL_PREG"
-  ),
-  selector = "ALL",
-  start_offset = c(0L, 0L, 0L, -1172L),
-  end_offset = c(30L, 0L, 14L, 0L),
-  event_col = "pregnancy_episodes"
+    variable_id = c("prior", "since_start", "anytime", "outside"),
+    concept_id = "DEMO",
+    constructor = c(
+        "IN_PRIOR_PREG", "SINCE_START_CURRENT_PREG",
+        "ANYTIME_CURRENT_PREG", "OUTSIDE_ALL_PREG"
+    ),
+    selector = "ALL",
+    start_offset = c(0L, 0L, 0L, -1172L),
+    end_offset = c(30L, 0L, 14L, 0L),
+    event_col = "pregnancy_episodes"
 )
 
 define_window(population, metadata)[
-  window_valid == TRUE,
-  .(variable_id, window_start, window_end)
+    window_valid == TRUE,
+    .(variable_id, window_start, window_end)
 ]
 ```
 

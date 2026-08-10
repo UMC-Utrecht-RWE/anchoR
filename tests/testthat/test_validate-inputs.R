@@ -144,7 +144,7 @@ testthat::test_that(
       "Unsupported selector(s) in `metadata`:",
       "UNSUPPORTED_A, UNSUPPORTED_B",
       sprintf(
-        "Available selectors in package `anchoR`: %s.",
+        "Available selectors in package `anchor`: %s.",
         paste(available_selectors(), collapse = ", ")
       ),
       paste(
