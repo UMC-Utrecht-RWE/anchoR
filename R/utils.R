@@ -239,6 +239,10 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   metadata_dt[]
 }
 
+sql_string <- function(con, value) {
+  as.character(DBI::dbQuoteString(con, value))
+}
+
 concepts_to_data_table <- function(concepts) {
   concepts_type <- concepts_input_type(concepts)
 
@@ -252,12 +256,15 @@ concepts_to_data_table <- function(concepts) {
 
     con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
     on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
-
+    concepts_sql <- sql_string(
+      con,
+      normalizePath(concepts, winslash = "/", mustWork = TRUE)
+    )
     DBI::dbExecute(
       con,
       sprintf(
-        "ATTACH '%s' AS concepts_db (READ_ONLY);",
-        normalizePath(concepts, winslash = "/")
+        "ATTACH %s AS concepts_db (READ_ONLY);",
+        concepts_sql
       )
     )
 

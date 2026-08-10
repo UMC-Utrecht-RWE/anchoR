@@ -272,8 +272,9 @@ publish_accumulated_table <- function(con, table_name, anchor_hive_path) {
   DBI::dbExecute(
     con,
     add_parquet_export(
-      sprintf("SELECT * FROM %s", table_name),
-      anchor_hive_path
+      con = con,
+      sql_query = sprintf("SELECT * FROM %s", table_name),
+      anchor_hive_path = anchor_hive_path
     )
   )
 
@@ -713,9 +714,10 @@ anchor_by_variable <- function(
   # (in "memory" staging mode) to keep the accumulator table from outgrowing
   # RAM goes to local scratch instead of wherever it would otherwise
   # default to.
+  temp_directory_sql <- sql_string(con, duckdb_temp_dir)
   DBI::dbExecute(
     con,
-    sprintf("SET temp_directory = '%s';", duckdb_temp_dir)
+    sprintf("SET temp_directory = %s;", temp_directory_sql)
   )
 
   logger::log_trace("Loading concepts into DuckDB execution context.")

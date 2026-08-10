@@ -155,7 +155,9 @@ read_builtin_selector_sql <- function(selector) {
   )
 }
 
-add_parquet_export <- function(sql_query, anchor_hive_path, selector = NULL) {
+add_parquet_export <- function(
+  con, sql_query, anchor_hive_path, selector = NULL
+) {
   # This helper is for SQL templates that export concept subsets to Parquet
   # files instead of returning them as query results.
   # The `anchor_hive_path` parameter is a path in the SQL environment's
@@ -168,23 +170,27 @@ add_parquet_export <- function(sql_query, anchor_hive_path, selector = NULL) {
   # export an already-combined, multi-selector result in one COPY (e.g.
   # `publish_accumulated_table()`) have no single selector to key on, so
   # `selector` is optional there.
+  path_sql <- sql_string(con, anchor_hive_path)
+
   filename_prefix <- if (is.null(selector)) {
     "part"
   } else {
     tolower(normalize_selector_name(selector))
   }
-  export_query <- sprintf(
-    "COPY (%s) TO '%s'
-    (FORMAT 'parquet',
-    PARTITION_BY (variable_id),
-    FILENAME_PATTERN '%s_{i}',
-      OVERWRITE_OR_IGNORE TRUE);",
-    sql_query,
-    anchor_hive_path,
-    filename_prefix
-  )
+  filename_sql <- sql_string(con, paste0(filename_prefix, "_{i}"))
 
-  export_query
+  sprintf(
+    paste(
+      "COPY (%s) TO %s",
+      "(FORMAT parquet,",
+      " PARTITION_BY (variable_id),",
+      " FILENAME_PATTERN %s,",
+      " OVERWRITE_OR_IGNORE TRUE);"
+    ),
+    sql_query,
+    path_sql,
+    filename_sql
+  )
 }
 
 ensure_accumulate_table <- function(con, table_name) {
@@ -247,7 +253,12 @@ run_selector_query <- function(
 ) {
   query <- read_selector_sql_query(selector, selector_env)
   sql <- if (is.null(accumulate_table)) {
-    add_parquet_export(query, anchor_hive_path, selector)
+    add_parquet_export(
+      con = con,
+      sql_query = query,
+      anchor_hive_path = anchor_hive_path,
+      selector = selector
+    )
   } else {
     ensure_accumulate_table(con, accumulate_table)
     add_table_accumulation(query, accumulate_table)

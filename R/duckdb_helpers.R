@@ -53,11 +53,16 @@ load_concepts_table <- function(con, concepts, concept_ids = NULL) {
     # ATTACHing the same database twice raises a DuckDB error.
     attached_dbs <- DBI::dbGetQuery(con, "PRAGMA database_list;")$name
     if (!"concepts_db" %in% attached_dbs) {
+      concepts_sql <- sql_string(
+        con,
+        normalizePath(concepts, winslash = "/", mustWork = TRUE)
+      )
+
       DBI::dbExecute(
         con,
         sprintf(
-          "ATTACH '%s' AS concepts_db (READ_ONLY);",
-          normalizePath(concepts, winslash = "/")
+          "ATTACH %s AS concepts_db (READ_ONLY);",
+          concepts_sql
         )
       )
     }
