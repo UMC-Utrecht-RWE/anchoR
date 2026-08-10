@@ -37,7 +37,9 @@ capped_followup_window <- make_constructor(
         for (col in unique(window_dt$anchor_end_col)) {
             window_dt[
                 anchor_end_col == col,
-                window_end := as.Date(pmin(get(col) + end_offset, .follow_up_cap))
+                window_end := as.Date(
+                    pmin(get(col) + end_offset, .follow_up_cap)
+                )
             ]
         }
 
@@ -49,6 +51,8 @@ capped_followup_window <- make_constructor(
     )
 )
 ```
+
+
 
 The constructor uses canonical metadata fields so validation and the anchoring pipeline retain everything it needs.
 
@@ -76,6 +80,8 @@ define_window(
     , .(person_id, window_start, window_end, window_valid)
 ]
 ```
+
+
 
 Person 1 is capped by recorded follow-up; person 2 is capped at `T0 + 180`. Test those boundaries with `define_window()` before applying concepts.
 
@@ -106,6 +112,8 @@ assign(
 anchor(population, metadata, concepts, anchor_hive_path = hive)
 get_anchor_result(metadata, hive, result_shape = "long")
 ```
+
+
 
 Custom constructors are discovered in the global environment by the standard `anchor()` workflow. `define_window()` additionally accepts `constructor_env` for explicit lookup during isolated testing. Built-in and custom constructor rows may coexist in one metadata table.
 
