@@ -458,10 +458,6 @@ imputing_missing <- function(wide_anchored, metadata) {
 
       if (i_variable_type %in% c("TF", "BOOL", "BOOLEAN", "LOGICAL")) {
         # Recognize both logical/numeric and string encodings of TRUE/FALSE.
-        # base::as.logical() only understands "TRUE"/"FALSE"/"T"/"F", so a
-        # source that encodes booleans as "1"/"0" would otherwise turn valid
-        # values into NA (and "FALSE"/"0" would be misflagged as invalid and
-        # replaced with TRUE) if we relied on it directly.
         true_values <- c(TRUE, 1, "TRUE", "1", "T")
         false_values <- c(FALSE, 0, "FALSE", "0", "F")
         raw_values <- wide_anchored[[value_col]]
