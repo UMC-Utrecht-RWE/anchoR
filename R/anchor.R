@@ -94,23 +94,18 @@ move_anchor_partition <- function(
       target_partition_path
     )
   )
-  if (file.rename(source_partition_path, target_partition_path)) {
-    logger::log_trace(
-      sprintf(
-        "Renamed staged parquet  in a single filesystem move for `%s`.",
-        variable_id
-      )
-    )
-    return(invisible(target_partition_path))
-  }
-
-  logger::log_trace(
-    sprintf(
-      "Falling back to copy-and-delete while moving parquet for `%s`.",
-      variable_id
-    )
+  target_parent <- dirname(target_partition_path)
+  incoming_path <- tempfile(
+    pattern = ".anchor-incoming-",
+    tmpdir = target_parent
   )
-  dir.create(target_partition_path, recursive = TRUE, showWarnings = FALSE)
+  backup_path <- tempfile(
+    pattern = ".anchor-backup-",
+    tmpdir = target_parent
+  )
+
+  # Copy onto the target filesystem before touching the current partition.
+  dir.create(incoming_path, recursive = TRUE, showWarnings = FALSE)
   staged_files <- list.files(
     source_partition_path,
     full.names = TRUE,
@@ -119,33 +114,76 @@ move_anchor_partition <- function(
   )
   copied <- file.copy(
     from = staged_files,
-    to = target_partition_path,
+    to = incoming_path,
     recursive = TRUE,
     copy.mode = TRUE,
     copy.date = TRUE
   )
 
-  if (!all(copied)) {
-    msg <- sprintf(
-      paste(
-        "Could not move staged parquet files for variable_id `%s`",
-        "into `%s`."
+  if (
+    length(staged_files) == 0L ||
+      length(copied) != length(staged_files) ||
+      !all(copied)
+  ) {
+    unlink(incoming_path, recursive = TRUE, force = TRUE)
+
+    stop(
+      sprintf(
+        "Could not prepare replacement partition for `%s`.",
+        variable_id
       ),
-      variable_id,
-      target_partition_path
+      call. = FALSE
     )
-    logger::log_error(msg)
-    base::stop(msg, call. = FALSE)
+  }
+
+  had_existing <- dir.exists(target_partition_path)
+
+  # Retain the existing output as a recoverable backup.
+  if (had_existing) {
+    if (!file.rename(target_partition_path, backup_path)) {
+      unlink(incoming_path, recursive = TRUE, force = TRUE)
+
+      stop(
+        sprintf(
+          "Could not back up existing partition for `%s`.",
+          variable_id
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  # Both paths are on the target filesystem, so this should be a fast rename.
+  if (!file.rename(incoming_path, target_partition_path)) {
+    rollback_succeeded <- !had_existing ||
+      file.rename(backup_path, target_partition_path)
+
+    unlink(incoming_path, recursive = TRUE, force = TRUE)
+
+    message <- sprintf(
+      "Could not install replacement partition for `%s`.",
+      variable_id
+    )
+
+    if (!rollback_succeeded) {
+      message <- paste0(
+        message,
+        " Rollback failed; the original remains at `",
+        backup_path,
+        "`."
+      )
+    }
+
+    stop(message, call. = FALSE)
+  }
+
+  # Installation succeeded; the old partition is no longer needed.
+  if (had_existing) {
+    unlink(backup_path, recursive = TRUE, force = TRUE)
   }
 
   unlink(source_partition_path, recursive = TRUE, force = TRUE)
-  logger::log_trace(
-    sprintf(
-      "Copied %d staged parquet file(s) for variable_id `%s`.",
-      length(staged_files),
-      variable_id
-    )
-  )
+
   invisible(target_partition_path)
 }
 
