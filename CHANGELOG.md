@@ -33,7 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `documentation/definitions/End Cap Offset.md`, `SINCE_START_CURRENT_PREG.md`, `ANYTIME_CURRENT_PREG.md`: deleted along with the mechanism/constructors they described.
 
 ### Fixed
+- `R/get_anchor_result.R::imputing_missing()`: boolean imputation now recognizes `1`/`0` (as numbers or as strings `"1"`/`"0"`) as valid `TRUE`/`FALSE` encodings, alongside `TRUE`/`FALSE`/`"TRUE"`/`"FALSE"`/`"T"`/`"F"`. Previously the final `as.logical()` coercion only understood the `"TRUE"`/`"FALSE"`-style strings, so a variable whose source concept recorded booleans as `"1"`/`"0"` would have its present values silently turned into `NA` instead of `TRUE`/`FALSE` — this is what caused ASD calculations to fail downstream for some, but not all, boolean covariates.
+- Same function: explicit `FALSE`/`0` values were previously misclassified as "invalid" by the invalid-value check (which only recognized `TRUE`-ish encodings) and silently flipped to `TRUE`. Both `TRUE`-ish and `FALSE`-ish encodings are now recognized before a value is treated as invalid.
 - `looks_like_glob()` (used by `normalize_parquet_sources()` to decide whether a nonexistent-looking path might still be a glob pattern DuckDB can resolve) used a bracket-expression regex (`[\\*\\?\\[]`) written as if `\\*`/`\\?`/`\\[` were escaped literals inside the class; a bracket expression doesn't treat backslash as an escape character, so it actually matched a literal backslash instead, making it return `TRUE` for *any* Windows-style path (backslash path separators) whether or not it contained a real glob character. On Windows this silently let a nonexistent parquet path through instead of raising anchoR's "Concept parquet source does not exist" error. Rewritten as `[*?[]`, which matches only actual `*`/`?`/`[` glob characters.
+
 
 ## [v1.4.5]
 ### Fixed

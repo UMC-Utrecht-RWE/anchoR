@@ -54,6 +54,25 @@ testthat::test_that(
     result <- imputing_missing(wide_anchored, metadata)
 
     testthat::expect_identical(result, wide_anchored)
+testthat::test_that(
+  "imputing_missing fills missing boolean values with FALSE and coerces
+  the column to logical, recognizing 1/0 string encodings of TRUE/FALSE",
+  {
+    wide_anchored <- data.table::data.table(
+      person_id = c("1", "2", "3", "4"),
+      value_bool_var = c("TRUE", NA_character_, "1", "0")
+    )
+    metadata <- data.table::data.table(
+      variable_id = "bool_var",
+      is_expected_missing = FALSE,
+      variable_type = "TF"
+    )
+
+    result <- imputing_missing(wide_anchored, metadata)
+
+    testthat::expect_identical(
+      result$value_bool_var, c(TRUE, FALSE, TRUE, FALSE)
+    )
   }
 )
 
@@ -104,24 +123,69 @@ testthat::test_that(
     )
 
     testthat::expect_true(result$value_v1)
-  }
-)
-
-testthat::test_that(
-  "imputing_missing leaves the string \"TRUE\" as TRUE",
+  "imputing_missing does not flip explicit FALSE values to TRUE",
   {
     wide_anchored <- data.table::data.table(
-      person_id = "1", value_v1 = "TRUE"
+      person_id = c("1", "2"),
+      value_bool_var = c("FALSE", FALSE)
     )
     metadata <- data.table::data.table(
-      variable_id = "v1",
+      variable_id = "bool_var",
       is_expected_missing = FALSE,
-      variable_type = "BOOLEAN"
+      variable_type = "TF"
     )
 
     result <- imputing_missing(wide_anchored, metadata)
 
-    testthat::expect_true(result$value_v1)
+    testthat::expect_identical(result$value_bool_var, c(FALSE, FALSE))
+  }
+)
+
+testthat::test_that(
+  "imputing_missing replaces invalid boolean values with TRUE",
+  {
+    old_appender <- logger::log_appender()
+    if (!is.function(old_appender)) old_appender <- logger::appender_console
+    withr::defer(logger::log_appender(old_appender))
+    logger::log_appender(logger::appender_void)
+
+    wide_anchored <- data.table::data.table(
+      person_id = "1",
+      value_bool_var = "yes"
+    )
+    metadata <- data.table::data.table(
+      variable_id = "bool_var",
+      is_expected_missing = FALSE,
+      variable_type = "BOOL"
+    )
+
+    invisible(utils::capture.output(
+      result <- imputing_missing(wide_anchored, metadata)
+    ))
+
+    testthat::expect_identical(result$value_bool_var, TRUE)
+  }
+)
+
+testthat::test_that(
+  "imputing_missing leaves missing values as NA when is_expected_missing
+  is TRUE",
+  {
+    wide_anchored <- data.table::data.table(
+      person_id = c("1", "2"),
+      value_bool_var = c(NA_character_, "TRUE")
+    )
+    metadata <- data.table::data.table(
+      variable_id = "bool_var",
+      is_expected_missing = TRUE,
+      variable_type = "TF"
+    )
+
+    result <- imputing_missing(wide_anchored, metadata)
+
+    testthat::expect_identical(
+      result$value_bool_var, c(NA_character_, "TRUE")
+    )
   }
 )
 
@@ -142,6 +206,16 @@ testthat::test_that(
       variable_id = "v1",
       is_expected_missing = FALSE,
       variable_type = "BOOLEAN"
+  "imputing_missing fills missing categorical values with 0",
+  {
+    wide_anchored <- data.table::data.table(
+      person_id = c("1", "2"),
+      value_cat_var = c(NA_character_, "2")
+    )
+    metadata <- data.table::data.table(
+      variable_id = "cat_var",
+      is_expected_missing = FALSE,
+      variable_type = "CAT"
     )
 
     result <- imputing_missing(wide_anchored, metadata)
@@ -171,42 +245,82 @@ testthat::test_that(
     )
     metadata <- data.table::data.table(
       variable_id = "v1", is_expected_missing = TRUE, variable_type = "TF"
-    )
-
-    result <- imputing_missing(wide_anchored, metadata)
-
-    testthat::expect_true(is.na(result$value_v1))
+    testthat::expect_identical(result$value_cat_var, c("0", "2"))
   }
 )
 
 testthat::test_that(
-  "imputing_missing skips a variable whose value column isn't in wide_anchored", # nolint
+  "imputing_missing leaves non-boolean, non-categorical variable types
+  untouched",
+  {
+    wide_anchored <- data.table::data.table(
+      person_id = "1",
+      value_int_var = NA_character_
+    )
+    metadata <- data.table::data.table(
+      variable_id = "int_var",
+      is_expected_missing = FALSE,
+      variable_type = "INT"
+    )
+
+    result <- imputing_missing(wide_anchored, metadata)
+
+    testthat::expect_identical(result$value_int_var, NA_character_)
+  }
+)
+
+testthat::test_that(
+  "imputing_missing skips variables whose value column is absent",
   {
     wide_anchored <- data.table::data.table(person_id = "1")
     metadata <- data.table::data.table(
-      variable_id = "not_present",
+      variable_id = "missing_var",
       is_expected_missing = FALSE,
       variable_type = "TF"
     )
 
     result <- imputing_missing(wide_anchored, metadata)
 
-    testthat::expect_equal(names(result), "person_id")
+    testthat::expect_identical(result, wide_anchored)
   }
 )
 
 testthat::test_that(
-  "imputing_missing leaves unrecognized variable_type values unchanged",
+  "imputing_missing returns input unchanged when all required metadata
+  columns are absent",
   {
     wide_anchored <- data.table::data.table(
-      person_id = "1", value_v1 = NA_integer_
+      person_id = "1",
+      value_bool_var = NA_character_
+    )
+    metadata <- data.table::data.table(other_col = "x")
+
+    testthat::expect_silent(
+      result <- imputing_missing(wide_anchored, metadata)
+    )
+
+    testthat::expect_identical(result, wide_anchored)
+  }
+)
+
+testthat::test_that(
+  "imputing_missing warns and skips imputation when metadata is only
+  partially missing required columns",
+  {
+    wide_anchored <- data.table::data.table(
+      person_id = "1",
+      value_bool_var = NA_character_
     )
     metadata <- data.table::data.table(
-      variable_id = "v1", is_expected_missing = FALSE, variable_type = "INT"
+      variable_id = "bool_var",
+      is_expected_missing = FALSE
     )
 
-    result <- imputing_missing(wide_anchored, metadata)
+    testthat::expect_warning(
+      result <- imputing_missing(wide_anchored, metadata),
+      "partially missing required imputation columns"
+    )
 
-    testthat::expect_true(is.na(result$value_v1))
+    testthat::expect_identical(result, wide_anchored)
   }
 )
