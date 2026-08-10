@@ -162,6 +162,27 @@ validate_population_anchor_col <- function(population_dt, anchor_col) {
   )
 }
 
+validate_variable_ids <- function(variable_ids) {
+  variable_ids <- as.character(variable_ids)
+
+  invalid <- is.na(variable_ids) |
+    !nzchar(trimws(variable_ids)) |
+    grepl("[/\\\\]", variable_ids) |
+    grepl("[[:cntrl:]]", variable_ids)
+
+  if (any(invalid)) {
+    stop(
+      paste(
+        "`variable_id` must be non-missing and non-empty, and must not",
+        "contain path separators or control characters."
+      ),
+      call. = FALSE
+    )
+  }
+
+  invisible(variable_ids)
+}
+
 #' Validate an Episodes Table
 #'
 #' Checks the minimum structure required for the episode window engine
@@ -221,6 +242,15 @@ validate_anchor_inputs <- function(
   # anchor_col must be a Date column; skipping this check would cause
   # hard-to-trace problems downstream.
   validate_population_anchor_col(population_dt, anchor_col)
+  metadata_dt <- as_data_table(metadata, "metadata")
+
+  assert_has_columns(
+    metadata_dt,
+    required = "variable_id",
+    arg = "metadata"
+  )
+
+  validate_variable_ids(metadata_dt$variable_id)
 
   metadata_dt <- normalize_metadata(
     metadata,
@@ -232,7 +262,6 @@ validate_anchor_inputs <- function(
     required = "person_id",
     arg = "population"
   )
-
 
   assert_has_columns(
     metadata_dt,
