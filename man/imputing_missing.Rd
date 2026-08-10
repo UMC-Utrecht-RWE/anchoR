@@ -37,7 +37,7 @@ stay missing):
 \itemize{
 \item Boolean/TF variable types (\code{TF}, \code{BOOL}, \code{BOOLEAN}, \code{LOGICAL}): blank
 cells become \code{FALSE}. \code{TRUE}/\code{FALSE} are recognized however they are
-stored -- as logicals, as numbers (\code{1}/\code{0}), or as text
+stored as logicals, as numbers (\code{1}/\code{0}), or as text
 (\code{"TRUE"}/\code{"FALSE"}/\code{"T"}/\code{"F"}/\code{"1"}/\code{"0"}). Any other value is
 treated as invalid, logged with a warning, and defaulted to \code{TRUE}.
 \item Categorical variable types (\code{CAT}, \code{FACTOR}): blank cells become
