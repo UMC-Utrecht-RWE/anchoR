@@ -17,7 +17,7 @@ ensure_anchor_hive_path <- function(anchor_hive_path) {
   }
 
   if (!dir.exists(anchor_hive_path)) {
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Creating parquet hive directory: %s",
         anchor_hive_path
@@ -400,7 +400,7 @@ anchor_impl <- function(
   # Remove impossible anchors.
   valid_windows <- window_dt[window_valid == TRUE]
   if (nrow(valid_windows) == 0L) {
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         paste(
           "No valid windows remained after filtering for %d metadata row(s).",
@@ -800,7 +800,7 @@ anchor_by_variable <- function(
     chunk_start_time <- Sys.time()
     chunk_metadata <- metadata_dt[variable_id %in% chunk_variable_ids]
 
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Anchoring chunk %d/%d (%d variable_id(s)): %s",
         chunk_index,
@@ -843,7 +843,7 @@ anchor_by_variable <- function(
       Sys.time(), chunk_start_time,
       units = "secs"
     )
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Finished anchoring chunk %d/%d in %.2f secs.",
         chunk_index,
@@ -961,7 +961,7 @@ anchor_by_selector <- function(
   for (current_selector in selectors) {
     selector_start_time <- Sys.time()
     selector_metadata <- metadata_dt[selector == current_selector]
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Anchoring selector `%s` (%d variable_id(s)).",
         current_selector,
@@ -985,7 +985,7 @@ anchor_by_selector <- function(
       clear_existing_partitions = FALSE
     )
 
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Finished anchoring selector `%s` in %.2f secs.",
         current_selector,

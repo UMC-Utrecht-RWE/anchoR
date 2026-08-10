@@ -298,7 +298,7 @@ run_selector_queries <- function(
   # template processes all matching person-variable windows in one batch.
   for (i in seq_along(selectors)) {
     selector_name <- selectors[[i]]
-    logger::log_info(
+    logger::log_debug(
       sprintf("\tProcessing selector: %s", selector_name)
     )
 
