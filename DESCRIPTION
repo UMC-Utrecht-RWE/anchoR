@@ -13,9 +13,9 @@ Description:
     metadata-driven selector rules to concept records. The package keeps
     reusable anchoring logic separate from study-specific pipelines and
     SQL examples.
-URL: https://github.com/UMC-Utrecht-RWE/anchoR,
-    https://umc-utrecht-rwe.github.io/anchoR/
-BugReports: https://github.com/UMC-Utrecht-RWE/anchoR/issues
+URL: https://github.com/UMC-Utrecht-RWE/anchor,
+    https://umc-utrecht-rwe.github.io/anchor/
+BugReports: https://github.com/UMC-Utrecht-RWE/anchor/issues
 License: file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

@@ -1,3 +1,3 @@
-library(anchoR)
+library(anchor)
 
-testthat::test_check("anchoR")
+testthat::test_check("anchor")

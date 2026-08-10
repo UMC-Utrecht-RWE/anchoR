@@ -8,7 +8,7 @@ vignette: >
 ---
 
 ```{r setup, message=FALSE}
-library(anchoR)
+library(anchor)
 library(data.table)
 ```
 
@@ -21,20 +21,20 @@ population <- data.table(person_id = "1", T0 = as.Date("2024-01-10"))
 # does not provide (see the RANGE_COUNT bullet below).
 selectors <- setdiff(available_selectors(), "RANGE_COUNT")
 metadata <- data.table(
-  variable_id = paste0("example_", tolower(selectors)),
-  concept_id = "MEASURE",
-  constructor = "GENERIC",
-  selector = selectors,
-  start_offset = -30L,
-  end_offset = 0L,
-  range_min = 2,
-  range_max = 10
+    variable_id = paste0("example_", tolower(selectors)),
+    concept_id = "MEASURE",
+    constructor = "GENERIC",
+    selector = selectors,
+    start_offset = -30L,
+    end_offset = 0L,
+    range_min = 2,
+    range_max = 10
 )
 concepts <- data.table(
-  person_id = "1",
-  concept_id = "MEASURE",
-  date = as.Date(c("2024-01-01", "2024-01-05", "2024-01-05")),
-  value = c("1", "9", "10")
+    person_id = "1",
+    concept_id = "MEASURE",
+    date = as.Date(c("2024-01-01", "2024-01-05", "2024-01-05")),
+    value = c("1", "9", "10")
 )
 
 hive <- tempfile("selector-hive-")

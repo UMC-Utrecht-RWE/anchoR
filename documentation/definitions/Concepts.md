@@ -1,4 +1,4 @@
-> The raw event source anchoR filters and collapses: one row per `person_id x concept_id x date x value` record.
+> The raw event source anchor filters and collapses: one row per `person_id x concept_id x date x value` record.
 
 Concepts are the long, event-level input, everything a person had recorded, independent of any window. `anchor()` filters concept rows down to whichever fall inside a person-variable [Window](Window.md) (built from [Population](Population.md) + [Metadata](Metadata.md)), then a [Selector](Selector.md) collapses the matches into one result per window.
 

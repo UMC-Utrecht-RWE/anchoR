@@ -83,7 +83,7 @@ testthat::test_that("selector_sql_root errors when sql root cannot be found", {
 
   testthat::expect_error(
     root_fn(),
-    "Could not locate `inst/sql` for the anchoR package.",
+    "Could not locate `inst/sql` for the anchor package.",
     fixed = TRUE
   )
 })
@@ -140,9 +140,7 @@ testthat::test_that("run_selector_queries reports selector context on error", {
   query_fn <- run_selector_queries
   environment(query_fn) <- list2env(
     list(
-      run_selector_query = function(
-        con, selector, anchor_hive_path = NULL, accumulate_table = NULL
-      ) {
+      run_selector_query = function(con, selector, anchor_hive_path = NULL, accumulate_table = NULL) {
         stop("boom", call. = FALSE)
       }
     ),

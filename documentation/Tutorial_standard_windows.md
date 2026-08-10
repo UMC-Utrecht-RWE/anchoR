@@ -1,6 +1,6 @@
-# Using anchoR for Standard (Single-Anchor) Study Variables
+# Using anchor for Standard (Single-Anchor) Study Variables
 
-This is the usage guide for anchoR's core workflow: a study variable anchored to one fixed date per person (usually called `T0`), with a window defined as a fixed offset around it. If you need a window that depends on a *recurring* event instead (e.g. pregnancy, or any condition that can start and stop multiple times), see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md), everything on this page is the `GENERIC` special case of that same machinery.
+This is the usage guide for anchor's core workflow: a study variable anchored to one fixed date per person (usually called `T0`), with a window defined as a fixed offset around it. If you need a window that depends on a *recurring* event instead (e.g. pregnancy, or any condition that can start and stop multiple times), see [Tutorial_pregnancy_windows](Tutorial_pregnancy_windows.md), everything on this page is the `GENERIC` special case of that same machinery.
 
 ## The three inputs
 
@@ -15,7 +15,7 @@ This is the usage guide for anchoR's core workflow: a study variable anchored to
 ## Step 1: [Population](definitions/Population.md)
 
 ```r
-library(anchoR)
+library(anchor)
 library(data.table)
 
 population <- data.table(
@@ -82,14 +82,14 @@ Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 rec
 
 ## Selector reference
 
-| selector            | returns per window                                                                                                                           |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LATEST`            | the most recent matching record (by `date`)                                                                                                  |
-| `EARLIEST`          | the oldest matching record                                                                                                                   |
-| `COUNT`             | how many records matched (`value` is the count, `date` is the latest)                                                                        |
-| `COUNT_MORE_THAN_1` | `TRUE` only if 2 or more records matched, otherwise no row at all                                                                            |
-| `RANGE_COUNT`    | counts matches like `COUNT`, then looks up that count in a user-provided `concept_ranges` table (matched on `concept_id`, inclusive `lower_range`/`upper_range` bounds) to return a bucketed category instead of the raw count |
-| `ALL`               | every matching record, one output row each                                                                                                   |
+| selector            | returns per window                                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `LATEST`            | the most recent matching record (by `date`)                                                                                                                                                                                    |
+| `EARLIEST`          | the oldest matching record                                                                                                                                                                                                     |
+| `COUNT`             | how many records matched (`value` is the count, `date` is the latest)                                                                                                                                                          |
+| `COUNT_MORE_THAN_1` | `TRUE` only if 2 or more records matched, otherwise no row at all                                                                                                                                                              |
+| `RANGE_COUNT`       | counts matches like `COUNT`, then looks up that count in a user-provided `concept_ranges` table (matched on `concept_id`, inclusive `lower_range`/`upper_range` bounds) to return a bucketed category instead of the raw count |
+| `ALL`               | every matching record, one output row each                                                                                                                                                                                     |
 
 Worked example, one variable per selector:
 
@@ -304,4 +304,4 @@ get_anchor_result(metadata, hive_path, result_shape = "long")[
 
 ## Extending beyond a fixed offset
 
-`GENERIC` covers "the window is always N days around one anchor date." If a study variable instead needs a window built from a *recurring* event (multiple pregnancies, repeated hospitalizations, ...), that's what the episode-based constructors in [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) are for, same `population`/`metadata`/`concepts`/`anchor()` workflow, just a different `constructor` value and one extra population column. For anything else entirely bespoke, `make_constructor()` lets you build and register a new window shape without editing anchoR itself.
+`GENERIC` covers "the window is always N days around one anchor date." If a study variable instead needs a window built from a *recurring* event (multiple pregnancies, repeated hospitalizations, ...), that's what the episode-based constructors in [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) are for, same `population`/`metadata`/`concepts`/`anchor()` workflow, just a different `constructor` value and one extra population column. For anything else entirely bespoke, `make_constructor()` lets you build and register a new window shape without editing anchor itself.

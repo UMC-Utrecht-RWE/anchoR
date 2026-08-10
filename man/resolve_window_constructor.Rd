@@ -17,7 +17,7 @@ The constructor function.
 \description{
 Looks up the function that computes windows for a given \code{constructor}
 value. Built-in constructors (e.g. \code{generic_window}) are always resolved
-from the anchoR package itself. A user-defined constructor is found by
+from the anchor package itself. A user-defined constructor is found by
 name (\verb{<constructor>_window}, lower-cased) in \code{constructor_env}, so anyone
 can add one with \code{make_constructor()} without editing this package.
 }

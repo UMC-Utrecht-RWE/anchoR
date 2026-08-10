@@ -1,4 +1,4 @@
-# Running anchoR: `anchor()`, `anchor_by_variable()`, `anchor_by_selector()`
+# Running anchor: `anchor()`, `anchor_by_variable()`, `anchor_by_selector()`
 
 `R/anchor.R` holds the three functions that actually *run* the anchoring pipeline and write results to a parquet hive at `anchor_hive_path`. This page is about **how to call them**, which one to reach for, how they relate to each other, and (for `anchor_by_variable()`) the performance knobs meant for large runs or slow output storage.
 

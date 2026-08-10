@@ -1,6 +1,6 @@
-# anchoR
+# anchor
 
-`anchoR` is a small R package for anchoring study variables to an index date.
+`anchor` is a small R package for anchoring study variables to an index date.
 
 It is built for a common epidemiology workflow:
 
@@ -18,7 +18,7 @@ The package works with three inputs:
 - `metadata`: one row per study variable, including the concept to look for, the selector to use, and the lookback offsets
 - `concepts`: the clinical events table, supplied as a data frame, a DuckDB file, or parquet location(s)
 
-From those inputs, `anchoR` builds one person-variable window, queries the concept data, and writes an anchored result you can read back in long or wide format.
+From those inputs, `anchor` builds one person-variable window, queries the concept data, and writes an anchored result you can read back in long or wide format.
 
 ## Main functions
 
@@ -27,13 +27,13 @@ From those inputs, `anchoR` builds one person-variable window, queries the conce
 - `anchor_by_variable()`: process variables in bounded chunks while still replacing each variable's partition independently
 - `anchor_by_selector()`: group all variables using the same selector into one query
 - `get_anchor_result()`: read the anchored parquet hive back as a long or wide `data.table`
-- `make_constructor()`: build a custom window-construction rule without editing anchoR itself
+- `make_constructor()`: build a custom window-construction rule without editing anchor itself
 - `filter_supported_metadata()`: drop metadata rows whose selectors are not implemented in the package
 
 ## Minimal example
 
 ```r
-library(anchoR)
+library(anchor)
 library(data.table)
 
 population <- data.table(
@@ -80,8 +80,8 @@ Person 1's window is 365 days before `T0` through `T0` itself, which covers the 
 
 ## Documentation
 
-- Installed introductory vignettes: `vignette("standard-windows", package = "anchoR")` and `vignette("episode-windows", package = "anchoR")`.
-- Practical vignettes: `multiple-windows`, `metadata-migration`, `production-sources`, `troubleshooting`, `selector-cookbook`, `custom-constructors`, and `imputation` (open one with `vignette("<name>", package = "anchoR")`).
+- Installed introductory vignettes: `vignette("standard-windows", package = "anchor")` and `vignette("episode-windows", package = "anchor")`.
+- Practical vignettes: `multiple-windows`, `metadata-migration`, `production-sources`, `troubleshooting`, `selector-cookbook`, `custom-constructors`, and `imputation` (open one with `vignette("<name>", package = "anchor")`).
 - [Standard-window tutorial](documentation/Tutorial_standard_windows.md): selectors, multiple windows, batching, and custom anchors.
 - [Episode-window tutorial](documentation/Tutorial_pregnancy_windows.md): recurring start/end episodes and pregnancy-oriented constructors.
 - [Result walkthrough](documentation/get_anchor_result_walkthrough.md): long/wide retrieval and imputation internals.

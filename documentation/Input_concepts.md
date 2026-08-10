@@ -1,6 +1,6 @@
 # Concepts input
 
-`concepts` contains the event records queried by anchoR. Each row represents one recorded value for a person, concept, and date.
+`concepts` contains the event records queried by anchor. Each row represents one recorded value for a person, concept, and date.
 
 ## Required columns
 
@@ -11,7 +11,7 @@
 | `date`       | `Date` or date-compatible | Event date tested against inclusive window boundaries.                                                  |
 | `value`      | any scalar type           | Event value returned or interpreted by the selector. It is normalized to character for selector output. |
 
-The source may contain additional columns. anchoR selects only these four fields for selector queries.
+The source may contain additional columns. anchor selects only these four fields for selector queries.
 
 ## Supported sources
 
@@ -41,6 +41,6 @@ The same person may have multiple rows for one concept, and records may fall ins
 - Window bounds are inclusive: matching SQL uses `date BETWEEN window_start AND window_end`.
 - `LATEST` and `EARLIEST` select by date. If records tie on the selected date, the lexicographically largest normalized character `value` breaks the tie, producing one row.
 - `RANGE_COUNT` counts matches per person/window like `COUNT`, then looks up that count in a user-provided `concept_ranges` table (matched on `concept_id`, count falling within inclusive `lower_range`/`upper_range` bounds) to return a bucketed category instead of the raw count.
-- Boolean presence concepts commonly use `"TRUE"`, but anchoR does not require that convention.
+- Boolean presence concepts commonly use `"TRUE"`, but anchor does not require that convention.
 
 See [definitions/Selector.md](definitions/Selector.md) for the complete selector contract.

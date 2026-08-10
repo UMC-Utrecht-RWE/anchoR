@@ -106,7 +106,7 @@ generic_window <- make_constructor(
 #'
 #' Looks up the function that computes windows for a given `constructor`
 #' value. Built-in constructors (e.g. `generic_window`) are always resolved
-#' from the anchoR package itself. A user-defined constructor is found by
+#' from the anchor package itself. A user-defined constructor is found by
 #' name (`<constructor>_window`, lower-cased) in `constructor_env`, so anyone
 #' can add one with `make_constructor()` without editing this package.
 #'
@@ -137,7 +137,7 @@ resolve_window_constructor <- function(constructor_name, constructor_env) {
     sprintf(
       paste(
         "Window function does not exist: %s.",
-        "Looked in the anchoR package and in `constructor_env`; a custom",
+        "Looked in the anchor package and in `constructor_env`; a custom",
         "constructor must be named '%s' and live in (or be visible from)",
         "`constructor_env`."
       ),
@@ -281,7 +281,7 @@ cross_join_population_metadata <- function(population_dt, metadata_dt) {
 #' @param anchor_col Column to use when metadata does not specify
 #'   `anchor_start_col` or `anchor_end_col`.
 #' @param constructor_env Environment to search for user-defined window
-#'   constructors that are not built into anchoR. Defaults to the global
+#'   constructors that are not built into anchor. Defaults to the global
 #'   environment, so a constructor made with `make_constructor()` and
 #'   assigned at the top level (e.g. `my_window <- make_constructor(...)`)
 #'   is found automatically. Pass a different environment (or a small one

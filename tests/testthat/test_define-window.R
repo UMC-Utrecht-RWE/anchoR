@@ -43,7 +43,7 @@ testthat::test_that("generic_window_check works correctly", {
 # ---------------------------------------------------------------------------
 # make_constructor(): the public factory used to build a window constructor.
 # These tests double as usage documentation for anyone adding a new window
-# type without editing anchoR itself.
+# type without editing anchor itself.
 # ---------------------------------------------------------------------------
 
 testthat::test_that("make_constructor fails fast on a malformed factory call", {
@@ -84,8 +84,8 @@ testthat::test_that("constructor enforces required_cols", {
 
 testthat::test_that("constructor with make_constructor computes windows", {
   # This is the same recipe a package user follows to add a window type
-  # anchoR doesn't ship: wrap a transform_fn, declare what it needs, get a
-  # constructor back. No changes to anchoR's source are required.
+  # anchor doesn't ship: wrap a transform_fn, declare what it needs, get a
+  # constructor back. No changes to anchor's source are required.
   offset_window <- make_constructor(
     transform_fn = function(window_dt) {
       window_dt[, window_start := anchor_date - offset_days]
@@ -134,7 +134,7 @@ testthat::test_that("generic_window computes start and end dates", {
 })
 
 # ---------------------------------------------------------------------------
-# resolve_window_constructor(): looks in exactly two places -- the anchoR
+# resolve_window_constructor(): looks in exactly two places -- the anchor
 # namespace for built-ins, `constructor_env` for anything else. Tested in
 # isolation so the lookup rule is clear without define_window()'s plumbing.
 # ---------------------------------------------------------------------------
@@ -309,9 +309,9 @@ testthat::test_that(
 testthat::test_that(
   "define_window resolves a user-defined constructor through constructor_env",
   {
-    # A package user extends anchoR by building a constructor with
+    # A package user extends anchor by building a constructor with
     # make_constructor() and naming it "<constructor>_window". They don't edit
-    # anchoR or its namespace -- passing an environment containing the
+    # anchor or its namespace -- passing an environment containing the
     # function is enough.
     index_window <- make_constructor(
       transform_fn = function(window_dt) {

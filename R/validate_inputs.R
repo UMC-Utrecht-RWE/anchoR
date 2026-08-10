@@ -56,7 +56,7 @@ metadata_supported_selectors <- function(metadata_dt) {
       "Unsupported selector(s) in `metadata`:",
       paste(unsupported_selectors, collapse = ", "),
       sprintf(
-        "Available selectors in package `anchoR`: %s.",
+        "Available selectors in package `anchor`: %s.",
         paste(supported_selectors, collapse = ", ")
       ),
       paste(

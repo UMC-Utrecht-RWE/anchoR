@@ -13,7 +13,7 @@ One person with three episodes and an anchor (`T0`) inside the third:
 `T0 = 2026-02-15` (falls inside episode C).
 
 ```r
-library(anchoR)
+library(anchor)
 library(data.table)
 
 episodes <- data.table(
