@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+
+### Fixed
+- `R/get_anchor_result.R::imputing_missing()`: boolean imputation now recognizes `1`/`0` (as numbers or as strings `"1"`/`"0"`) as valid `TRUE`/`FALSE` encodings, alongside `TRUE`/`FALSE`/`"TRUE"`/`"FALSE"`/`"T"`/`"F"`. Previously the final `as.logical()` coercion only understood the `"TRUE"`/`"FALSE"`-style strings, so a variable whose source concept recorded booleans as `"1"`/`"0"` would have its present values silently turned into `NA` instead of `TRUE`/`FALSE` — this is what caused ASD calculations to fail downstream for some, but not all, boolean covariates.
+- Same function: explicit `FALSE`/`0` values were previously misclassified as "invalid" by the invalid-value check (which only recognized `TRUE`-ish encodings) and silently flipped to `TRUE`. Both `TRUE`-ish and `FALSE`-ish encodings are now recognized before a value is treated as invalid.
+
 ## [v1.4.5]
 ### Fixed
 - `R/duckdb_helpers.R::load_concepts_table()` no longer errors when called a second time on the same DuckDB connection. It now checks PRAGMA `database_list` and skips the ATTACH if concepts_db is already attached, instead of unconditionally re-attaching (which DuckDB rejects).

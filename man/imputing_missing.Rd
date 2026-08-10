@@ -18,10 +18,37 @@ The updated wide data.table. Returns input unchanged when
 required metadata columns are missing.
 }
 \description{
-Imputes missing value_<variable_id> cells in a wide anchored result
-using metadata rules for is_expected_missing and variable_type.
-For non-expected-missing variables, logical/TF types are imputed as FALSE
-and categorical types as 0. If required metadata columns are only
-partially available, the function warns and skips imputation.
+Fills in blank (\code{NA}) value_<variable_id> cells in a wide anchored
+result table, using \code{metadata} to decide what a blank cell should
+become for each variable.
+}
+\details{
+get_anchor_result() only produces a value when a matching record was
+found, so a blank cell can mean different things depending on the kind
+of variable. For a yes/no (boolean) variable, "no record found"
+usually means the event never happened, so it should read as \code{FALSE}
+rather than "unknown". For a categorical variable, "no record found"
+is usually its own category. This function applies those defaults so
+callers do not have to fill them in by hand for every variable.
+
+For each \code{variable_id} listed in \code{metadata} (skipping any row where
+\code{is_expected_missing} is \code{TRUE}, since those variables are allowed to
+stay missing):
+\itemize{
+\item Boolean/TF variable types (\code{TF}, \code{BOOL}, \code{BOOLEAN}, \code{LOGICAL}): blank
+cells become \code{FALSE}. \code{TRUE}/\code{FALSE} are recognized however they are
+stored as logicals, as numbers (\code{1}/\code{0}), or as text
+(\code{"TRUE"}/\code{"FALSE"}/\code{"T"}/\code{"F"}/\code{"1"}/\code{"0"}). Any other value is
+treated as invalid, logged with a warning, and defaulted to \code{TRUE}.
+\item Categorical variable types (\code{CAT}, \code{FACTOR}): blank cells become
+\code{0}, used as a dedicated "missing" category.
+\item Any other variable_type is left untouched.
+}
+
+If \code{metadata} is missing all three required columns (\code{variable_id},
+\code{is_expected_missing}, \code{variable_type}), imputation is skipped and the
+input is returned unchanged. If only some of those columns are
+present, the function warns and also skips imputation, rather than
+guessing at the missing rules.
 }
 \keyword{internal}
