@@ -374,11 +374,35 @@ get_anchor_result <- function(
 
 #' Impute Missing Values in Wide Anchor Output
 #'
-#' Imputes missing value_<variable_id> cells in a wide anchored result
-#' using metadata rules for is_expected_missing and variable_type.
-#' For non-expected-missing variables, logical/TF types are imputed as FALSE
-#' and categorical types as 0. If required metadata columns are only
-#' partially available, the function warns and skips imputation.
+#' Fills in blank (`NA`) value_<variable_id> cells in a wide anchored
+#' result table, using `metadata` to decide what a blank cell should
+#' become for each variable.
+#'
+#' get_anchor_result() only produces a value when a matching record was
+#' found, so a blank cell can mean different things depending on the kind
+#' of variable. For a yes/no (boolean) variable, "no record found"
+#' usually means the event never happened, so it should read as `FALSE`
+#' rather than "unknown". For a categorical variable, "no record found"
+#' is usually its own category. This function applies those defaults so
+#' callers do not have to fill them in by hand for every variable.
+#'
+#' For each `variable_id` listed in `metadata` (skipping any row where
+#' `is_expected_missing` is `TRUE`, since those variables are allowed to
+#' stay missing):
+#' - Boolean/TF variable types (`TF`, `BOOL`, `BOOLEAN`, `LOGICAL`): blank
+#'   cells become `FALSE`. `TRUE`/`FALSE` are recognized however they are
+#'   stored as logicals, as numbers (`1`/`0`), or as text
+#'   (`"TRUE"`/`"FALSE"`/`"T"`/`"F"`/`"1"`/`"0"`). Any other value is
+#'   treated as invalid, logged with a warning, and defaulted to `TRUE`.
+#' - Categorical variable types (`CAT`, `FACTOR`): blank cells become
+#'   `0`, used as a dedicated "missing" category.
+#' - Any other variable_type is left untouched.
+#'
+#' If `metadata` is missing all three required columns (`variable_id`,
+#' `is_expected_missing`, `variable_type`), imputation is skipped and the
+#' input is returned unchanged. If only some of those columns are
+#' present, the function warns and also skips imputation, rather than
+#' guessing at the missing rules.
 #'
 #' @param wide_anchored A wide data.table from get_anchor_result
 #'   with value_<variable_id> columns.
@@ -433,13 +457,22 @@ imputing_missing <- function(wide_anchored, metadata) {
       # integer variable is left as is.
 
       if (i_variable_type %in% c("TF", "BOOL", "BOOLEAN", "LOGICAL")) {
-        # Report invalid values
-        # Identify invalid non-missing values
-        invalid_rows <- wide_anchored[
-          !is.na(get(value_col)) &
-            !(get(value_col) %in% c(TRUE, 1, "TRUE", "1"))
-        ]
-        if (nrow(invalid_rows) > 0) {
+        # Recognize both logical/numeric and string encodings of TRUE/FALSE.
+        # base::as.logical() only understands "TRUE"/"FALSE"/"T"/"F", so a
+        # source that encodes booleans as "1"/"0" would otherwise turn valid
+        # values into NA (and "FALSE"/"0" would be misflagged as invalid and
+        # replaced with TRUE) if we relied on it directly.
+        true_values <- c(TRUE, 1, "TRUE", "1", "T")
+        false_values <- c(FALSE, 0, "FALSE", "0", "F")
+        raw_values <- wide_anchored[[value_col]]
+
+        is_na_value <- is.na(raw_values)
+        is_true_value <- raw_values %in% true_values
+        is_false_value <- raw_values %in% false_values
+        is_invalid_value <- !is_na_value & !is_true_value & !is_false_value
+
+        if (any(is_invalid_value)) {
+          invalid_rows <- wide_anchored[is_invalid_value]
           logger::log_warn(
             sprintf(
               "Variable '%s' contains %d invalid boolean value(s): %s.
@@ -453,14 +486,12 @@ imputing_missing <- function(wide_anchored, metadata) {
           print(invalid_rows)
         }
 
-        # Replace invalid values with TRUE
-        wide_anchored[
-          !is.na(get(value_col)) &
-            !(get(value_col) %in% c(TRUE, 1, "TRUE", "1")),
-          (value_col) := TRUE
-        ]
-        wide_anchored[is.na(get(value_col)), (value_col) := FALSE]
-        wide_anchored[, (value_col) := as.logical(get(value_col))]
+        # Missing records default to FALSE (never happened); unrecognized
+        # values default to TRUE, matching prior behavior.
+        imputed_values <- rep(NA, length(raw_values))
+        imputed_values[is_true_value | is_invalid_value] <- TRUE
+        imputed_values[is_false_value | is_na_value] <- FALSE
+        wide_anchored[, (value_col) := imputed_values]
       } else if (i_variable_type %in% c("CAT", "FACTOR")) {
         wide_anchored[is.na(get(value_col)), (value_col) := 0]
       }
