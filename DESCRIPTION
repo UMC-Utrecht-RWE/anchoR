@@ -1,6 +1,6 @@
 Package: anchoR
 Title: Anchoring Utilities for Epidemiologic Study Design
-Version: 1.4.5
+Version: 1.5
 Author: c(
     person("Mattia", "Cinelli", , "m.cinelli@umcutrecht.nl", role = c("aut", "cre"), comment = c(ORCID = "0000-0001-9306-8079")),
     person("Albert", "Cid Royo", email = "A.CidRoyo@umcutrecht.nl", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-1863-3450")),
