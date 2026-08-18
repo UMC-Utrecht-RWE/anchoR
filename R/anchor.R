@@ -17,7 +17,7 @@ ensure_anchor_hive_path <- function(anchor_hive_path) {
   }
 
   if (!dir.exists(anchor_hive_path)) {
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Creating parquet hive directory: %s",
         anchor_hive_path
@@ -94,23 +94,18 @@ move_anchor_partition <- function(
       target_partition_path
     )
   )
-  if (file.rename(source_partition_path, target_partition_path)) {
-    logger::log_trace(
-      sprintf(
-        "Renamed staged parquet  in a single filesystem move for `%s`.",
-        variable_id
-      )
-    )
-    return(invisible(target_partition_path))
-  }
-
-  logger::log_trace(
-    sprintf(
-      "Falling back to copy-and-delete while moving parquet for `%s`.",
-      variable_id
-    )
+  target_parent <- dirname(target_partition_path)
+  incoming_path <- tempfile(
+    pattern = ".anchor-incoming-",
+    tmpdir = target_parent
   )
-  dir.create(target_partition_path, recursive = TRUE, showWarnings = FALSE)
+  backup_path <- tempfile(
+    pattern = ".anchor-backup-",
+    tmpdir = target_parent
+  )
+
+  # Copy onto the target filesystem before touching the current partition.
+  dir.create(incoming_path, recursive = TRUE, showWarnings = FALSE)
   staged_files <- list.files(
     source_partition_path,
     full.names = TRUE,
@@ -119,33 +114,76 @@ move_anchor_partition <- function(
   )
   copied <- file.copy(
     from = staged_files,
-    to = target_partition_path,
+    to = incoming_path,
     recursive = TRUE,
     copy.mode = TRUE,
     copy.date = TRUE
   )
 
-  if (!all(copied)) {
-    msg <- sprintf(
-      paste(
-        "Could not move staged parquet files for variable_id `%s`",
-        "into `%s`."
+  if (
+    length(staged_files) == 0L ||
+      length(copied) != length(staged_files) ||
+      !all(copied)
+  ) {
+    unlink(incoming_path, recursive = TRUE, force = TRUE)
+
+    stop(
+      sprintf(
+        "Could not prepare replacement partition for `%s`.",
+        variable_id
       ),
-      variable_id,
-      target_partition_path
+      call. = FALSE
     )
-    logger::log_error(msg)
-    base::stop(msg, call. = FALSE)
+  }
+
+  had_existing <- dir.exists(target_partition_path)
+
+  # Retain the existing output as a recoverable backup.
+  if (had_existing) {
+    if (!file.rename(target_partition_path, backup_path)) {
+      unlink(incoming_path, recursive = TRUE, force = TRUE)
+
+      stop(
+        sprintf(
+          "Could not back up existing partition for `%s`.",
+          variable_id
+        ),
+        call. = FALSE
+      )
+    }
+  }
+
+  # Both paths are on the target filesystem, so this should be a fast rename.
+  if (!file.rename(incoming_path, target_partition_path)) {
+    rollback_succeeded <- !had_existing ||
+      file.rename(backup_path, target_partition_path)
+
+    unlink(incoming_path, recursive = TRUE, force = TRUE)
+
+    message <- sprintf(
+      "Could not install replacement partition for `%s`.",
+      variable_id
+    )
+
+    if (!rollback_succeeded) {
+      message <- paste0(
+        message,
+        " Rollback failed; the original remains at `",
+        backup_path,
+        "`."
+      )
+    }
+
+    stop(message, call. = FALSE)
+  }
+
+  # Installation succeeded; the old partition is no longer needed.
+  if (had_existing) {
+    unlink(backup_path, recursive = TRUE, force = TRUE)
   }
 
   unlink(source_partition_path, recursive = TRUE, force = TRUE)
-  logger::log_trace(
-    sprintf(
-      "Copied %d staged parquet file(s) for variable_id `%s`.",
-      length(staged_files),
-      variable_id
-    )
-  )
+
   invisible(target_partition_path)
 }
 
@@ -272,8 +310,9 @@ publish_accumulated_table <- function(con, table_name, anchor_hive_path) {
   DBI::dbExecute(
     con,
     add_parquet_export(
-      sprintf("SELECT * FROM %s", table_name),
-      anchor_hive_path
+      con = con,
+      sql_query = sprintf("SELECT * FROM %s", table_name),
+      anchor_hive_path = anchor_hive_path
     )
   )
 
@@ -315,6 +354,8 @@ order_variable_ids_by_selector <- function(metadata_dt) {
 #'   process in this call.
 #' @param anchor_col Column in `population_dt` used as the index date when
 #'   metadata does not specify an anchor column.
+#' @param episodes_dt Validated episodes `data.table`, or `NULL` when
+#'   `metadata_dt` uses no episode-based constructor.
 #' @param anchor_hive_path Existing, normalized path to write selector output.
 #' @param clear_existing_partitions Whether to clear partitions before writing.
 #' @return Invisibly `NULL` on success, or (only when no window was valid) the
@@ -326,6 +367,7 @@ anchor_impl <- function(
   population_dt,
   metadata_dt,
   anchor_col,
+  episodes_dt = NULL,
   anchor_hive_path = NULL,
   accumulate_table = NULL,
   clear_existing_partitions = TRUE
@@ -341,6 +383,7 @@ anchor_impl <- function(
   window_dt <- define_window(
     population = window_population,
     metadata = metadata_dt,
+    episodes = episodes_dt,
     anchor_col = anchor_col
   )
   logger::log_debug(
@@ -357,7 +400,7 @@ anchor_impl <- function(
   # Remove impossible anchors.
   valid_windows <- window_dt[window_valid == TRUE]
   if (nrow(valid_windows) == 0L) {
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         paste(
           "No valid windows remained after filtering for %d metadata row(s).",
@@ -428,6 +471,12 @@ anchor_impl <- function(
 #' @param concepts A concept table as a data frame, a DuckDB file path whose
 #'   \code{concept_table} contains \code{person_id}, \code{concept_id}, and
 #'   \code{date}, or parquet file location(s).
+#' @param episodes Optional data frame with \code{person_id},
+#'   \code{start_episode}, \code{end_episode} columns. Required when
+#'   \code{metadata} uses an episode-based constructor
+#'   (\code{in_current_pregnancy}, \code{in_prior_pregnancy},
+#'   \code{in_current_and_prior}, \code{outside_all_pregnancy}); see
+#'   \code{R/pregnancy_window.R}.
 #' @param anchor_col Character. Name of the column in \code{population} to use
 #'   as the index date when metadata does not specify an anchor column.
 #'   Defaults to \code{"T0"}.
@@ -444,6 +493,7 @@ anchor <- function(
   population,
   metadata,
   concepts,
+  episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL,
   prepare_con = NULL
@@ -455,6 +505,7 @@ anchor <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
+    episodes = episodes,
     anchor_col = anchor_col
   )
   concepts_type <- if (is.null(validated$concepts)) {
@@ -501,6 +552,7 @@ anchor <- function(
     population_dt = validated$population,
     metadata_dt = validated$metadata,
     anchor_col = anchor_col,
+    episodes_dt = validated$episodes,
     anchor_hive_path = anchor_hive_path
   )
 
@@ -577,6 +629,7 @@ anchor_by_variable <- function(
   population,
   metadata,
   concepts,
+  episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL,
   chunk_size = 20L,
@@ -596,6 +649,7 @@ anchor_by_variable <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
+    episodes = episodes,
     anchor_col = anchor_col
   )
 
@@ -698,9 +752,10 @@ anchor_by_variable <- function(
   # (in "memory" staging mode) to keep the accumulator table from outgrowing
   # RAM goes to local scratch instead of wherever it would otherwise
   # default to.
+  temp_directory_sql <- sql_string(con, duckdb_temp_dir)
   DBI::dbExecute(
     con,
-    sprintf("SET temp_directory = '%s';", duckdb_temp_dir)
+    sprintf("SET temp_directory = %s;", temp_directory_sql)
   )
 
   logger::log_trace("Loading concepts into DuckDB execution context.")
@@ -745,7 +800,7 @@ anchor_by_variable <- function(
     chunk_start_time <- Sys.time()
     chunk_metadata <- metadata_dt[variable_id %in% chunk_variable_ids]
 
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Anchoring chunk %d/%d (%d variable_id(s)): %s",
         chunk_index,
@@ -774,6 +829,7 @@ anchor_by_variable <- function(
           population_dt = validated$population,
           metadata_dt = chunk_metadata,
           anchor_col = anchor_col,
+          episodes_dt = validated$episodes,
           anchor_hive_path = local_hive_path,
           accumulate_table = accumulate_table,
           clear_existing_partitions = FALSE
@@ -787,7 +843,7 @@ anchor_by_variable <- function(
       Sys.time(), chunk_start_time,
       units = "secs"
     )
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Finished anchoring chunk %d/%d in %.2f secs.",
         chunk_index,
@@ -864,6 +920,7 @@ anchor_by_selector <- function(
   population,
   metadata,
   concepts,
+  episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL,
   prepare_con = NULL
@@ -872,6 +929,7 @@ anchor_by_selector <- function(
     population = population,
     metadata = metadata,
     concepts = concepts,
+    episodes = episodes,
     anchor_col = anchor_col
   )
 
@@ -903,7 +961,7 @@ anchor_by_selector <- function(
   for (current_selector in selectors) {
     selector_start_time <- Sys.time()
     selector_metadata <- metadata_dt[selector == current_selector]
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Anchoring selector `%s` (%d variable_id(s)).",
         current_selector,
@@ -922,11 +980,12 @@ anchor_by_selector <- function(
       population_dt = validated$population,
       metadata_dt = selector_metadata,
       anchor_col = anchor_col,
+      episodes_dt = validated$episodes,
       anchor_hive_path = anchor_hive_path,
       clear_existing_partitions = FALSE
     )
 
-    logger::log_info(
+    logger::log_debug(
       sprintf(
         "Finished anchoring selector `%s` in %.2f secs.",
         current_selector,

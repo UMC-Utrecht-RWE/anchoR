@@ -364,7 +364,7 @@ testthat::test_that(
 
     # `cov_latest`'s selector (LATEST) sorts last among the three selectors
     # in `minimal_metadata()`, so with `chunk_size = 1` it lands in the final
-    # chunk -- `cov_count` and `lab_range` succeed in earlier chunks before
+    # chunk, `cov_count` and `lab_range` succeed in earlier chunks before
     # this one fails.
     metadata <- minimal_metadata()
     metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]

@@ -1,0 +1,4 @@
+variable_id,concept_id,raw_concept,exposure,outcome,covariate,data_type,start_offset,end_offset,window_name,constructor,selector,Matching,variable_description
+COD_ARRHYTHMIA,C_ARRH_AESI,concept codelist,FALSE,FALSE,TRUE,BOOL,-365,-1,lookback,GENERIC,LATEST,FALSE,History of Arrhythmia
+COD_ARRHYTHMIA,C_ARRH_AESI,concept codelist,FALSE,FALSE,TRUE,DATE,0,0,induction,GENERIC,EARLIEST,FALSE,History of Arrhythmia
+COD_ARRHYTHMIA,C_ARRH_AESI,concept codelist,FALSE,FALSE,TRUE,DATE,1,365,risk,GENERIC,EARLIEST,FALSE,History of Arrhythmia

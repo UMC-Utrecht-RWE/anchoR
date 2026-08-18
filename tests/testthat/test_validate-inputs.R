@@ -236,3 +236,33 @@ testthat::test_that(
     testthat::expect_identical(result$person_id, population$person_id)
   }
 )
+
+testthat::test_that("variable_id rejects unsafe filesystem values", {
+  invalid_ids <- list(
+    NA_character_,
+    "",
+    "   ",
+    "group/result",
+    "group\\result",
+    "line\nbreak"
+  )
+
+  for (variable_id in invalid_ids) {
+    testthat::expect_error(
+      validate_variable_ids(variable_id),
+      "`variable_id` must be non-missing",
+      fixed = TRUE
+    )
+  }
+})
+
+testthat::test_that("variable_id accepts ordinary identifiers", {
+  valid_ids <- c(
+    "blood_pressure",
+    "lab-result.1",
+    "blood pressure",
+    "lab:glucose"
+  )
+
+  testthat::expect_invisible(validate_variable_ids(valid_ids))
+})

@@ -41,12 +41,12 @@ if (getRversion() >= "2.15.1") {
       "window_valid",
       "window_name",
       "..result_key_cols",
-      "event_start",
-      "event_end",
-      "event_col",
-      "end_cap_offset",
-      "start_look_back",
-      "end_look_back"
+      "start_episode",
+      "end_episode",
+      ".episodes",
+      "episode_class",
+      "range_min",
+      "range_max"
     )
   )
 }

@@ -134,7 +134,7 @@ testthat::test_that("generic_window computes start and end dates", {
 })
 
 # ---------------------------------------------------------------------------
-# resolve_window_constructor(): looks in exactly two places -- the anchoR
+# resolve_window_constructor(): looks in exactly two places, the anchoR
 # namespace for built-ins, `constructor_env` for anything else. Tested in
 # isolation so the lookup rule is clear without define_window()'s plumbing.
 # ---------------------------------------------------------------------------
@@ -201,7 +201,7 @@ testthat::test_that(
 )
 
 # ---------------------------------------------------------------------------
-# finalize_windows(): row order, window_valid, anchor_row_id -- isolated from
+# finalize_windows(): row order, window_valid, anchor_row_id, isolated from
 # both the cross join and the constructor dispatch.
 # ---------------------------------------------------------------------------
 
@@ -311,7 +311,7 @@ testthat::test_that(
   {
     # A package user extends anchoR by building a constructor with
     # make_constructor() and naming it "<constructor>_window". They don't edit
-    # anchoR or its namespace -- passing an environment containing the
+    # anchoR or its namespace, passing an environment containing the
     # function is enough.
     index_window <- make_constructor(
       transform_fn = function(window_dt) {

@@ -1,416 +1,415 @@
-# ---------------------------------------------------------------------------
-# outside_all_event_gaps(): the complement of the union of events within
-# a search range, tested directly since it is the trickiest piece of the
-# event engine.
-# ---------------------------------------------------------------------------
+#--- Tests for nest_episodes_onto_population
+testthat::test_that("Test nest_episodes_onto_population intended behaviour", {
+  nested <- nest_episodes_onto_population(
+    pregnancy_population_simple(),
+    pregnancy_episodes_simple()
+  )
+  testthat::expect_equal(typeof(nested$.episodes), "list")
+  testthat::expect_true(nested$.episodes[[1]]$start_episode[1] == "2020-01-01")
 
-testthat::test_that("outside_all_event_gaps finds gaps between events", {
-  events <- data.table::data.table(
-    event_start = as.Date(c("2020-01-01", "2021-02-15", "2022-03-01")),
-    event_end = as.Date(c("2020-09-01", "2021-05-20", "2022-12-01"))
+  nested <- nest_episodes_onto_population(
+    pregnancy_population_complex(),
+    pregnancy_episodes_complex()
   )
 
-  gaps <- outside_all_event_gaps(
-    events,
-    anchor = as.Date("2022-08-16"),
-    start_offset = 0L,
-    end_offset = -1000L
-  )
+  testthat::expect_equal(dim(nested$.episodes[[1]]), c(3, 2))
+})
 
-  # An event always fences a gap, even the one containing the anchor, so
-  # there is no gap after the third event starts (2022-03-01).
+#--- Tests for classify_episodes
+testthat::test_that("Test classify_episodes intended behaviour", {
+  # T0 before the first episode
   testthat::expect_equal(
-    gaps$window_start,
-    as.Date(c("2019-11-20", "2020-09-02", "2021-05-21"))
+    classify_episodes(
+      pregnancy_episodes_simple(),
+      as.Date("2019-12-31")
+    )$episode_class,
+    c("future", "future")
   )
+  # T0 in the first episode
   testthat::expect_equal(
-    gaps$window_end,
-    as.Date(c("2019-12-31", "2021-02-14", "2022-02-28"))
+    classify_episodes(
+      pregnancy_episodes_simple(),
+      as.Date("2020-01-01")
+    )$episode_class,
+    c("current", "future")
+  )
+
+  # T0 between the two episodes
+  testthat::expect_equal(
+    classify_episodes(
+      pregnancy_episodes_simple(),
+      as.Date("2020-07-01")
+    )$episode_class,
+    c("prior", "future")
+  )
+
+  # T0 in the second episode
+  testthat::expect_equal(
+    classify_episodes(
+      pregnancy_episodes_simple(),
+      as.Date("2021-01-01")
+    )$episode_class,
+    c("prior", "current")
+  )
+  # T0 after the second episode
+  testthat::expect_equal(
+    classify_episodes(
+      pregnancy_episodes_simple(),
+      as.Date("2023-01-01")
+    )$episode_class,
+    c("prior", "prior")
   )
 })
 
-testthat::test_that(
-  "outside_all_event_gaps returns one gap when no event overlaps",
-  {
-    events <- data.table::data.table(
-      event_start = as.Date("2010-01-01"),
-      event_end = as.Date("2010-06-01")
-    )
+#--- Tests for episode_windows
+# All expected values below were independently verified against
+# episode_windows() directly (not copied from pregnancy_window_engine's
+# behaviour), using the "prior" episode from pregnancy_episodes_cases():
+# [2025-01-07, 2025-05-07].
+testthat::test_that("episode_windows: neither pair set falls back to the episode's own unshifted span", { # nolint: line_length_linter.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    NA_real_, NA_real_, NA_real_, NA_real_
+  )
+  testthat::expect_equal(nrow(w), 1L)
+  testthat::expect_equal(w$window_start, as.Date("2025-01-07"))
+  testthat::expect_equal(w$window_end, as.Date("2025-05-07"))
+})
 
-    gaps <- outside_all_event_gaps(
-      events,
-      anchor = as.Date("2024-01-01"),
-      start_offset = -30L,
-      end_offset = 0L
-    )
+testthat::test_that("episode_windows: outer side of each pair set (before_start + after_end) shares one window", { # nolint: line_length_linter.
+  # before_start_offset and after_end_offset are the two "outer" sides;
+  # either one set alone makes the whole thing one shared window, here
+  # pinning both edges to the episode's own unshifted span.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    0, NA_real_, NA_real_, 0
+  )
+  testthat::expect_equal(nrow(w), 1L)
+  testthat::expect_equal(w$window_start, as.Date("2025-01-07"))
+  testthat::expect_equal(w$window_end, as.Date("2025-05-07"))
+})
 
-    testthat::expect_equal(gaps$window_start, as.Date("2023-12-02"))
-    testthat::expect_equal(gaps$window_end, as.Date("2024-01-01"))
-  }
-)
+testthat::test_that("episode_windows: inner side of each pair set (after_start + before_end), neither outer side set, gives two single-day regions", { # nolint: line_length_linter.
+  # after_start_offset and before_end_offset are the "inner" sides; with
+  # no outer side (before_start_offset/after_end_offset) set anywhere,
+  # each inner-only pair forms its own region instead, missing side
+  # defaulting to 0.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    NA_real_, 0, 0, NA_real_
+  )
+  testthat::expect_equal(nrow(w), 2L)
+  testthat::expect_equal(
+    w$window_start, as.Date(c("2025-01-07", "2025-05-07"))
+  )
+  testthat::expect_equal(w$window_end, as.Date(c("2025-01-07", "2025-05-07")))
+})
 
-# ---------------------------------------------------------------------------
-# event_window_engine(): tested directly on a hand-built window_dt so the
-# selection + offset rules are visible without going through define_window().
-# ---------------------------------------------------------------------------
+testthat::test_that("episode_windows: before_start_offset alone shares a window even when the end pair's only side is its inner one", { # nolint: line_length_linter.
+  # before_start_offset (outer) triggers shared-window mode by itself;
+  # before_end_offset (normally inner-only-forms-its-own-region) gets used
+  # as a plain point for the shared window's end instead, since shared
+  # mode is already active.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    -7, NA_real_, -7, NA_real_
+  )
+  testthat::expect_equal(nrow(w), 1L)
+  testthat::expect_equal(w$window_start, as.Date("2024-12-31"))
+  testthat::expect_equal(w$window_end, as.Date("2025-04-30"))
+})
 
-event_window_dt <- function(
+testthat::test_that("episode_windows: after_start_offset alone, end pair fully unset, is its own region", { # nolint: line_length_linter.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    NA_real_, 50, NA_real_, NA_real_
+  )
+  testthat::expect_equal(nrow(w), 1L)
+  testthat::expect_equal(w$window_start, as.Date("2025-01-07"))
+  testthat::expect_equal(w$window_end, as.Date("2025-02-26"))
+})
+
+testthat::test_that("episode_windows: both pairs set -> two regions", {
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    -7, 7, -7, 7
+  )
+  testthat::expect_equal(nrow(w), 2L)
+  testthat::expect_equal(
+    w$window_start, as.Date(c("2024-12-31", "2025-04-30"))
+  )
+  testthat::expect_equal(w$window_end, as.Date(c("2025-01-14", "2025-05-14")))
+})
+
+testthat::test_that("episode_windows: a fully-specified pair still gets the other pair's inner-only region alongside it", { # nolint: line_length_linter.
+  # Regression test: a pair with both sides set ("full") must not suppress
+  # the other pair's own contribution when that other pair has only its
+  # inner side set (and shared mode isn't triggered by anything). Both
+  # pairs' own regions should appear, not just the full one's.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    -7, 7, -7, NA_real_
+  )
+  testthat::expect_equal(nrow(w), 2L)
+  testthat::expect_equal(
+    w$window_start, as.Date(c("2024-12-31", "2025-04-30"))
+  )
+  testthat::expect_equal(w$window_end, as.Date(c("2025-01-14", "2025-05-07")))
+
+  # Same thing with the full/inner-only pairs swapped.
+  w2 <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    NA_real_, 7, -7, 7
+  )
+  testthat::expect_equal(nrow(w2), 2L)
+  testthat::expect_equal(
+    w2$window_start, as.Date(c("2025-01-07", "2025-04-30"))
+  )
+  testthat::expect_equal(w2$window_end, as.Date(c("2025-01-14", "2025-05-14")))
+})
+
+testthat::test_that("episode_windows: 0/0 on both pairs collapses each region to a single day", { # nolint: line_length_linter.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    0, 0, 0, 0
+  )
+  testthat::expect_equal(nrow(w), 2L)
+  testthat::expect_equal(
+    w$window_start, as.Date(c("2025-01-07", "2025-05-07"))
+  )
+  testthat::expect_equal(w$window_end, as.Date(c("2025-01-07", "2025-05-07")))
+})
+
+testthat::test_that("episode_windows: both pairs specified, shifted later", {
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    7, 14, 7, 14
+  )
+  testthat::expect_equal(
+    w$window_start, as.Date(c("2025-01-14", "2025-05-14"))
+  )
+  testthat::expect_equal(w$window_end, as.Date(c("2025-01-21", "2025-05-21")))
+})
+
+testthat::test_that("episode_windows: only the start pair fully specified emits just that region", { # nolint: line_length_linter.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    -7, 7, NA_real_, NA_real_
+  )
+  testthat::expect_equal(nrow(w), 1L)
+  testthat::expect_equal(w$window_start, as.Date("2024-12-31"))
+  testthat::expect_equal(w$window_end, as.Date("2025-01-14"))
+})
+
+testthat::test_that("episode_windows: only the end pair fully specified emits just that region", { # nolint: line_length_linter.
+  w <- episode_windows(
+    as.Date("2025-01-07"), as.Date("2025-05-07"),
+    NA_real_, NA_real_, -7, 7
+  )
+  testthat::expect_equal(nrow(w), 1L)
+  testthat::expect_equal(w$window_start, as.Date("2025-04-30"))
+  testthat::expect_equal(w$window_end, as.Date("2025-05-14"))
+})
+
+testthat::test_that("episode_windows errors on an inverted start pair", {
+  testthat::expect_error(
+    episode_windows(
+      as.Date("2025-01-07"), as.Date("2025-05-07"),
+      1, 0, NA_real_, NA_real_
+    ),
+    "before_start_episode_offset"
+  )
+})
+
+testthat::test_that("episode_windows errors on an inverted end pair", {
+  testthat::expect_error(
+    episode_windows(
+      as.Date("2025-01-07"), as.Date("2025-05-07"),
+      NA_real_, NA_real_, 1, 0
+    ),
+    "before_end_episode_offset"
+  )
+})
+
+#--- Tests for pregnancy_window_engine
+# A hand-built window_dt (mirroring what define_window() would eventually
+# feed the constructor's transform_fn with) so these tests exercise
+# pregnancy_window_engine() directly, with full control over every column,
+# instead of going through define_window(), which already resolves and
+# calls the constructor internally, so re-running the engine on its
+# (already exploded) output would double-process it.
+cases_window_dt <- function(
   constructor,
-  start_offset = 0L,
-  end_offset = 0L,
-  end_cap_offset = NA_real_,
-  start_look_back = NA_real_,
-  end_look_back = NA_real_,
-  events = NULL
+  before_start = NA_real_, after_start = NA_real_,
+  before_end = NA_real_, after_end = NA_real_,
+  anchor_start_offset = NA_real_, anchor_end_offset = NA_real_,
+  t0 = as.Date("2026-03-07"),
+  episodes = NULL
 ) {
-  if (is.null(events)) {
-    events <- data.table::data.table(
-      event_start = as.Date(c("2020-01-01", "2021-02-15", "2022-03-01")),
-      event_end = as.Date(c("2020-09-01", "2021-05-20", "2022-12-01"))
-    )
+  if (is.null(episodes)) {
+    episodes <- pregnancy_episodes_cases()[, .(start_episode, end_episode)]
   }
-
   data.table::data.table(
     person_id = "1",
-    T0 = as.Date("2022-08-16"),
-    variable_id = "v",
+    T0 = t0,
+    variable_id = "x",
     constructor = constructor,
     anchor_start_col = "T0",
-    event_col = "pregnancy_events",
-    start_offset = start_offset,
-    end_offset = end_offset,
-    end_cap_offset = end_cap_offset,
-    start_look_back = start_look_back,
-    end_look_back = end_look_back,
-    pregnancy_events = list(events)
+    anchor_end_col = "T0",
+    anchor_start_offset = anchor_start_offset,
+    anchor_end_offset = anchor_end_offset,
+    before_start_episode_offset = before_start,
+    after_start_episode_offset = after_start,
+    before_end_episode_offset = before_end,
+    after_end_episode_offset = after_end,
+    .episodes = list(episodes)
   )
 }
 
-testthat::test_that(
-  "event_window_engine PRIOR selects events ending before the anchor",
-  {
-    out <- event_window_engine(
-      event_window_dt("IN_PRIOR_PREG"),
-      event_select = "PRIOR"
-    )
+testthat::test_that("pregnancy_window_engine CURRENT selects current episode", {
+  out <- pregnancy_window_engine(
+    cases_window_dt("in_current_pregnancy", -7, 7, -7, 7),
+    episode_select = "CURRENT"
+  )
+  testthat::expect_equal(nrow(out), 2L)
+  testthat::expect_equal(
+    out$window_start, as.Date(c("2025-12-31", "2026-04-30"))
+  )
+  testthat::expect_equal(out$window_end, as.Date(c("2026-01-14", "2026-05-14")))
+})
 
-    testthat::expect_equal(nrow(out), 2L)
-    testthat::expect_equal(
-      out$window_start, as.Date(c("2020-01-01", "2021-02-15"))
-    )
-    testthat::expect_equal(
-      out$window_end, as.Date(c("2020-09-01", "2021-05-20"))
-    )
-  }
-)
+testthat::test_that("pregnancy_window_engine PRIOR selects the prior episode", {
+  out <- pregnancy_window_engine(
+    cases_window_dt("in_prior_pregnancy", -7, 7, -7, 7),
+    episode_select = "PRIOR"
+  )
+  testthat::expect_equal(nrow(out), 2L)
+  testthat::expect_equal(
+    out$window_start, as.Date(c("2024-12-31", "2025-04-30"))
+  )
+  testthat::expect_equal(out$window_end, as.Date(c("2025-01-14", "2025-05-14")))
+})
 
-testthat::test_that("event_window_engine PRIOR applies an end cap", {
-  out <- event_window_engine(
-    event_window_dt(
-      "IN_PRIOR_PREG",
-      start_offset = 90L, end_offset = 0L, end_cap_offset = 166
+testthat::test_that("pregnancy_window_engine clips a border-offset window to anchor_start_offset", { # nolint: line_length_linter.
+  # T0 = 2026-03-07, anchor_start_offset = 0 -> hard lower bound = T0. The
+  # current episode's first region ([2025-12-31, 2026-01-14], entirely
+  # before T0) gets its start raised to T0, making it invalid (start > end);
+  # the second region ([2026-04-30, 2026-05-14], already after T0) is
+  # untouched.
+  out <- pregnancy_window_engine(
+    cases_window_dt(
+      "in_current_pregnancy", -7, 7, -7, 7,
+      anchor_start_offset = 0
     ),
-    event_select = "PRIOR"
+    episode_select = "CURRENT"
   )
+  testthat::expect_equal(
+    out$window_start, as.Date(c("2026-03-07", "2026-04-30"))
+  )
+  testthat::expect_equal(out$window_end, as.Date(c("2026-01-14", "2026-05-14")))
+  window_valid <- !is.na(out$window_start) & !is.na(out$window_end) &
+    out$window_start <= out$window_end
+  testthat::expect_equal(window_valid, c(FALSE, TRUE))
+})
 
-  testthat::expect_equal(
-    out$window_start, as.Date(c("2020-03-31", "2021-05-16"))
+testthat::test_that("pregnancy_window_engine clips a border-offset window to anchor_end_offset", { # nolint: line_length_linter.
+  # T0 = 2026-03-07, anchor_end_offset = -365 -> hard upper bound =
+  # 2025-03-07. The prior episode's first region ([2024-12-31, 2025-01-14],
+  # already before that bound) is untouched; the second region
+  # ([2025-04-30, 2025-05-14], entirely after it) gets its end lowered to
+  # 2025-03-07, making it invalid (start > end).
+  out <- pregnancy_window_engine(
+    cases_window_dt(
+      "in_prior_pregnancy", -7, 7, -7, 7,
+      anchor_end_offset = -365
+    ),
+    episode_select = "PRIOR"
   )
   testthat::expect_equal(
-    out$window_end, as.Date(c("2020-06-15", "2021-05-20"))
+    out$window_start, as.Date(c("2024-12-31", "2025-04-30"))
+  )
+  testthat::expect_equal(out$window_end, as.Date(c("2025-01-14", "2025-03-07")))
+  window_valid <- !is.na(out$window_start) & !is.na(out$window_end) &
+    out$window_start <= out$window_end
+  testthat::expect_equal(window_valid, c(TRUE, FALSE))
+})
+
+testthat::test_that("pregnancy_window_engine CURRENT_AND_PRIOR unions both episodes' windows", { # nolint: line_length_linter.
+  out <- pregnancy_window_engine(
+    cases_window_dt("in_current_and_prior", -7, 7, -7, 7),
+    episode_select = "CURRENT_AND_PRIOR"
+  )
+  testthat::expect_equal(nrow(out), 4L)
+  # current's two regions first (selected <- rbind(current, prior)), then
+  # prior's two.
+  testthat::expect_equal(
+    out$window_start,
+    as.Date(c("2025-12-31", "2026-04-30", "2024-12-31", "2025-04-30"))
+  )
+  testthat::expect_equal(
+    out$window_end,
+    as.Date(c("2026-01-14", "2026-05-14", "2025-01-14", "2025-05-14"))
   )
 })
 
-testthat::test_that(
-  "event_window_engine PRIOR filters out episodes outside the lookback range",
-  {
-    # anchor (T0) = 2022-08-16, lookback = [T0 - 500, T0]. Episode 1
-    # (2020-01-01/2020-09-01) ends well before the lookback range starts, so
-    # it never becomes a candidate at all. Episode 2 (2021-02-15/2021-05-20)
-    # overlaps the lookback range, so it is kept -- and with start_offset/
-    # end_offset both 0 here, its window is exactly the episode's own span.
-    out <- event_window_engine(
-      event_window_dt(
-        "IN_PRIOR_PREG",
-        start_look_back = -500, end_look_back = 0
-      ),
-      event_select = "PRIOR"
-    )
-
-    testthat::expect_equal(nrow(out), 1L)
-    testthat::expect_equal(out$window_start, as.Date("2021-02-15"))
-    testthat::expect_equal(out$window_end, as.Date("2021-05-20"))
-  }
-)
-
-testthat::test_that(
-  "event_window_engine PRIOR lookback range only filters, never clips",
-  {
-    # Same lookback range as above ([T0 - 500, T0] ~= [2021-04-03,
-    # 2022-08-16]), but start_offset/end_offset now shift episode 2's window
-    # to [2021-01-16, 2021-06-19] -- window_start ends up *before* the
-    # lookback's own lower bound. The shifted window is kept exactly as
-    # computed, proving the lookback range only decides which episodes are
-    # eligible; it never truncates the resulting window.
-    out <- event_window_engine(
-      event_window_dt(
-        "IN_PRIOR_PREG",
-        start_offset = -30L, end_offset = 30L,
-        start_look_back = -500, end_look_back = 0
-      ),
-      event_select = "PRIOR"
-    )
-
-    testthat::expect_equal(nrow(out), 1L)
-    testthat::expect_equal(out$window_start, as.Date("2021-01-16"))
-    testthat::expect_equal(out$window_end, as.Date("2021-06-19"))
-  }
-)
-
-testthat::test_that(
-  "event_window_engine PRIOR leaves windows alone when lookback is NA",
-  {
-    out <- event_window_engine(
-      event_window_dt("IN_PRIOR_PREG"),
-      event_select = "PRIOR"
-    )
-
-    testthat::expect_equal(
-      out$window_start, as.Date(c("2020-01-01", "2021-02-15"))
-    )
-    testthat::expect_equal(
-      out$window_end, as.Date(c("2020-09-01", "2021-05-20"))
-    )
-  }
-)
-
-testthat::test_that(
-  "IN_PRIOR_PREG lookback range flows end to end through define_window",
-  {
-    metadata <- data.table::data.table(
-      variable_id = "gest_diabetes_prior",
-      concept_id = "GEST_DIAB",
-      constructor = "IN_PRIOR_PREG",
-      selector = "LATEST",
-      start_offset = 0L,
-      end_offset = 0L,
-      start_look_back = -500L,
-      end_look_back = 0L,
-      event_col = "pregnancy_events"
-    )
-
-    windows <- define_window(event_population(), metadata)
-
-    # Person 1's two prior episodes end at 2020-09-01 and 2021-05-20; anchor
-    # is 2022-08-16. Only the second overlaps the 500-day lookback range, so
-    # the first is filtered out before a window row is even created -- only
-    # one candidate window reaches define_window() at all.
-    testthat::expect_equal(nrow(windows), 1L)
-    testthat::expect_true(windows$window_valid)
-    testthat::expect_equal(windows$window_end, as.Date("2021-05-20"))
-  }
-)
-
-testthat::test_that(
-  "event_window_engine CURRENT with event_END covers whole event",
-  {
-    out <- event_window_engine(
-      event_window_dt("ANYTIME_CURRENT_PREG", end_offset = 30L),
-      event_select = "CURRENT",
-      end_boundary = "event_END"
-    )
-
-    testthat::expect_equal(out$window_start, as.Date("2022-03-01"))
-    testthat::expect_equal(out$window_end, as.Date("2022-12-31"))
-  }
-)
-
-testthat::test_that("event_window_engine CURRENT with ANCHOR stops at T0", {
-  out <- event_window_engine(
-    event_window_dt("SINCE_START_CURRENT_PREG"),
-    event_select = "CURRENT",
-    end_boundary = "ANCHOR"
+testthat::test_that("pregnancy_window_engine CURRENT produces no rows when T0 is not inside any episode", { # nolint: line_length_linter.
+  out <- pregnancy_window_engine(
+    cases_window_dt(
+      "in_current_pregnancy", 0, 0, 0, 0,
+      t0 = as.Date("2025-08-01")
+    ),
+    episode_select = "CURRENT"
   )
-
-  testthat::expect_equal(out$window_start, as.Date("2022-03-01"))
-  testthat::expect_equal(out$window_end, as.Date("2022-08-16"))
+  testthat::expect_equal(nrow(out), 0L)
 })
 
-testthat::test_that(
-  "event_window_engine contributes zero rows when nothing matches",
-  {
-    no_events <- data.table::data.table(
-      event_start = as.Date(character()),
-      event_end = as.Date(character())
+testthat::test_that("pregnancy_window_engine PRIOR falls back to T0-relative when there is no current episode", { # nolint: line_length_linter.
+  # T0 = 2025-08-01 falls in the gap after the prior episode ends
+  # (2025-05-07) and before the current episode starts (2026-01-07): no
+  # episode contains it, so classify_episodes() falls back to T0-relative
+  # prior/future, and the (now-"prior") episode's own unshifted span comes
+  # through unchanged.
+  out <- pregnancy_window_engine(
+    cases_window_dt(
+      "in_prior_pregnancy",
+      NA_real_, NA_real_, NA_real_, NA_real_,
+      t0 = as.Date("2025-08-01")
+    ),
+    episode_select = "PRIOR"
+  )
+  testthat::expect_equal(nrow(out), 1L)
+  testthat::expect_equal(out$window_start, as.Date("2025-01-07"))
+  testthat::expect_equal(out$window_end, as.Date("2025-05-07"))
+})
+
+testthat::test_that("pregnancy_window_engine OUTSIDE_ALL uses anchor offsets, not episode borders", { # nolint: line_length_linter.
+  window_dt <- data.table::data.table(
+    person_id = "1", T0 = as.Date("2021-03-01"), variable_id = "x",
+    constructor = "outside_all_pregnancy",
+    anchor_start_col = "T0", anchor_end_col = "T0",
+    anchor_start_offset = -500L, anchor_end_offset = 0L,
+    before_start_episode_offset = NA_real_,
+    after_start_episode_offset = NA_real_,
+    before_end_episode_offset = NA_real_,
+    after_end_episode_offset = NA_real_,
+    .episodes = list(
+      pregnancy_episodes_simple()[, .(start_episode, end_episode)]
     )
+  )
+  out <- pregnancy_window_engine(window_dt, episode_select = "OUTSIDE_ALL")
+  testthat::expect_equal(nrow(out), 2L)
+  testthat::expect_equal(
+    out$window_start, as.Date(c("2019-10-18", "2020-07-01"))
+  )
+  testthat::expect_equal(out$window_end, as.Date(c("2019-12-31", "2020-12-31")))
+})
 
-    out <- event_window_engine(
-      event_window_dt("IN_PRIOR_PREG", events = no_events),
-      event_select = "PRIOR"
-    )
-
-    testthat::expect_equal(nrow(out), 0L)
-  }
-)
-
-testthat::test_that(
-  "event_window_engine OUTSIDE_ALL uses start/end offset as search range",
-  {
-    out <- event_window_engine(
-      event_window_dt(
-        "OUTSIDE_ALL_PREG",
-        start_offset = 0L, end_offset = -1000L
-      ),
-      event_select = "OUTSIDE_ALL"
-    )
-
-    testthat::expect_equal(nrow(out), 3L)
-    testthat::expect_true(all(out$window_start <= out$window_end))
-  }
-)
-
-# ---------------------------------------------------------------------------
-# The four named constructors: thin wrappers over event_window_engine.
-# ---------------------------------------------------------------------------
-
-testthat::test_that(
-  "the four event constructors dispatch to the right engine parameters",
-  {
-    prior <- in_prior_preg_window(event_window_dt("IN_PRIOR_PREG"))
-    testthat::expect_equal(nrow(prior), 2L)
-
-    anytime <- anytime_current_preg_window(
-      event_window_dt("ANYTIME_CURRENT_PREG")
-    )
-    testthat::expect_equal(anytime$window_end, as.Date("2022-12-01"))
-
-    since_start <- since_start_current_preg_window(
-      event_window_dt("SINCE_START_CURRENT_PREG")
-    )
-    testthat::expect_equal(since_start$window_end, as.Date("2022-08-16"))
-
-    outside <- outside_all_preg_window(
-      event_window_dt(
-        "OUTSIDE_ALL_PREG",
-        start_offset = 0L, end_offset = -1000L
-      )
-    )
-    testthat::expect_equal(nrow(outside), 3L)
-  }
-)
-
-# ---------------------------------------------------------------------------
-# End-to-end: row expansion through define_window(), and the SQL aggregation
-# fix through anchor() + get_anchor_result().
-# ---------------------------------------------------------------------------
-
-testthat::test_that(
-  "define_window expands one row into multiple candidate windows",
-  {
-    windows <- define_window(event_population(), event_metadata())
-
-    # Person 1 has two prior events -> two candidate windows; person 2
-    # has none -> zero candidate windows.
-    testthat::expect_equal(nrow(windows), 2L)
-    testthat::expect_equal(windows$person_id, c("1", "1"))
-    testthat::expect_true(all(windows$window_valid))
-  }
-)
-
-testthat::test_that(
-  "multiple candidate windows for one variable collapse to one LATEST result",
-  {
-    hive_path <- tempfile(pattern = "anchor-hive-")
-    dir.create(hive_path)
-    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
-
-    anchor(
-      population = event_population(),
-      metadata = event_metadata(),
-      concepts = event_concepts(),
-      anchor_hive_path = hive_path
-    )
-
-    anchored <- read_anchor_hive(hive_path)
-
-    # Both prior-pregnancy windows for person 1 contain a matching
-    # GEST_DIAB record; LATEST must pick the later one across both, as a
-    # single row.
-    testthat::expect_equal(nrow(anchored), 1L)
-    testthat::expect_equal(anchored$person_id, "1")
-    testthat::expect_equal(anchored$date, as.Date("2021-03-01"))
-    testthat::expect_equal(anchored$value, "TRUE")
-  }
-)
-
-# ---------------------------------------------------------------------------
-# The full documented scenario: all 5 pregnancy_examples.md constructors at
-# once, via pregnancy_population_with_events()/pregnancy_metadata_translated()
-# (adapters over the pregnancy_population/pregnancy_periods/pregnancy_metadata
-# fixtures above). Every expected value below was independently re-derived
-# from the PRIOR/CURRENT/OUTSIDE_ALL rules against pregnancy_periods(), not
-# copied from the untrusted pregnancy_output()/intermediate_windows_pregnancy().
-# ---------------------------------------------------------------------------
-
-testthat::test_that(
-  "define_window reproduces the documented candidate windows per person/T0",
-  {
-    windows <- define_window(
-      pregnancy_population_with_events(), pregnancy_metadata_translated()
-    )
-    windows <- windows[order(variable_id, person_id, T0, window_start)]
-
-    # Person 1 has two episodes ending before T0 = 2021-04-02's *other* row
-    # (T0 = 2022-08-16), so IN_PRIOR_PREG produces one window for the
-    # 2021-04-02 row and two for the 2022-08-16 row; person 3's only
-    # episode contains its T0, so it contributes none.
-    prior <- windows[variable_id == "preg_example_1"]
-    testthat::expect_equal(nrow(prior), 4L)
-    testthat::expect_equal(prior$person_id, c("1", "1", "1", "2"))
-
-    # OUTSIDE_ALL_PREG for person 1 at T0 = 2022-08-16: three episodes give
-    # three gaps within the [T0 - 3652, T0] search range (an episode always
-    # fences a gap, so nothing extends past the third episode's start).
-    outside_person1 <- windows[
-      variable_id == "preg_example_4" & person_id == "1" & T0 == "2022-08-16"
-    ]
-    testthat::expect_equal(nrow(outside_person1), 3L)
-    testthat::expect_equal(
-      outside_person1$window_end,
-      as.Date(c("2019-12-31", "2021-02-14", "2022-02-28"))
-    )
-  }
-)
-
-testthat::test_that(
-  "anchor() resolves the documented pregnancy scenario end to end",
-  {
-    hive_path <- tempfile(pattern = "anchor-hive-")
-    dir.create(hive_path)
-    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
-
-    anchor(
-      population = pregnancy_population_with_events(),
-      metadata = pregnancy_metadata_translated(),
-      concepts = pregnancy_concepts(),
-      anchor_hive_path = hive_path
-    )
-
-    anchored <- read_anchor_hive(hive_path)
-    anchored <- anchored[order(variable_id)]
-
-    # preg_example_2 (gest_diabetes record falls between two SINCE_START
-    # windows, matching neither) and preg_example_4 (the obesity record
-    # falls inside a pregnancy, so OUTSIDE_ALL_PREG correctly excludes it)
-    # produce no rows at all -- only 3 of the 5 variables match anything.
-    testthat::expect_equal(
-      anchored$variable_id,
-      c("preg_example_1", "preg_example_3", "preg_example_5")
-    )
-    testthat::expect_equal(anchored$person_id, c("1", "1", "2"))
-    testthat::expect_equal(anchored$T0, as.Date(rep("2022-08-16", 3)))
-    testthat::expect_equal(
-      anchored$date, as.Date(c("2021-05-01", "2022-12-30", "2021-07-01"))
-    )
-  }
-)
+testthat::test_that("pregnancy_window_engine surfaces an inverted-pair error from episode_windows", { # nolint: line_length_linter.
+  testthat::expect_error(
+    pregnancy_window_engine(
+      cases_window_dt("in_current_pregnancy", 1, 0, NA_real_, NA_real_),
+      episode_select = "CURRENT"
+    ),
+    "before_start_episode_offset"
+  )
+})

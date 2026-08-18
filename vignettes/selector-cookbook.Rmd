@@ -54,6 +54,8 @@ Important details:
 
 Selector output `value` is character in persisted/public long results. Convert it to the type you need after retrieval rather than assuming the source type survives every SQL selector.
 
+None of these fit your rule? See `vignette("custom-selectors")` for `make_selector()`, which lets you add a selector of your own without editing anchoR.
+
 ```{r cleanup, include=FALSE}
 unlink(hive, recursive = TRUE)
 ```

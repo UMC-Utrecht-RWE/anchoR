@@ -96,10 +96,80 @@ testthat::test_that(
 )
 
 testthat::test_that(
+  "load_concepts_table attaches and restricts a DuckDB source to concept_ids", # nolint: line_length_linter.
+  {
+    concepts <- data.table::data.table(
+      person_id = c("1", "1", "1"),
+      concept_id = c("A", "B", "C"),
+      date = as.Date("2023-01-01"),
+      value = c("x", "y", "z")
+    )
+    db_path <- withr::local_tempfile(fileext = ".duckdb")
+    setup_con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path)
+    DBI::dbWriteTable(setup_con, "concept_table", concepts)
+    DBI::dbDisconnect(setup_con, shutdown = TRUE)
+
+    con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+    load_concepts_table(con, db_path, concept_ids = c("A", "C"))
+
+    loaded <- data.table::setDT(
+      DBI::dbGetQuery(con, "SELECT * FROM concepts ORDER BY concept_id")
+    )
+    testthat::expect_equal(loaded$concept_id, c("A", "C"))
+    testthat::expect_true(inherits(loaded$date, "Date") || is.character(loaded$date)) # nolint: line_length_linter.
+  }
+)
+
+testthat::test_that(
+  "load_concepts_table doesn't re-ATTACH an already-attached DuckDB source",
+  {
+    concepts <- data.table::data.table(
+      person_id = "1", concept_id = "A", date = as.Date("2023-01-01"),
+      value = "x"
+    )
+    db_path <- withr::local_tempfile(fileext = ".duckdb")
+    setup_con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path)
+    DBI::dbWriteTable(setup_con, "concept_table", concepts)
+    DBI::dbDisconnect(setup_con, shutdown = TRUE)
+
+    con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+    load_concepts_table(con, db_path)
+    # A second call against the same connection must not error by trying to
+    # ATTACH the same database twice.
+    testthat::expect_no_error(load_concepts_table(con, db_path))
+
+    loaded <- data.table::setDT(DBI::dbGetQuery(con, "SELECT * FROM concepts"))
+    testthat::expect_equal(loaded$concept_id, "A")
+  }
+)
+
+testthat::test_that("write_population_windows errors when anchor_col is missing", { # nolint: line_length_linter.
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  population_windows <- data.table::data.table(
+    anchor_row_id = 1L, person_id = "1", concept_id = "A",
+    variable_id = "v1", window_name = NA_character_, selector = "LATEST",
+    window_start = as.Date("2023-01-01"), window_end = as.Date("2023-01-31"),
+    range_min = NA_real_, range_max = NA_real_
+  )
+
+  testthat::expect_error(
+    write_population_windows(con, population_windows, anchor_col = "T0"),
+    "Anchor column `T0` was not found in `population_windows`.",
+    fixed = TRUE
+  )
+})
+
+testthat::test_that(
   "anchor() ignores concepts for concept_ids outside metadata",
   {
     # An end-to-end check that the concept_ids filter in load_concepts_table
-    # never changes results -- a concept_id irrelevant to metadata must have
+    # never changes results, a concept_id irrelevant to metadata must have
     # been unmatchable anyway (the join is on w.concept_id), this just locks
     # down that the filtering doesn't accidentally drop something it should
     # keep.

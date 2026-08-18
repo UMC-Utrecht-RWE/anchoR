@@ -8,6 +8,7 @@ validate_anchor_inputs(
   population,
   metadata,
   concepts = NULL,
+  episodes = NULL,
   anchor_col = "T0"
 )
 }
@@ -21,12 +22,16 @@ anchor column used for windowing.}
 \code{concept_table} contains \code{person_id}, \code{concept_id}, and \code{date}, or parquet
 file location(s).}
 
+\item{episodes}{Optional data frame with \code{person_id}, \code{start_episode},
+\code{end_episode} columns, required when \code{metadata} uses an episode-based
+constructor. See \code{R/pregnancy_window.R}.}
+
 \item{anchor_col}{Column to use when metadata does not specify
 the anchor column.}
 }
 \value{
 Invisibly returns a list with normalized \code{population}, \code{metadata},
-and \code{concepts}.
+\code{concepts}, and \code{episodes}.
 }
 \description{
 Standardizes the study-variable metadata shape and checks the minimum

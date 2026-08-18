@@ -8,6 +8,7 @@ anchor(
   population,
   metadata,
   concepts,
+  episodes = NULL,
   anchor_col = "T0",
   anchor_hive_path = NULL,
   prepare_con = NULL
@@ -24,6 +25,13 @@ the columns required by \code{validate_anchor_inputs()}.}
 \item{concepts}{A concept table as a data frame, a DuckDB file path whose
 \code{concept_table} contains \code{person_id}, \code{concept_id}, and
 \code{date}, or parquet file location(s).}
+
+\item{episodes}{Optional data frame with \code{person_id},
+\code{start_episode}, \code{end_episode} columns. Required when
+\code{metadata} uses an episode-based constructor
+(\code{in_current_pregnancy}, \code{in_prior_pregnancy},
+\code{in_current_and_prior}, \code{outside_all_pregnancy}); see
+\code{R/pregnancy_window.R}.}
 
 \item{anchor_col}{Character. Name of the column in \code{population} to use
 as the index date when metadata does not specify an anchor column.

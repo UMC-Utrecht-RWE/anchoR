@@ -37,7 +37,11 @@ normalize_selector_name <- function(x) {
 }
 
 looks_like_glob <- function(x) {
-  grepl("[\\*\\?\\[]", x)
+  # A bracket expression like [...] does not treat backslash as an escape
+  # character, so `\\*`/`\\?`/`\\[` inside one match a literal backslash,
+  # not an escaped `*`/`?`/`[`. That previously made this TRUE for any
+  # Windows-style path (backslash separators), not just actual globs.
+  grepl("[*?[]", x)
 }
 
 concepts_input_type <- function(concepts) {
@@ -206,19 +210,17 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   }
   if (!"range_min" %in% names(metadata_dt)) metadata_dt[, range_min := NA_real_]
   if (!"range_max" %in% names(metadata_dt)) metadata_dt[, range_max := NA_real_]
-  # Only the event-based constructors (see R/pregnancy_window.R) use these;
+  # Only the episode-based constructors (see R/pregnancy_window.R) use these;
   # other constructors carry them along unused.
-  if (!"event_col" %in% names(metadata_dt)) {
-    metadata_dt[, event_col := NA_character_]
-  }
-  if (!"end_cap_offset" %in% names(metadata_dt)) {
-    metadata_dt[, end_cap_offset := NA_real_]
-  }
-  if (!"start_look_back" %in% names(metadata_dt)) {
-    metadata_dt[, start_look_back := NA_real_]
-  }
-  if (!"end_look_back" %in% names(metadata_dt)) {
-    metadata_dt[, end_look_back := NA_real_]
+  episode_offset_cols <- c(
+    "anchor_start_offset", "anchor_end_offset",
+    "before_start_episode_offset", "after_start_episode_offset",
+    "before_end_episode_offset", "after_end_episode_offset"
+  )
+  for (col in episode_offset_cols) {
+    if (!col %in% names(metadata_dt)) {
+      metadata_dt[, (col) := NA_real_]
+    }
   }
 
   metadata_dt[, `:=`(
@@ -227,10 +229,18 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
     range_min = as.numeric(range_min),
     range_max = as.numeric(range_max)
   )]
+  metadata_dt[
+    , (episode_offset_cols) := lapply(.SD, as.numeric),
+    .SDcols = episode_offset_cols
+  ]
 
   # Return a fully standardized table so validation and execution never need to
   # branch on legacy names or loose column types.
   metadata_dt[]
+}
+
+sql_string <- function(con, value) {
+  as.character(DBI::dbQuoteString(con, value))
 }
 
 concepts_to_data_table <- function(concepts) {
@@ -246,12 +256,15 @@ concepts_to_data_table <- function(concepts) {
 
     con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
     on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
-
+    concepts_sql <- sql_string(
+      con,
+      normalizePath(concepts, winslash = "/", mustWork = TRUE)
+    )
     DBI::dbExecute(
       con,
       sprintf(
-        "ATTACH '%s' AS concepts_db (READ_ONLY);",
-        normalizePath(concepts, winslash = "/")
+        "ATTACH %s AS concepts_db (READ_ONLY);",
+        concepts_sql
       )
     )
 

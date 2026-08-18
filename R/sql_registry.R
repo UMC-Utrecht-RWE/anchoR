@@ -126,7 +126,38 @@ selector_sql_path <- function(selector) {
   sql_path
 }
 
-add_parquet_export <- function(sql_query, anchor_hive_path, selector = NULL) {
+#' Check Whether a Built-in SQL Template Exists for a Selector
+#'
+#' Non-throwing counterpart to `selector_sql_path()`, used by
+#' `resolve_selector_sql()`/`selector_is_resolvable()` to check the package
+#' templates before falling back to a caller-defined selector.
+#'
+#' @param selector Selector name such as `"LATEST"` or `"COUNT"`.
+#' @return `TRUE` if a bundled `inst/sql/<selector>.sql` template exists.
+#' @keywords internal
+selector_sql_exists <- function(selector) {
+  sql_path <- file.path(
+    selector_sql_root(),
+    paste0(tolower(normalize_selector_name(selector[[1L]])), ".sql")
+  )
+  file.exists(sql_path)
+}
+
+#' Read a Built-in Selector's SQL Template
+#'
+#' @param selector Selector name such as `"LATEST"` or `"COUNT"`.
+#' @return SQL text (a single string) read from `inst/sql`.
+#' @keywords internal
+read_builtin_selector_sql <- function(selector) {
+  paste(
+    readLines(selector_sql_path(selector), warn = FALSE),
+    collapse = "\n"
+  )
+}
+
+add_parquet_export <- function(
+  con, sql_query, anchor_hive_path, selector = NULL
+) {
   # This helper is for SQL templates that export concept subsets to Parquet
   # files instead of returning them as query results.
   # The `anchor_hive_path` parameter is a path in the SQL environment's
@@ -139,23 +170,27 @@ add_parquet_export <- function(sql_query, anchor_hive_path, selector = NULL) {
   # export an already-combined, multi-selector result in one COPY (e.g.
   # `publish_accumulated_table()`) have no single selector to key on, so
   # `selector` is optional there.
+  path_sql <- sql_string(con, anchor_hive_path)
+
   filename_prefix <- if (is.null(selector)) {
     "part"
   } else {
     tolower(normalize_selector_name(selector))
   }
-  export_query <- sprintf(
-    "COPY (%s) TO '%s'
-    (FORMAT 'parquet',
-    PARTITION_BY (variable_id),
-    FILENAME_PATTERN '%s_{i}',
-      OVERWRITE_OR_IGNORE TRUE);",
-    sql_query,
-    anchor_hive_path,
-    filename_prefix
-  )
+  filename_sql <- sql_string(con, paste0(filename_prefix, "_{i}"))
 
-  export_query
+  sprintf(
+    paste(
+      "COPY (%s) TO %s",
+      "(FORMAT parquet,",
+      " PARTITION_BY (variable_id),",
+      " FILENAME_PATTERN %s,",
+      " OVERWRITE_OR_IGNORE TRUE);"
+    ),
+    sql_query,
+    path_sql,
+    filename_sql
+  )
 }
 
 ensure_accumulate_table <- function(con, table_name) {
@@ -200,24 +235,30 @@ add_table_accumulation <- function(sql_query, table_name) {
   sprintf("INSERT INTO %s BY NAME (%s);", table_name, sql_query)
 }
 
-read_selector_sql_query <- function(selector) {
-  # Keeping SQL in separate template files makes the selector logic inspectable
-  # and editable without embedding large query strings inside R functions.
-  paste(
-    readLines(selector_sql_path(selector), warn = FALSE),
-    collapse = "\n"
-  )
+read_selector_sql_query <- function(selector, selector_env = globalenv()) {
+  # Keeping built-in SQL in separate template files makes the selector logic
+  # inspectable and editable without embedding large query strings inside R
+  # functions. A selector not bundled with the package is resolved from
+  # `selector_env` instead see `resolve_selector_sql()` and
+  # `make_selector()`.
+  resolve_selector_sql(selector, selector_env)
 }
 
 run_selector_query <- function(
   con,
   selector,
   anchor_hive_path = NULL,
-  accumulate_table = NULL
+  accumulate_table = NULL,
+  selector_env = globalenv()
 ) {
-  query <- read_selector_sql_query(selector)
+  query <- read_selector_sql_query(selector, selector_env)
   sql <- if (is.null(accumulate_table)) {
-    add_parquet_export(query, anchor_hive_path, selector)
+    add_parquet_export(
+      con = con,
+      sql_query = query,
+      anchor_hive_path = anchor_hive_path,
+      selector = selector
+    )
   } else {
     ensure_accumulate_table(con, accumulate_table)
     add_table_accumulation(query, accumulate_table)
@@ -240,7 +281,8 @@ run_selector_queries <- function(
   con,
   selectors,
   anchor_hive_path = NULL,
-  accumulate_table = NULL
+  accumulate_table = NULL,
+  selector_env = globalenv()
 ) {
   if (
     is.null(accumulate_table) &&
@@ -256,7 +298,7 @@ run_selector_queries <- function(
   # template processes all matching person-variable windows in one batch.
   for (i in seq_along(selectors)) {
     selector_name <- selectors[[i]]
-    logger::log_info(
+    logger::log_debug(
       sprintf("\tProcessing selector: %s", selector_name)
     )
 
@@ -269,7 +311,8 @@ run_selector_queries <- function(
             con,
             selector_name,
             anchor_hive_path = anchor_hive_path,
-            accumulate_table = accumulate_table
+            accumulate_table = accumulate_table,
+            selector_env = selector_env
           ),
           warning = function(w) {
             logger::log_warn(
