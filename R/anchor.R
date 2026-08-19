@@ -279,7 +279,7 @@ publish_anchor_partitions <- function(
 
 #' Write an in-memory accumulator table to the real output hive.
 #'
-#' Used by [anchor_variable_impl()]'s "memory" staging mode: instead of a
+#' Used by `anchor_variable_impl()`'s "memory" staging mode: instead of a
 #' local scratch hive on disk, chunk results pile up in one DuckDB table
 #' (see `add_table_accumulation()`), and this is the single write that
 #' finally sends that table to `anchor_hive_path` as parquet. Because the
@@ -340,7 +340,7 @@ order_variable_ids_by_selector <- function(metadata_dt) {
 
 #' Do the windowing and selector work for one batch of variables.
 #'
-#' Shared by [anchor_whole_impl()] and [anchor_variable_impl()] so the
+#' Shared by `anchor_whole_impl()` and `anchor_variable_impl()` so the
 #' expensive setup (opening a DuckDB connection, loading `concepts`) only
 #' happens once, instead of once per variable. This function does the part
 #' that's different for each batch: building the person-by-variable time
@@ -458,7 +458,7 @@ anchor_impl <- function(
   invisible(NULL)
 }
 
-#' Do the "whole" anchoring pass: one [anchor_impl()] call for everything.
+#' Do the "whole" anchoring pass: one `anchor_impl()` call for everything.
 #'
 #' @inheritParams anchor
 #' @return Invisibly `NULL`; writes parquet files to `anchor_hive_path` as a
@@ -534,7 +534,7 @@ anchor_whole_impl <- function(
 
 #' Do the "variable" anchoring pass: batch through metadata in chunks.
 #'
-#' Same job as [anchor_whole_impl()], but works through \code{metadata} in
+#' Same job as `anchor_whole_impl()`, but works through \code{metadata} in
 #' batches of \code{chunk_size} variables at a time (default 20) instead of
 #' all at once.
 #'
@@ -572,7 +572,7 @@ anchor_whole_impl <- function(
 #' once, which is much cheaper than running one query per variable.
 #' Variables are sorted by selector before being split into batches, so
 #' each batch groups same-selector variables together as much as
-#' \code{chunk_size} allows (see [anchor_selector_impl()] if you'd rather
+#' \code{chunk_size} allows (see `anchor_selector_impl()` if you'd rather
 #' always process every variable sharing a selector together, with no
 #' batch-size limit).
 #'
@@ -850,18 +850,18 @@ anchor_variable_impl <- function(
   invisible(variable_ids)
 }
 
-#' Do the "selector" anchoring pass: one [anchor_impl()] call per selector.
+#' Do the "selector" anchoring pass: one `anchor_impl()` call per selector.
 #'
 #' Runs the windowing/selector work once for each distinct \code{selector}
 #' value found in \code{metadata}, so every variable that shares a selector
 #' is covered by a single query (and a single join against
 #' \code{concepts}), no matter how many variables share it; unlike
-#' [anchor_variable_impl()], there is no \code{chunk_size} limit splitting a
+#' `anchor_variable_impl()`, there is no \code{chunk_size} limit splitting a
 #' selector's variables across more than one query. Affected
 #' \code{variable_id} partitions are cleared once before selector processing
 #' begins. The calls leave the rest of \code{anchor_hive_path} untouched, so
 #' rerunning with the same or a smaller \code{metadata} is safe; it just
-#' does not give you [anchor_variable_impl()]'s \code{chunk_size}-bounded
+#' does not give you `anchor_variable_impl()`'s \code{chunk_size}-bounded
 #' blast radius, since every variable sharing a selector is recomputed
 #' together in one query.
 #'
