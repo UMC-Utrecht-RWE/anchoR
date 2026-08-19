@@ -222,6 +222,14 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
       metadata_dt[, (col) := NA_real_]
     }
   }
+  # Optional per-episode capping flags (also episode-constructor-only): left
+  # NA/unset, they change nothing, matching existing metadata's behavior.
+  episode_cap_cols <- c("cap_start_to_episode", "cap_end_to_episode")
+  for (col in episode_cap_cols) {
+    if (!col %in% names(metadata_dt)) {
+      metadata_dt[, (col) := NA]
+    }
+  }
 
   metadata_dt[, `:=`(
     anchor_start_col = normalize_anchor_reference(anchor_start_col, anchor_col),
@@ -232,6 +240,10 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   metadata_dt[
     , (episode_offset_cols) := lapply(.SD, as.numeric),
     .SDcols = episode_offset_cols
+  ]
+  metadata_dt[
+    , (episode_cap_cols) := lapply(.SD, as.logical),
+    .SDcols = episode_cap_cols
   ]
 
   # Return a fully standardized table so validation and execution never need to
