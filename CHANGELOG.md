@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `cap_start_to_episode`/`cap_end_to_episode`: two new optional logical metadata columns (`NA`/unset by default), read by `in_current_pregnancy`/`in_prior_pregnancy`/`in_current_and_prior` (not `outside_all_pregnancy`). The need of this case is that we might introduce a `after_start_episode_offset` that falls after the end of an episode pregnancy and the user wants the window to be capped at the minimum value between `after_start_episode_offset` and the end of pregnancy. Therefore, when `TRUE`,  `cap_start_to_episode` raises `window_start` up to at least the episode's own `start_episode`, `cap_end_to_episode` lowers `window_end` down to at most the episode's own `end_episode`.
 
+### Changed
+- `anchor()` gains a `by` argument (`"whole"` (default), `"variable"`, `"selector"`) that dispatches to the same batching/staging/publishing behavior `anchor_by_variable()`/`anchor_by_selector()` provided, so callers no longer need those separate functions to run the anchoring pass batch-by-variable or one-selector-at-a-time. `anchor_by_variable()` and `anchor_by_selector()` are now deprecated thin wrappers (in `R/deprecated.R`) that forward to `anchor(..., by = "variable")`/`anchor(..., by = "selector")` and warn via `.Deprecated()`; they are unchanged in behavior and not yet removed.
+
 ## [v1.5]
 ### Removed (Breaking)
 - The entire old pregnancy/episode API is gone: the `IN_PRIOR_PREG`, `SINCE_START_CURRENT_PREG`, and `ANYTIME_CURRENT_PREG` constructors, the population `event_col` list-column a caller had to pre-nest themselves, and the `end_cap_offset`/`start_look_back`/`end_look_back` metadata columns. None of these names resolve to anything anymore. Existing episode metadata must be rewritten against the new constructors/columns below before calling `anchor()`; there is no compatibility alias.
