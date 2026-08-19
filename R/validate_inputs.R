@@ -282,7 +282,9 @@ validate_anchor_inputs <- function(
       "before_start_episode_offset",
       "after_start_episode_offset",
       "before_end_episode_offset",
-      "after_end_episode_offset"
+      "after_end_episode_offset",
+      "cap_start_to_episode",
+      "cap_end_to_episode"
     ),
     arg = "metadata"
   )
@@ -303,7 +305,9 @@ validate_anchor_inputs <- function(
     "before_start_episode_offset",
     "after_start_episode_offset",
     "before_end_episode_offset",
-    "after_end_episode_offset"
+    "after_end_episode_offset",
+    "cap_start_to_episode",
+    "cap_end_to_episode"
   )]
 
   population_anchor_columns(population_dt, metadata_dt)
