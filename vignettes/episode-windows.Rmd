@@ -66,7 +66,29 @@ See `documentation/definitions/Episode-Based Window Engine.md` for the complete 
 
 `outside_all_pregnancy` works differently: it doesn't use the before/after episode offsets at all, only `anchor_start_offset`/`anchor_end_offset`, which define the overall search range (`[T0 - 1172, T0]` above) that the gaps between episodes are computed within.
 
-`anchor_start_offset`/`anchor_end_offset` aren't only `outside_all_pregnancy`'s search range, though they're also a hard boundary applied to *every* constructor's window: `[T0 + anchor_start_offset, T0 + anchor_end_offset]`, clipped in independently of the border-offset formula above. Left `NA` (as for `current`/`prior`/`current_and_prior` in the metadata above), that boundary is simply not enforced. Setting it clips whatever window the border-offset formula produced, even down to nothing:
+The border-offset formula has no idea how long a selected episode actually lasted, though — `after_start_episode_offset = 400` always adds 400 days to `start_episode`, whether or not that episode's own `end_episode` came sooner. Two optional logical columns, `cap_start_to_episode`/`cap_end_to_episode` (both `NA`/unset by default, not read by `outside_all_pregnancy`), pull a window back inside its own selected episode's real bounds when that happens:
+
+```{r episode-cap}
+capped_metadata <- data.table(
+    variable_id = "current_capped",
+    concept_id = "DEMO",
+    constructor = "in_current_pregnancy",
+    selector = "ALL",
+    start_offset = 0L,
+    end_offset = 0L,
+    after_start_episode_offset = 400L, # 400 days after episode C's own start ...
+    cap_end_to_episode = TRUE # ... but never past episode C's own end
+)
+
+define_window(population, capped_metadata, episodes = episodes)[
+    window_valid == TRUE,
+    .(variable_id, window_start, window_end)
+]
+```
+
+Without the cap, `after_start_episode_offset = 400` alone would run to `2026-12-06`, four months past episode C's own end (`2026-08-01`); with `cap_end_to_episode = TRUE`, the window stops at the episode's real end instead.
+
+`anchor_start_offset`/`anchor_end_offset` aren't only `outside_all_pregnancy`'s search range, though — they're also a hard boundary applied to *every* constructor's window: `[T0 + anchor_start_offset, T0 + anchor_end_offset]`, clipped in independently of the border-offset formula and the episode-bounds cap above. Left `NA` (as for `current`/`prior`/`current_and_prior` in the metadata above), that boundary is simply not enforced. Setting it clips whatever window the border-offset formula produced, even down to nothing:
 
 ```{r anchor-clip}
 clipped_metadata <- data.table(

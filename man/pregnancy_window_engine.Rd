@@ -30,9 +30,16 @@ For \code{"CURRENT"}/\code{"PRIOR"}/\code{"CURRENT_AND_PRIOR"}, episodes are fir
 classified relative to the anchor (see \code{classify_episodes()}), then each
 selected episode independently contributes its own window(s) via
 \code{episode_windows()}, purely from its own \code{start_episode}/\code{end_episode}
-and the row's four border offsets. \code{"OUTSIDE_ALL"} is different: it
+and the row's four border offsets. Each of those windows is then
+optionally capped to the \emph{selected episode's own bounds}: when
+\code{cap_start_to_episode} is \code{TRUE}, \code{window_start} is raised up to at
+least that episode's \code{start_episode}; when \code{cap_end_to_episode} is
+\code{TRUE}, \code{window_end} is lowered down to at most that episode's
+\code{end_episode}. Both default to \code{NA}/unset (no change from the
+border-offset formula's own result). \code{"OUTSIDE_ALL"} is different: it
 finds the gaps \emph{between all} of a person's episodes inside
-\verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]} directly; the border offsets are not used.
+\verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]} directly; the border offsets and the two capping
+flags are not used.
 Regardless of \code{episode_select}, every candidate window is then clipped
 to that same \verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]} boundary via \code{clip_to_anchor_bounds()} -- for
 \code{"OUTSIDE_ALL"} this is a no-op (the gaps are already computed inside
