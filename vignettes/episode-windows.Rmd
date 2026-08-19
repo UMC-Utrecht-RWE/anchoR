@@ -29,6 +29,7 @@ population <- data.table(
 )
 ```
 
+
 `T0` falls inside the third episode, so that one is "current" and the other two are "prior". The four constructors select the current episode, every prior episode, both combined, or the gaps outside every episode.
 
 ```{r metadata}
@@ -56,6 +57,7 @@ define_window(population, metadata, episodes = episodes)[
 ]
 ```
 
+
 Every episode-based window is built from two independent border pairs: `before_start_episode_offset`/`after_start_episode_offset` (relative to the episode's own `start_episode`) and `before_end_episode_offset`/`after_end_episode_offset` (relative to `end_episode`). Each pair is read as `edge + offset`, `NA` meaning that side isn't set. `before_start_episode_offset` and `after_end_episode_offset` are the two "outer" sides (they point away from the episode); `after_start_episode_offset` and `before_end_episode_offset` are the "inner" sides (they point into it):
 
 - **Either outer side set alone** (as above: `current`'s `before_start_episode_offset = 0` and `after_end_episode_offset = 14`): the whole window becomes one shared window, that side's offset defining its edge directly, the other pair contributing whichever single value it has (or the unshifted edge, if it has nothing) for the opposite edge. `current`'s start is pinned to the episode's own start (`before_start_episode_offset = 0`); its end is 14 days past the episode's own end (`after_end_episode_offset = 14`).
@@ -76,7 +78,7 @@ capped_metadata <- data.table(
     selector = "ALL",
     start_offset = 0L,
     end_offset = 0L,
-    after_start_episode_offset = 400L, # 400 days after episode C's own start ...
+    after_start_episode_offset = 400L, # 400 days after episode C's own start
     cap_end_to_episode = TRUE # ... but never past episode C's own end
 )
 
@@ -85,6 +87,7 @@ define_window(population, capped_metadata, episodes = episodes)[
     .(variable_id, window_start, window_end)
 ]
 ```
+
 
 Without the cap, `after_start_episode_offset = 400` alone would run to `2026-12-06`, four months past episode C's own end (`2026-08-01`); with `cap_end_to_episode = TRUE`, the window stops at the episode's real end instead.
 
@@ -111,6 +114,7 @@ define_window(population, clipped_metadata, episodes = episodes)[
     .(variable_id, window_start, window_end)
 ]
 ```
+
 
 The current episode's own unshifted span (`[2025-11-01, 2026-08-01]`) gets clipped down to `[2026-01-16, 2026-02-15]`, the last 30 days before `T0`.
 
