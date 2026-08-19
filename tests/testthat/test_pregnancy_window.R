@@ -243,6 +243,7 @@ cases_window_dt <- function(
   before_start = NA_real_, after_start = NA_real_,
   before_end = NA_real_, after_end = NA_real_,
   anchor_start_offset = NA_real_, anchor_end_offset = NA_real_,
+  cap_start_to_episode = NA, cap_end_to_episode = NA,
   t0 = as.Date("2026-03-07"),
   episodes = NULL
 ) {
@@ -262,6 +263,8 @@ cases_window_dt <- function(
     after_start_episode_offset = after_start,
     before_end_episode_offset = before_end,
     after_end_episode_offset = after_end,
+    cap_start_to_episode = cap_start_to_episode,
+    cap_end_to_episode = cap_end_to_episode,
     .episodes = list(episodes)
   )
 }
@@ -332,6 +335,48 @@ testthat::test_that("pregnancy_window_engine clips a border-offset window to anc
   window_valid <- !is.na(out$window_start) & !is.na(out$window_end) &
     out$window_start <= out$window_end
   testthat::expect_equal(window_valid, c(TRUE, FALSE))
+})
+
+testthat::test_that("pregnancy_window_engine cap_end_to_episode stops a window from overshooting the episode's real end", { # nolint: line_length_linter.
+  # Current episode is [2026-01-07, 2026-05-07]. after_start_episode_offset
+  # = 200 alone builds a window running to 2026-07-26, well past the
+  # episode's actual end -- cap_end_to_episode pulls it back to 2026-05-07.
+  capped <- pregnancy_window_engine(
+    cases_window_dt(
+      "in_current_pregnancy",
+      after_start = 200, cap_end_to_episode = TRUE
+    ),
+    episode_select = "CURRENT"
+  )
+  testthat::expect_equal(capped$window_start, as.Date("2026-01-07"))
+  testthat::expect_equal(capped$window_end, as.Date("2026-05-07"))
+
+  uncapped <- pregnancy_window_engine(
+    cases_window_dt("in_current_pregnancy", after_start = 200),
+    episode_select = "CURRENT"
+  )
+  testthat::expect_equal(uncapped$window_end, as.Date("2026-07-26"))
+})
+
+testthat::test_that("pregnancy_window_engine cap_start_to_episode stops a window from starting before the episode begins", { # nolint: line_length_linter.
+  # Prior episode is [2025-01-07, 2025-05-07]. before_start_episode_offset
+  # = -30, after_start_episode_offset = 10 builds [2024-12-08, 2025-01-17]
+  # -- cap_start_to_episode pulls the start back up to 2025-01-07.
+  capped <- pregnancy_window_engine(
+    cases_window_dt(
+      "in_prior_pregnancy",
+      before_start = -30, after_start = 10, cap_start_to_episode = TRUE
+    ),
+    episode_select = "PRIOR"
+  )
+  testthat::expect_equal(capped$window_start, as.Date("2025-01-07"))
+  testthat::expect_equal(capped$window_end, as.Date("2025-01-17"))
+
+  uncapped <- pregnancy_window_engine(
+    cases_window_dt("in_prior_pregnancy", before_start = -30, after_start = 10),
+    episode_select = "PRIOR"
+  )
+  testthat::expect_equal(uncapped$window_start, as.Date("2024-12-08"))
 })
 
 testthat::test_that("pregnancy_window_engine CURRENT_AND_PRIOR unions both episodes' windows", { # nolint: line_length_linter.

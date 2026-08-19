@@ -368,10 +368,17 @@ clip_to_anchor_bounds <- function(
 #' classified relative to the anchor (see `classify_episodes()`), then each
 #' selected episode independently contributes its own window(s) via
 #' `episode_windows()`, purely from its own `start_episode`/`end_episode`
-#' and the row's four border offsets. `"OUTSIDE_ALL"` is different: it
+#' and the row's four border offsets. Each of those windows is then
+#' optionally capped to the *selected episode's own bounds*: when
+#' `cap_start_to_episode` is `TRUE`, `window_start` is raised up to at
+#' least that episode's `start_episode`; when `cap_end_to_episode` is
+#' `TRUE`, `window_end` is lowered down to at most that episode's
+#' `end_episode`. Both default to `NA`/unset (no change from the
+#' border-offset formula's own result). `"OUTSIDE_ALL"` is different: it
 #' finds the gaps *between all* of a person's episodes inside
 #' `[anchor_start_col + anchor_start_offset, anchor_end_col +
-#' anchor_end_offset]` directly; the border offsets are not used.
+#' anchor_end_offset]` directly; the border offsets and the two capping
+#' flags are not used.
 #' Regardless of `episode_select`, every candidate window is then clipped
 #' to that same `[anchor_start_col + anchor_start_offset, anchor_end_col +
 #' anchor_end_offset]` boundary via `clip_to_anchor_bounds()` -- for
@@ -419,11 +426,18 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
       windows <- data.table::rbindlist(lapply(
         seq_len(nrow(selected)),
         function(j) {
-          episode_windows(
+          w <- episode_windows(
             selected$start_episode[[j]], selected$end_episode[[j]],
             row$before_start_episode_offset, row$after_start_episode_offset,
             row$before_end_episode_offset, row$after_end_episode_offset
           )
+          if (isTRUE(row$cap_start_to_episode)) {
+            w[, window_start := pmax(window_start, selected$start_episode[[j]])]
+          }
+          if (isTRUE(row$cap_end_to_episode)) {
+            w[, window_end := pmin(window_end, selected$end_episode[[j]])]
+          }
+          w[]
         }
       ))
     }
@@ -462,7 +476,8 @@ episode_required_cols <- c(
   "anchor_start_col", "anchor_end_col",
   "anchor_start_offset", "anchor_end_offset",
   "before_start_episode_offset", "after_start_episode_offset",
-  "before_end_episode_offset", "after_end_episode_offset"
+  "before_end_episode_offset", "after_end_episode_offset",
+  "cap_start_to_episode", "cap_end_to_episode"
 )
 
 # Look for records in the episode containing the anchor date (T0).
