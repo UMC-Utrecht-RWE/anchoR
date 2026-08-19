@@ -13,7 +13,9 @@ Every constructor in this family answers three questions about a person's episod
    - `outside_all_pregnancy`: the gaps between all episodes, not any specific one
 2. **Where do a selected episode's window boundaries sit, relative to that episode?**
    - Two offset pairs, one around `start_episode` and one around `end_episode`. See "Building a window from a selected episode" below.
-3. **Does the window need to stay inside a hard, anchor-relative boundary?**
+3. **Should the window be pulled back inside that same episode's own real bounds, if it overshoots them?**
+   - `cap_start_to_episode`/`cap_end_to_episode` optionally cap a window to the selected episode's actual `start_episode`/`end_episode`. See "Capping a window to its own episode's real bounds" below.
+4. **Does the window need to stay inside a hard, anchor-relative boundary?**
    - `anchor_start_offset`/`anchor_end_offset` optionally clip every resulting window to `[T0 + anchor_start_offset, T0 + anchor_end_offset]`, for all four constructors. See "The hard anchor-relative boundary" below.
 
 There is one shared internal engine underneath (`pregnancy_window_engine()`); the four public constructor names below are that engine pre-configured with a selection rule. Users interact with it through `define_window()` or `anchor()`, rather than calling the internal engine directly. **The formula in this page is a summary — [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) is the canonical, complete description; if the two ever disagree, that page is right.**
@@ -54,6 +56,28 @@ Each side is `edge + offset` (`0` = exactly on the edge, `NA` = not set):
 See [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) for the complete rule and more worked examples, including the case where the two pairs disagree (one outer, one inner).
 
 `outside_all_pregnancy` doesn't use these four columns at all — see its own row below.
+
+## Capping a window to its own episode's real bounds: `cap_start_to_episode`/`cap_end_to_episode`
+
+The border-offset formula above has no idea how long a selected episode actually lasted — `after_start_episode_offset = 140` always adds 140 days to `start_episode`, whether or not that particular episode's `end_episode` came sooner. Two optional logical columns close that gap, both `NA`/unset by default (no effect on existing metadata):
+
+- `cap_start_to_episode = TRUE`: raises `window_start` up to at least the selected episode's own `start_episode`.
+- `cap_end_to_episode = TRUE`: lowers `window_end` down to at most the selected episode's own `end_episode`.
+
+Both apply per selected episode (so with `in_prior_pregnancy`, each prior episode is capped against its *own* bounds, not a shared value), right after the border-offset formula builds a window and before the anchor-relative boundary below is applied. Neither errors — a window capped past its other edge just comes out invalid, like any other empty window. `outside_all_pregnancy` doesn't read these either.
+
+```r
+metadata <- data.table(
+  variable_id  = "gest_diabetes_prior_early",
+  concept_id   = "GEST_DIAB",
+  constructor  = "in_prior_pregnancy",
+  selector     = "LATEST",
+  start_offset = 0L,
+  end_offset   = 0L,
+  after_start_episode_offset = 140,  # up to 140 days after each prior episode's start ...
+  cap_end_to_episode = TRUE          # ... but never past that same episode's real end
+)
+```
 
 ## The hard anchor-relative boundary: `anchor_start_offset`/`anchor_end_offset`
 
@@ -115,6 +139,7 @@ Alongside the usual columns (`variable_id`, `concept_id`, `selector`, `start_off
 
 - `constructor`: one of the four names above
 - `before_start_episode_offset` / `after_start_episode_offset`, `before_end_episode_offset` / `after_end_episode_offset` (all default `NA_real_`): the border-offset pairs described above
+- `cap_start_to_episode` / `cap_end_to_episode` (default `NA`): optionally pull a window back inside its own selected episode's real bounds, described above
 - `anchor_start_offset` / `anchor_end_offset` (default `NA_real_`): the hard anchor-relative boundary described above, applied to all four constructors (and also `outside_all_pregnancy`'s own search range)
 
 ```r
@@ -185,6 +210,7 @@ Every row below was run through `define_window()` directly and verified against 
 | `in_current_pregnancy` (no border or anchor offsets set)                                       | `[2025-11-01, 2026-08-01]` (episode 3's own unshifted span)                                                                                       |
 | `in_current_pregnancy` (`after_end_episode_offset = 14`)                                       | `[2025-11-01, 2026-08-15]` (episode 3, end extended 14 days — `after_end_episode_offset` is an outer side, so this shares a window with the unshifted start) |
 | `in_current_pregnancy` (no border offsets, `anchor_start_offset = -30, anchor_end_offset = 0`) | `[2026-01-16, 2026-02-15]` (episode 3's unshifted span, clipped to the last 30 days before `T0`)                                                  |
+| `in_current_pregnancy` (`after_start_episode_offset = 400, cap_end_to_episode = TRUE`)         | `[2025-11-01, 2026-08-01]` (raw region would reach into 2026-12; capped back to episode 3's own real end)                                         |
 | `in_prior_pregnancy` (no border or anchor offsets set)                                         | `[2023-01-01, 2023-09-01]` and `[2024-03-01, 2024-11-15]`                                                                                         |
 | `in_prior_pregnancy` (`before_start_episode_offset = 0, after_start_episode_offset = 90`)      | `[2023-01-01, 2023-04-01]` and `[2024-03-01, 2024-05-30]` (both sides of the start pair are set, so each prior episode's start pair is its own region regardless of the end pair) |
 | `in_current_and_prior` (no border or anchor offsets set)                                       | episode 3's span, plus both prior episodes' spans (3 windows total)                                                                               |
@@ -196,6 +222,8 @@ Notes on the `in_prior_pregnancy` "first 90 days" row: setting both sides of the
 
 Notes on the `in_current_pregnancy` clipped row: `anchor_start_offset`/`anchor_end_offset` don't shape a window the way the border-offset pairs do — they narrow whatever window the border-offset formula already produced. Set them wide enough (or leave them `NA`) if you don't want them to interfere with a border-offset window that's meant to reach further than `T0`.
 
+Notes on the `in_current_pregnancy` capped row: `after_start_episode_offset = 400` alone builds a window running to `2026-12-06` (episode 3's start plus 400 days), well past episode 3's own end (`2026-08-01`); `cap_end_to_episode = TRUE` pulls that back to the episode's real end. This is a different mechanism from `anchor_start_offset`/`anchor_end_offset` above: the cap is relative to the *selected episode's own bounds*, not to `T0`.
+
 ## Extending beyond pregnancy
 
 The internal `pregnancy_window_engine()` only knows about `start_episode`/`end_episode` and an anchor date, so the mechanics are not pregnancy-specific. The currently exposed constructor names are pregnancy-oriented, however. A recurring obesity or cancer diagnosis can reuse them unchanged: build an `episodes` table for that condition (deciding upstream how diagnoses collapse into episodes) and pass it the same way. If the pregnancy-oriented names would be misleading in your project, wrap the same behavior in a clearly named custom constructor made with `make_constructor()`.
@@ -205,4 +233,5 @@ The internal `pregnancy_window_engine()` only knows about `start_episode`/`end_e
 - `outside_all_pregnancy`'s search range and "an episode always fences a gap" rule are the implemented interpretation of `pregnancy_examples.md`'s "outside pregnancy" description, worth double-checking against a few real cases, especially ones where `T0` falls inside an ongoing episode.
 - Watch for a set outer side (`before_start_episode_offset`/`after_end_episode_offset`) unexpectedly pulling the *other* pair into the same shared window — if you meant that other pair's single set side to form its own separate region, it won't, unless you leave every outer side `NA` on that variable.
 - If you set `anchor_start_offset`/`anchor_end_offset` on a variable that also uses border offsets, double-check the two aren't fighting each other — a border-offset window that's meant to reach past the anchor boundary will silently come back narrower (or invalid) instead of erroring.
+- `cap_start_to_episode`/`cap_end_to_episode` cap against the *selected* episode's own bounds — with `in_prior_pregnancy`/`in_current_and_prior`, that means each candidate window is capped independently against whichever episode produced it, not a single shared value across all of them.
 - A custom constructor built with `make_constructor()` (see the main package docs) still works alongside these; pass it via `define_window()`'s `constructor_env` argument if it isn't defined in the global environment.

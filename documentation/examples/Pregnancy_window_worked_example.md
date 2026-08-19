@@ -27,7 +27,8 @@ make_windows <- function(
   constructor,
   anchor_start_offset = NA_real_, anchor_end_offset = NA_real_,
   before_start_episode_offset = NA_real_, after_start_episode_offset = NA_real_,
-  before_end_episode_offset = NA_real_, after_end_episode_offset = NA_real_
+  before_end_episode_offset = NA_real_, after_end_episode_offset = NA_real_,
+  cap_start_to_episode = NA, cap_end_to_episode = NA
 ) {
   metadata <- data.table(
     variable_id = "demo",
@@ -41,7 +42,9 @@ make_windows <- function(
     before_start_episode_offset = before_start_episode_offset,
     after_start_episode_offset = after_start_episode_offset,
     before_end_episode_offset = before_end_episode_offset,
-    after_end_episode_offset = after_end_episode_offset
+    after_end_episode_offset = after_end_episode_offset,
+    cap_start_to_episode = cap_start_to_episode,
+    cap_end_to_episode = cap_end_to_episode
   )
   define_window(population, metadata, episodes = episodes)[
     window_valid == TRUE,
@@ -116,6 +119,33 @@ make_windows("in_current_and_prior")
 | 2025-11-01   | 2026-08-01 | C (current)   |
 | 2023-01-01   | 2023-09-01 | A (prior)     |
 | 2024-03-01   | 2024-11-15 | B (prior)     |
+
+## Capping a window to its own episode's real bounds
+
+The border-offset formula doesn't know how long a selected episode actually is: `after_start_episode_offset = 400` always adds 400 days to `start_episode`, regardless of where that episode's `end_episode` actually falls. On episode C ([2025-11-01, 2026-08-01], 273 days long), that overshoots by four months:
+
+```r
+make_windows("in_current_pregnancy", after_start_episode_offset = 400)
+```
+
+| window_start | window_end |
+| ------------ | ---------- |
+| 2025-11-01   | 2026-12-06 |
+
+`cap_end_to_episode = TRUE` pulls that back to episode C's own real end instead:
+
+```r
+make_windows(
+  "in_current_pregnancy", after_start_episode_offset = 400,
+  cap_end_to_episode = TRUE
+)
+```
+
+| window_start | window_end | note                                  |
+| ------------ | ---------- | -------------------------------------- |
+| 2025-11-01   | 2026-08-01 | end pulled back to episode C's own end |
+
+`cap_start_to_episode` works the same way on the opposite edge. Both default to `NA` (no effect) and apply per selected episode — with `in_prior_pregnancy`, each prior episode is capped against its own bounds independently, not a shared value.
 
 ## The hard anchor-relative boundary
 
