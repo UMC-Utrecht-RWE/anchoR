@@ -157,7 +157,7 @@ With no border offsets and no anchor offsets set at all (as above), each prior e
 
 ## Step 3: anchor and read the result
 
-Nothing else changes: `anchor()`/`anchor_by_variable()` and `get_anchor_result()` work exactly as they do for `GENERIC` metadata, just with `episodes` passed alongside `population`/`metadata`/`concepts`.
+Nothing else changes: `anchor()` and `get_anchor_result()` work exactly as they do for `GENERIC` metadata, just with `episodes` passed alongside `population`/`metadata`/`concepts`.
 
 ```r
 concepts <- data.table(

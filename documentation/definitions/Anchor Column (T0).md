@@ -1,4 +1,4 @@
-Passed to `anchor()` / `anchor_by_variable()` / [define_window()](<define_window().md>) as `anchor_col`. 
+Passed to `anchor()` / [define_window()](<define_window().md>) as `anchor_col`. 
 
 If a population's index date is named something else (e.g. `index_date`), pass its name via `anchor_col`, the output still writes it under the column `T0` regardless.
 

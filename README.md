@@ -23,9 +23,10 @@ From those inputs, `anchoR` builds one person-variable window, queries the conce
 ## Main functions
 
 - `define_window()`: build one anchoring window per person and per variable
-- `anchor()`: compute all requested variables in one pass and replace only their parquet partitions
-- `anchor_by_variable()`: process variables in bounded chunks while still replacing each variable's partition independently
-- `anchor_by_selector()`: group all variables using the same selector into one query
+- `anchor()`: compute requested variables and replace only their parquet partitions, in one of three modes controlled by `by`:
+  - `by = "whole"` (default): everything in one pass
+  - `by = "variable"`: process variables in bounded chunks while still replacing each variable's partition independently
+  - `by = "selector"`: group all variables using the same selector into one query
 - `get_anchor_result()`: read the anchored parquet hive back as a long or wide `data.table`
 - `make_constructor()`: build a custom window-construction rule without editing anchoR itself
 - `filter_supported_metadata()`: drop metadata rows whose selectors are not implemented in the package
