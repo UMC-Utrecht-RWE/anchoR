@@ -279,7 +279,7 @@ publish_anchor_partitions <- function(
 
 #' Write an in-memory accumulator table to the real output hive.
 #'
-#' Used by [anchor_by_variable()]'s "memory" staging mode: instead of a
+#' Used by [anchor_variable_impl()]'s "memory" staging mode: instead of a
 #' local scratch hive on disk, chunk results pile up in one DuckDB table
 #' (see `add_table_accumulation()`), and this is the single write that
 #' finally sends that table to `anchor_hive_path` as parquet. Because the
@@ -340,12 +340,12 @@ order_variable_ids_by_selector <- function(metadata_dt) {
 
 #' Do the windowing and selector work for one batch of variables.
 #'
-#' Shared by [anchor()] and [anchor_by_variable()] so the expensive setup
-#' (opening a DuckDB connection, loading `concepts`) only happens once,
-#' instead of once per variable. This function does the part that's
-#' different for each batch: building the person-by-variable time windows,
-#' and running the selector queries that turn those windows into anchored
-#' values.
+#' Shared by [anchor_whole_impl()] and [anchor_variable_impl()] so the
+#' expensive setup (opening a DuckDB connection, loading `concepts`) only
+#' happens once, instead of once per variable. This function does the part
+#' that's different for each batch: building the person-by-variable time
+#' windows, and running the selector queries that turn those windows into
+#' anchored values.
 #'
 #' @param con An open DBI connection with `concepts` already loaded.
 #' @param population_dt Validated population `data.table` (not yet trimmed to
@@ -458,47 +458,22 @@ anchor_impl <- function(
   invisible(NULL)
 }
 
-#' Anchor Study Variables to an Index Date
+#' Do the "whole" anchoring pass: one [anchor_impl()] call for everything.
 #'
-#' Applies metadata-driven windowing and selector rules to a concept table,
-#' producing one anchored value and event date per person-variable combination.
-#'
-#' @param population A data frame containing the study population. Must include
-#'   a \code{person_id} column and the anchor date column specified by
-#'   \code{anchor_col}.
-#' @param metadata A data frame describing the variables to anchor. Must contain
-#'   the columns required by \code{validate_anchor_inputs()}.
-#' @param concepts A concept table as a data frame, a DuckDB file path whose
-#'   \code{concept_table} contains \code{person_id}, \code{concept_id}, and
-#'   \code{date}, or parquet file location(s).
-#' @param episodes Optional data frame with \code{person_id},
-#'   \code{start_episode}, \code{end_episode} columns. Required when
-#'   \code{metadata} uses an episode-based constructor
-#'   (\code{in_current_pregnancy}, \code{in_prior_pregnancy},
-#'   \code{in_current_and_prior}, \code{outside_all_pregnancy}); see
-#'   \code{R/pregnancy_window.R}.
-#' @param anchor_col Character. Name of the column in \code{population} to use
-#'   as the index date when metadata does not specify an anchor column.
-#'   Defaults to \code{"T0"}.
-#' @param anchor_hive_path Character. Path to an existing (or creatable)
-#'   directory where selector query results are written as a partitioned parquet
-#'   hive. Must not be \code{NULL}.
-#' @param prepare_con Optional function taking a single argument (the open
-#'   DBI connection selector queries run against).
-#'
+#' @inheritParams anchor
 #' @return Invisibly `NULL`; writes parquet files to `anchor_hive_path` as a
 #'   side effect.
-#' @export
-anchor <- function(
+#' @keywords internal
+#' @noRd
+anchor_whole_impl <- function(
   population,
   metadata,
   concepts,
-  episodes = NULL,
-  anchor_col = "T0",
-  anchor_hive_path = NULL,
-  prepare_con = NULL
+  episodes,
+  anchor_col,
+  anchor_hive_path,
+  prepare_con
 ) {
-  logger::log_debug("Starting anchor().")
   # Normalize inputs at the beginning so the rest
   # of the workflow has stable input.
   validated <- validate_anchor_inputs(
@@ -547,7 +522,7 @@ anchor <- function(
   )
   run_prepare_con(con, prepare_con)
 
-  result <- anchor_impl(
+  anchor_impl(
     con = con,
     population_dt = validated$population,
     metadata_dt = validated$metadata,
@@ -555,14 +530,11 @@ anchor <- function(
     episodes_dt = validated$episodes,
     anchor_hive_path = anchor_hive_path
   )
-
-  logger::log_debug("Finished anchor().")
-  result
 }
 
-#' Anchor study variables in batches
+#' Do the "variable" anchoring pass: batch through metadata in chunks.
 #'
-#' Does the same job as [anchor()], but works through \code{metadata} in
+#' Same job as [anchor_whole_impl()], but works through \code{metadata} in
 #' batches of \code{chunk_size} variables at a time (default 20) instead of
 #' all at once.
 #'
@@ -600,47 +572,27 @@ anchor <- function(
 #' once, which is much cheaper than running one query per variable.
 #' Variables are sorted by selector before being split into batches, so
 #' each batch groups same-selector variables together as much as
-#' \code{chunk_size} allows (see [anchor_by_selector()] if you'd rather
+#' \code{chunk_size} allows (see [anchor_selector_impl()] if you'd rather
 #' always process every variable sharing a selector together, with no
 #' batch-size limit).
 #'
 #' @inheritParams anchor
-#' @param chunk_size How many variables to process per batch. Bigger
-#'   batches mean fewer (and cheaper) scans of \code{concepts}, but (with
-#'   \code{publish = "once"}) also throw away more work if a batch fails
-#'   partway through, since nothing is saved until the whole call succeeds.
-#'   Use \code{1} to process one variable at a time.
-#' @param staging_dir Folder to use for DuckDB's own temporary files, and
-#'   (only when \code{staging_mode = "disk"}) for the local scratch hive
-#'   every batch writes into. Defaults to \code{tempdir()}. Only change
-#'   this if your machine's default temporary folder is itself slow or on
-#'   a network drive.
-#' @param staging_mode Where each batch's results are held before being
-#'   published: \code{"memory"} (default) accumulates them in one DuckDB
-#'   table; \code{"disk"} writes them to a local scratch parquet hive
-#'   instead. See Details.
-#' @param publish When to write results to \code{anchor_hive_path}:
-#'   \code{"once"} (default) after the whole call succeeds, all together;
-#'   \code{"per_chunk"} after each batch, incrementally. See Details.
-#'
 #' @return Invisibly returns the variable ids that were processed.
-#' @export
-anchor_by_variable <- function(
+#' @keywords internal
+#' @noRd
+anchor_variable_impl <- function(
   population,
   metadata,
   concepts,
-  episodes = NULL,
-  anchor_col = "T0",
-  anchor_hive_path = NULL,
-  chunk_size = 20L,
-  staging_dir = NULL,
-  staging_mode = c("memory", "disk"),
-  publish = c("once", "per_chunk"),
-  prepare_con = NULL
+  episodes,
+  anchor_col,
+  anchor_hive_path,
+  chunk_size,
+  staging_dir,
+  staging_mode,
+  publish,
+  prepare_con
 ) {
-  staging_mode <- match.arg(staging_mode)
-  publish <- match.arg(publish)
-
   if (!is.numeric(chunk_size) || length(chunk_size) != 1L || chunk_size < 1) {
     stop_log("`chunk_size` must be a single positive number.")
   }
@@ -673,7 +625,7 @@ anchor_by_variable <- function(
   logger::log_debug(
     sprintf(
       paste(
-        "`anchor_by_variable()` received %d population row(s),",
+        "`anchor_variable_impl()` received %d population row(s),",
         "%d metadata row(s), anchor_col `%s`, concept source type `%s`,",
         "staging_mode `%s`, publish `%s`."
       ),
@@ -890,7 +842,7 @@ anchor_by_variable <- function(
 
   logger::log_debug(
     sprintf(
-      "Finished anchor_by_variable() for %d variable_id(s) in %d chunk(s).",
+      "Finished anchor_variable_impl() for %d variable_id(s) in %d chunk(s).",
       length(variable_ids),
       length(variable_id_chunks)
     )
@@ -898,32 +850,33 @@ anchor_by_variable <- function(
   invisible(variable_ids)
 }
 
-#' Anchor study variables, one selector at a time
+#' Do the "selector" anchoring pass: one [anchor_impl()] call per selector.
 #'
-#' Runs [anchor()] once for each distinct \code{selector} value found in
-#' \code{metadata}, so every variable that shares a selector is covered by
-#' a single query (and a single join against \code{concepts}), no matter
-#' how many variables share it; unlike [anchor_by_variable()], there is no
-#' \code{chunk_size} limit splitting a selector's variables across more
-#' than one query. Affected \code{variable_id} partitions are cleared once
-#' before selector processing begins. The calls leave the rest of
-#' \code{anchor_hive_path} untouched, so rerunning \code{anchor_by_selector()}
-#' with the same or a smaller \code{metadata} is safe; it just does not give
-#' you [anchor_by_variable()]'s \code{chunk_size}-bounded blast radius, since
-#' every variable sharing a selector is recomputed together in one query.
+#' Runs the windowing/selector work once for each distinct \code{selector}
+#' value found in \code{metadata}, so every variable that shares a selector
+#' is covered by a single query (and a single join against
+#' \code{concepts}), no matter how many variables share it; unlike
+#' [anchor_variable_impl()], there is no \code{chunk_size} limit splitting a
+#' selector's variables across more than one query. Affected
+#' \code{variable_id} partitions are cleared once before selector processing
+#' begins. The calls leave the rest of \code{anchor_hive_path} untouched, so
+#' rerunning with the same or a smaller \code{metadata} is safe; it just
+#' does not give you [anchor_variable_impl()]'s \code{chunk_size}-bounded
+#' blast radius, since every variable sharing a selector is recomputed
+#' together in one query.
 #'
 #' @inheritParams anchor
-#'
 #' @return Invisibly returns the selector values that were processed.
-#' @export
-anchor_by_selector <- function(
+#' @keywords internal
+#' @noRd
+anchor_selector_impl <- function(
   population,
   metadata,
   concepts,
-  episodes = NULL,
-  anchor_col = "T0",
-  anchor_hive_path = NULL,
-  prepare_con = NULL
+  episodes,
+  anchor_col,
+  anchor_hive_path,
+  prepare_con
 ) {
   validated <- validate_anchor_inputs(
     population = population,
@@ -939,7 +892,7 @@ anchor_by_selector <- function(
   logger::log_debug(
     sprintf(
       paste(
-        "`anchor_by_selector()` received %d population row(s),",
+        "`anchor_selector_impl()` received %d population row(s),",
         "%d metadata row(s) across %d selector(s)."
       ),
       nrow(validated$population),
@@ -998,9 +951,163 @@ anchor_by_selector <- function(
 
   logger::log_debug(
     sprintf(
-      "Finished anchor_by_selector() for %d selector(s).",
+      "Finished anchor_selector_impl() for %d selector(s).",
       length(selectors)
     )
   )
   invisible(selectors)
+}
+
+#' Anchor Study Variables to an Index Date
+#'
+#' Applies metadata-driven windowing and selector rules to a concept table,
+#' producing one anchored value and event date per person-variable combination.
+#'
+#' @param population A data frame containing the study population. Must include
+#'   a \code{person_id} column and the anchor date column specified by
+#'   \code{anchor_col}.
+#' @param metadata A data frame describing the variables to anchor. Must contain
+#'   the columns required by \code{validate_anchor_inputs()}.
+#' @param concepts A concept table as a data frame, a DuckDB file path whose
+#'   \code{concept_table} contains \code{person_id}, \code{concept_id}, and
+#'   \code{date}, or parquet file location(s).
+#' @param episodes Optional data frame with \code{person_id},
+#'   \code{start_episode}, \code{end_episode} columns. Required when
+#'   \code{metadata} uses an episode-based constructor
+#'   (\code{in_current_pregnancy}, \code{in_prior_pregnancy},
+#'   \code{in_current_and_prior}, \code{outside_all_pregnancy}); see
+#'   \code{R/pregnancy_window.R}.
+#' @param anchor_col Character. Name of the column in \code{population} to use
+#'   as the index date when metadata does not specify an anchor column.
+#'   Defaults to \code{"T0"}.
+#' @param anchor_hive_path Character. Path to an existing (or creatable)
+#'   directory where selector query results are written as a partitioned parquet
+#'   hive. Must not be \code{NULL}.
+#' @param by How \code{metadata} is worked through:
+#'   \describe{
+#'     \item{\code{"whole"}}{(default) everything in one pass, one query per
+#'       selector. See Details.}
+#'     \item{\code{"variable"}}{\code{metadata} is worked through in batches
+#'       of \code{chunk_size} variables, so a single failing variable only
+#'       ever costs its own batch. See Details and \code{chunk_size},
+#'       \code{staging_dir}, \code{staging_mode}, \code{publish} below.}
+#'     \item{\code{"selector"}}{one pass per distinct \code{selector} value
+#'       in \code{metadata}, with no \code{chunk_size} limit; every variable
+#'       sharing a selector is always processed together. See Details.}
+#'   }
+#'
+#'   With \code{by = "variable"}, every batch's results are held somewhere
+#'   other than \code{anchor_hive_path} until they're ready to publish,
+#'   either in one growing DuckDB table (\code{staging_mode = "memory"}, the
+#'   default), or in a scratch folder on local disk
+#'   (\code{staging_mode = "disk"}, under \code{staging_dir}). Either way,
+#'   this keeps the repeated reading and writing that happens while batches
+#'   are being computed off \code{anchor_hive_path}, which matters when it
+#'   points at slow or network storage. \code{"memory"} avoids an extra
+#'   local write-then-read round trip that \code{"disk"} needs, but holds
+#'   the whole run's output in memory (DuckDB spills to local disk on its
+#'   own if that gets too big); \code{"disk"} bounds memory use to one batch
+#'   at a time instead.
+#'
+#'   \code{publish} controls when that held output gets written to
+#'   \code{anchor_hive_path}. With \code{publish = "once"} (the default),
+#'   nothing is written until every batch has finished successfully, and if
+#'   any batch fails, nothing is written at all, \code{anchor_hive_path} is
+#'   left exactly as it was before the call, and the error is raised, so you
+#'   never end up with some variables refreshed and others not. With
+#'   \code{publish = "per_chunk"}, each batch's results are written as soon
+#'   as that batch finishes, so a later batch's failure doesn't discard
+#'   earlier batches' already-published results.
+#'
+#'   Whichever combination is used, publishing only ever replaces the
+#'   \code{variable_id} partitions that were computed and leaves the rest of
+#'   \code{anchor_hive_path} untouched, so re-running for just a few
+#'   variables is always safe.
+#' @param chunk_size Only used when \code{by = "variable"}. How many
+#'   variables to process per batch. Bigger batches mean fewer (and cheaper)
+#'   scans of \code{concepts}, but (with \code{publish = "once"}) also throw
+#'   away more work if a batch fails partway through, since nothing is saved
+#'   until the whole call succeeds. Use \code{1} to process one variable at
+#'   a time. Variables are sorted by selector before being split into
+#'   batches, so each batch groups same-selector variables together as much
+#'   as \code{chunk_size} allows.
+#' @param staging_dir Only used when \code{by = "variable"}. Folder to use
+#'   for DuckDB's own temporary files, and (only when
+#'   \code{staging_mode = "disk"}) for the local scratch hive every batch
+#'   writes into. Defaults to \code{tempdir()}. Only change this if your
+#'   machine's default temporary folder is itself slow or on a network
+#'   drive.
+#' @param staging_mode Only used when \code{by = "variable"}. Where each
+#'   batch's results are held before being published: \code{"memory"}
+#'   (default) accumulates them in one DuckDB table; \code{"disk"} writes
+#'   them to a local scratch parquet hive instead. See Details.
+#' @param publish Only used when \code{by = "variable"}. When to write
+#'   results to \code{anchor_hive_path}: \code{"once"} (default) after the
+#'   whole call succeeds, all together; \code{"per_chunk"} after each batch,
+#'   incrementally. See Details.
+#' @param prepare_con Optional function taking a single argument (the open
+#'   DBI connection selector queries run against).
+#'
+#' @return Invisibly `NULL` when \code{by = "whole"}; otherwise, invisibly,
+#'   the \code{variable_id} values (\code{by = "variable"}) or
+#'   \code{selector} values (\code{by = "selector"}) that were processed.
+#'   Writes parquet files to \code{anchor_hive_path} as a side effect.
+#' @export
+anchor <- function(
+  population,
+  metadata,
+  concepts,
+  episodes = NULL,
+  anchor_col = "T0",
+  anchor_hive_path = NULL,
+  by = c("whole", "variable", "selector"),
+  chunk_size = 20L,
+  staging_dir = NULL,
+  staging_mode = c("memory", "disk"),
+  publish = c("once", "per_chunk"),
+  prepare_con = NULL
+) {
+  logger::log_debug("Starting anchor().")
+
+  by <- match.arg(by)
+  staging_mode <- match.arg(staging_mode)
+  publish <- match.arg(publish)
+
+  result <- switch(
+    by,
+    whole = anchor_whole_impl(
+      population = population,
+      metadata = metadata,
+      concepts = concepts,
+      episodes = episodes,
+      anchor_col = anchor_col,
+      anchor_hive_path = anchor_hive_path,
+      prepare_con = prepare_con
+    ),
+    variable = anchor_variable_impl(
+      population = population,
+      metadata = metadata,
+      concepts = concepts,
+      episodes = episodes,
+      anchor_col = anchor_col,
+      anchor_hive_path = anchor_hive_path,
+      chunk_size = chunk_size,
+      staging_dir = staging_dir,
+      staging_mode = staging_mode,
+      publish = publish,
+      prepare_con = prepare_con
+    ),
+    selector = anchor_selector_impl(
+      population = population,
+      metadata = metadata,
+      concepts = concepts,
+      episodes = episodes,
+      anchor_col = anchor_col,
+      anchor_hive_path = anchor_hive_path,
+      prepare_con = prepare_con
+    )
+  )
+
+  logger::log_debug("Finished anchor().")
+  result
 }
