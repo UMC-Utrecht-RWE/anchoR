@@ -4,7 +4,7 @@ Every episode-based constructor is this one engine, pre-configured with an `epis
 
 Episodes come from the [Episodes](Episodes.md) input table, nested onto [Population](Population.md) internally (one small `data.table(start_episode, end_episode)` per person, in a `.episodes` list-column) before any constructor runs; a caller only ever deals with the flat `episodes` table.
 
-There are three independent steps: **which episode(s) are selected**, **where each selected episode's window(s) sit**, and **clipping every resulting window to a hard anchor-relative boundary**.
+There are four independent steps: **which episode(s) are selected**, **where each selected episode's window(s) sit**, **optionally capping each window to that same episode's own real bounds**, and **clipping every resulting window to a hard anchor-relative boundary**.
 
 ## Step 1: classifying episodes relative to the anchor
 
@@ -53,7 +53,23 @@ The last two rows are the case worth internalizing for full pairs: a full pair (
 
 If a selected episode's engine call produces two regions (rule 1, or two pairs each independently "inner-only" under rule 3) or a constructor selects several episodes (e.g. `IN_PRIOR_PREG` with two prior episodes), each region/episode becomes its own candidate [Window](Window.md) row. See "Multiple candidate windows" in the tutorial for how the [Selector](Selector.md) then treats them.
 
-## Step 3: clipping to the hard anchor-relative boundary (all four constructors)
+## Step 3: capping a window to its own episode's real bounds (optional)
+
+The border-offset formula in Step 2 has no idea how long a selected episode actually is — `after_start_episode_offset = 140` always adds 140 days to `start_episode`, even if that particular episode's `end_episode` is only 90 days later. Two optional logical metadata columns, both `NA`/unset by default (no effect), close that gap:
+
+- `cap_start_to_episode = TRUE`: raises `window_start` up to at least the selected episode's own `start_episode` (`window_start := pmax(window_start, start_episode)`).
+- `cap_end_to_episode = TRUE`: lowers `window_end` down to at most the selected episode's own `end_episode` (`window_end := pmin(window_end, end_episode)`).
+
+Both are applied per selected episode, right after Step 2 builds that episode's window(s) and before Step 4's anchor clip runs. Neither errors; a window capped down past its other edge just comes out invalid like any other empty window. Not read by `OUTSIDE_ALL_PREG` (there's no single selected episode for it to cap against).
+
+Worked example: episode `[2025-01-01, 2025-04-01]` (90 days long), `before_start_episode_offset = 0, after_start_episode_offset = 140` (a full start pair, its own region `[2025-01-01, 2025-05-21]`, 50 days past the episode's real end):
+
+| `cap_end_to_episode` | result |
+| --- | --- |
+| `NA` (default) | `[2025-01-01, 2025-05-21]` — unaffected, exactly what Step 2 produced |
+| `TRUE` | `[2025-01-01, 2025-04-01]` — end pulled back to the episode's real end |
+
+## Step 4: clipping to the hard anchor-relative boundary (all four constructors)
 
 Independently of steps 1–2, `anchor_start_offset`/`anchor_end_offset` define a hard boundary, `[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]`, that **every** candidate window from **every** episode-based constructor must fall inside — not just `IN_CURRENT_PREG`/`IN_PRIOR_PREG`/`IN_CURRENT_AND_PRIOR`'s windows, but `OUTSIDE_ALL_PREG`'s gaps too. `clip_to_anchor_bounds()` applies each side independently, and only when it's not `NA` (the same convention the border-offset pairs use):
 

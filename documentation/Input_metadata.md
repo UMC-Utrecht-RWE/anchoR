@@ -25,6 +25,7 @@
 | `anchor_start_offset`, `anchor_end_offset`                  | `NA_real_`      | Episode-based constructors only: a hard `[anchor + offset, anchor + offset]` boundary every candidate window is clipped to, for all four constructors (it's also `OUTSIDE_ALL_PREG`'s own search range, so for that one the clip is a no-op). |
 | `before_start_episode_offset`, `after_start_episode_offset` | `NA_real_`      | Episode-based constructors only (not `outside_all_pregnancy`): border offsets relative to a selected episode's own start. |
 | `before_end_episode_offset`, `after_end_episode_offset`     | `NA_real_`      | Episode-based constructors only (not `outside_all_pregnancy`): border offsets relative to a selected episode's own end.   |
+| `cap_start_to_episode`, `cap_end_to_episode`                 | `NA`            | Episode-based constructors only (not `outside_all_pregnancy`): when `TRUE`, pulls a border-offset window back inside that same selected episode's own real bounds. |
 
 See [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) for exactly how the four border-offset columns combine to build a window, and [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) for a walkthrough. Episode-based constructors also require a separate `episodes` table, passed as its own argument alongside `population`/`metadata` see [Input_population.md](Input_population.md).
 
