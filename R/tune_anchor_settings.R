@@ -53,6 +53,8 @@ anchor_tuning_grid <- function(
 #' @param by,chunk_size,staging_mode,publish One row's worth of settings
 #'   from `anchor_tuning_grid()`. `chunk_size`/`staging_mode`/`publish` are
 #'   only passed on to `anchor()` when `by == "variable"`.
+#' @param benchmark_hive_root Existing directory under which to create the
+#'   throwaway hive for this run.
 #' @return A list with `elapsed_secs` (numeric), `success` (logical), and
 #'   `error_message` (`NA_character_` on success).
 #' @keywords internal
@@ -67,9 +69,13 @@ time_anchor_setting <- function(
   chunk_size,
   staging_mode,
   publish,
-  prepare_con
+  prepare_con,
+  benchmark_hive_root
 ) {
-  hive_path <- tempfile(pattern = "anchor-tune-hive-")
+  hive_path <- tempfile(
+    pattern = "anchor-tune-hive-",
+    tmpdir = benchmark_hive_root
+  )
   dir.create(hive_path)
   on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
@@ -116,11 +122,11 @@ time_anchor_setting <- function(
 #' `chunk_size`, `staging_mode`, and `publish` requested, against the given
 #' `population`/`metadata`/`concepts` (and optional `episodes`), and times
 #' each run. There's no single combination that's fastest everywhere, it
-#' depends on things specific to a client's own environment: how
+#' depends on things specific to a deap's own environment: how
 #' `anchor_hive_path` is mounted (local disk vs. slow/network storage), how
 #' many variables and distinct selectors `metadata` has, and how big
 #' `concepts` is. Meant to be run once, up front, against a representative
-#' sample of a new client's own data and storage, so that expensive
+#' sample of a new deap's own data and storage, so that expensive
 #' production runs can go straight to whatever settings this found fastest
 #' instead of guessing.
 #'
@@ -130,12 +136,13 @@ time_anchor_setting <- function(
 #' `by = "variable"` is benchmarked once per repeat per combination of the
 #' three.
 #'
-#' Every run writes to its own throwaway temporary hive, removed again
-#' immediately after, so this never touches a real `anchor_hive_path`. A run
-#' that errors (for example, a `staging_mode` a client's storage doesn't
-#' support) is recorded as a failure rather than stopping the whole
-#' benchmark, so one bad combination doesn't prevent finding out about the
-#' rest.
+#' Every run writes to its own throwaway hive below `benchmark_hive_root`,
+#' removed again immediately afterward. Set `benchmark_hive_root` to a
+#' directory on the same storage as the production hive when storage behavior
+#' is relevant to the comparison. A run that errors (for example, a
+#' `staging_mode` a deap's storage doesn't support) is recorded as a failure
+#' rather than stopping the whole benchmark, so one bad combination doesn't
+#' prevent finding out about the rest.
 #'
 #' @inheritParams anchor
 #' @param by_values Which `by` modes to benchmark. Defaults to all three.
@@ -149,6 +156,10 @@ time_anchor_setting <- function(
 #'   Combinations are ranked by the median of their successful runs; more
 #'   repeats give a steadier estimate at the cost of a longer benchmark.
 #'   Defaults to `1`.
+#' @param benchmark_hive_root Existing directory below which each benchmark
+#'   run creates an isolated throwaway output hive. Defaults to `tempdir()`.
+#'   To benchmark production storage characteristics, supply a directory on
+#'   the same mounted filesystem as the production `anchor_hive_path`.
 #'
 #' @return A list:
 #'   \describe{
@@ -174,7 +185,8 @@ tune_anchor_settings <- function(
   staging_mode_values = c("memory", "disk"),
   publish_values = c("once", "per_chunk"),
   repeats = 1L,
-  prepare_con = NULL
+  prepare_con = NULL,
+  benchmark_hive_root = tempdir()
 ) {
   if (!all(by_values %in% c("whole", "variable", "selector"))) {
     stop_log(
@@ -192,6 +204,14 @@ tune_anchor_settings <- function(
   }
   if (!is.numeric(repeats) || length(repeats) != 1L || repeats < 1) {
     stop_log("`repeats` must be a single positive number.")
+  }
+  if (
+    !is.character(benchmark_hive_root) ||
+      length(benchmark_hive_root) != 1L ||
+      is.na(benchmark_hive_root) ||
+      !dir.exists(benchmark_hive_root)
+  ) {
+    stop_log("`benchmark_hive_root` must be one existing directory.")
   }
 
   # Fail fast on broken inputs instead of repeating the same validation
@@ -254,7 +274,8 @@ tune_anchor_settings <- function(
         chunk_size = setting$chunk_size,
         staging_mode = setting$staging_mode,
         publish = setting$publish,
-        prepare_con = prepare_con
+        prepare_con = prepare_con,
+        benchmark_hive_root = benchmark_hive_root
       )
 
       if (!timing$success) {
