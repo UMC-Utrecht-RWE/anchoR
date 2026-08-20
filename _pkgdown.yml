@@ -25,6 +25,7 @@ reference:
   - title: Main workflow
     contents:
       - anchor
+      - tune_anchor_settings
       - anchor_by_variable
       - anchor_by_selector
       - define_window
