@@ -8,6 +8,7 @@ Choose the shortest guide that matches the task.
 - [Standard windows](Tutorial_standard_windows.md): the complete fixed-anchor workflow.
 - [Episode-based windows](Tutorial_pregnancy_windows.md): recurring start/end episodes.
 - [Custom constructors and selectors](Tutorial_custom_constructors_and_selectors.md): define your own window shape or selection rule without editing anchoR.
+- [Tune anchor settings](Tutorial_tune_anchor_settings.md): benchmark processing settings against representative client data and storage.
 - Installed equivalents: `vignette("standard-windows", package = "anchoR")` and `vignette("episode-windows", package = "anchoR")`.
 
 ## Input and output contracts

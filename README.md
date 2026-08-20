@@ -86,6 +86,7 @@ Person 1's window is 365 days before `T0` through `T0` itself, which covers the 
 - Practical vignettes: `multiple-windows`, `metadata-migration`, `production-sources`, `troubleshooting`, `selector-cookbook`, `custom-constructors`, and `imputation` (open one with `vignette("<name>", package = "anchoR")`).
 - [Standard-window tutorial](documentation/Tutorial_standard_windows.md): selectors, multiple windows, batching, and custom anchors.
 - [Episode-window tutorial](documentation/Tutorial_pregnancy_windows.md): recurring start/end episodes and pregnancy-oriented constructors.
+- [Tuning tutorial](documentation/Tutorial_tune_anchor_settings.md): compare `anchor()` processing settings for a client workload.
 - [Result walkthrough](documentation/get_anchor_result_walkthrough.md): long/wide retrieval and imputation internals.
 - Canonical schemas: [population](documentation/Input_population.md), [metadata](documentation/Input_metadata.md), [concepts](documentation/Input_concepts.md), and [output](documentation/Output_D4_StudyVariablesAnchored.md).
 - [Documentation index](documentation/README.md): choose a guide by task.
