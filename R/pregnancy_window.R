@@ -516,5 +516,19 @@ outside_all_pregnancy_window <- make_constructor(
     "anchor_start_col", "anchor_end_col",
     "anchor_start_offset", "anchor_end_offset"
   ),
-  check_fn = generic_window_check
+  check_fn = function(window_dt) {
+    generic_window_check(window_dt)
+    missing_bounds <- is.na(window_dt$anchor_start_offset) |
+      is.na(window_dt$anchor_end_offset)
+    if (any(missing_bounds)) {
+      stop_log(
+        paste(
+          "`outside_all_pregnancy` requires non-missing",
+          "`anchor_start_offset` and `anchor_end_offset`;",
+          "`start_offset` and `end_offset` are not used by this constructor."
+        )
+      )
+    }
+    invisible(TRUE)
+  }
 )

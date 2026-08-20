@@ -449,6 +449,19 @@ testthat::test_that("pregnancy_window_engine OUTSIDE_ALL uses anchor offsets, no
   testthat::expect_equal(out$window_end, as.Date(c("2019-12-31", "2020-12-31")))
 })
 
+testthat::test_that("outside_all_pregnancy rejects missing anchor bounds", {
+  window_dt <- data.table::data.table(
+    constructor = "outside_all_pregnancy",
+    anchor_start_col = "T0", anchor_end_col = "T0",
+    anchor_start_offset = NA_real_, anchor_end_offset = NA_real_
+  )
+
+  testthat::expect_error(
+    outside_all_pregnancy_window(window_dt),
+    "requires non-missing.*anchor_start_offset.*anchor_end_offset"
+  )
+})
+
 testthat::test_that("pregnancy_window_engine surfaces an inverted-pair error from episode_windows", { # nolint: line_length_linter.
   testthat::expect_error(
     pregnancy_window_engine(
