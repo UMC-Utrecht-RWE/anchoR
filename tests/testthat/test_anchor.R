@@ -271,7 +271,8 @@ testthat::test_that("it refreshes only requested variable partition", {
     variable_id %in% c("cov_latest", "cov_count")
   ]
 
-  anchor_by_variable(
+  anchor(
+    by = "variable",
     population = minimal_population(),
     metadata = metadata,
     concepts = minimal_concepts(),
@@ -288,7 +289,8 @@ testthat::test_that("it refreshes only requested variable partition", {
     )
   ))
 
-  anchor_by_variable(
+  anchor(
+    by = "variable",
     population = minimal_population(),
     metadata = metadata[variable_id == "cov_latest"],
     concepts = refreshed_concepts,
@@ -326,7 +328,8 @@ testthat::test_that(
       unlink(one_at_a_time_path, recursive = TRUE, force = TRUE),
       add = TRUE
     )
-    anchor_by_variable(
+    anchor(
+      by = "variable",
       population = minimal_population(),
       metadata = metadata,
       concepts = minimal_concepts(),
@@ -337,7 +340,8 @@ testthat::test_that(
     batched_path <- tempfile(pattern = "anchor-hive-")
     dir.create(batched_path)
     on.exit(unlink(batched_path, recursive = TRUE, force = TRUE), add = TRUE)
-    anchor_by_variable(
+    anchor(
+      by = "variable",
       population = minimal_population(),
       metadata = metadata,
       concepts = minimal_concepts(),
@@ -370,7 +374,8 @@ testthat::test_that(
     metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
-      anchor_by_variable(
+      anchor(
+        by = "variable",
         population = minimal_population(),
         metadata = metadata,
         concepts = minimal_concepts(),
@@ -394,7 +399,8 @@ testthat::test_that(
     memory_path <- tempfile(pattern = "anchor-hive-")
     dir.create(memory_path)
     on.exit(unlink(memory_path, recursive = TRUE, force = TRUE), add = TRUE)
-    anchor_by_variable(
+    anchor(
+      by = "variable",
       population = minimal_population(),
       metadata = metadata,
       concepts = minimal_concepts(),
@@ -406,7 +412,8 @@ testthat::test_that(
     disk_path <- tempfile(pattern = "anchor-hive-")
     dir.create(disk_path)
     on.exit(unlink(disk_path, recursive = TRUE, force = TRUE), add = TRUE)
-    anchor_by_variable(
+    anchor(
+      by = "variable",
       population = minimal_population(),
       metadata = metadata,
       concepts = minimal_concepts(),
@@ -445,7 +452,8 @@ testthat::test_that(
     metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
-      anchor_by_variable(
+      anchor(
+        by = "variable",
         population = minimal_population(),
         metadata = metadata,
         concepts = minimal_concepts(),
@@ -474,7 +482,8 @@ testthat::test_that(
     metadata[variable_id == "cov_latest", constructor := "NOPE_CONSTRUCTOR"]
 
     testthat::expect_error(
-      anchor_by_variable(
+      anchor(
+        by = "variable",
         population = minimal_population(),
         metadata = metadata,
         concepts = minimal_concepts(),
@@ -499,7 +508,8 @@ testthat::test_that("reshapes variable-by-variable hive output", {
   metadata <- minimal_metadata()[
     variable_id %in% c("cov_latest", "lab_range")
   ]
-  anchor_by_variable(
+  anchor(
+    by = "variable",
     population = minimal_population(),
     metadata = metadata,
     concepts = minimal_concepts(),
@@ -528,7 +538,8 @@ testthat::test_that(
     on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
 
     metadata <- minimal_metadata()[variable_id == "cov_latest"]
-    anchor_by_variable(
+    anchor(
+      by = "variable",
       population = minimal_population(),
       metadata = metadata,
       concepts = minimal_concepts(),
@@ -608,7 +619,8 @@ testthat::test_that(
     metadata <- minimal_metadata()[
       variable_id %in% c("cov_latest", "lab_range")
     ]
-    anchor_by_variable(
+    anchor(
+      by = "variable",
       population = minimal_population(),
       metadata = metadata,
       concepts = minimal_concepts(),
@@ -646,7 +658,8 @@ testthat::test_that(
     metadata <- minimal_metadata()[
       variable_id %in% c("cov_latest", "lab_range")
     ]
-    anchor_by_variable(
+    anchor(
+      by = "variable",
       population = minimal_population(),
       metadata = metadata,
       concepts = minimal_concepts(),
@@ -700,10 +713,10 @@ testthat::test_that(
 )
 
 testthat::test_that(
-  "anchor_by_selector batches variables by selector and matches anchor()",
+  "by = 'selector' batches variables by selector and matches by = 'whole'",
   {
     # minimal_metadata() spans three selectors (LATEST, COUNT, EARLIEST),
-    # so this exercises one anchor() call per selector.
+    # so this exercises one selector query per selector.
     metadata <- minimal_metadata()
 
     reference_path <- tempfile(pattern = "anchor-hive-")
@@ -722,7 +735,8 @@ testthat::test_that(
       unlink(by_selector_path, recursive = TRUE, force = TRUE),
       add = TRUE
     )
-    processed_selectors <- anchor_by_selector(
+    processed_selectors <- anchor(
+      by = "selector",
       population = minimal_population(),
       metadata = metadata,
       concepts = minimal_concepts(),
@@ -744,7 +758,7 @@ testthat::test_that(
 )
 
 testthat::test_that(
-  "anchor_by_selector preserves two selectors for one variable_id",
+  "by = 'selector' preserves two selectors for one variable_id",
   {
     hive_path <- tempfile(pattern = "anchor-hive-")
     dir.create(hive_path)
@@ -755,7 +769,8 @@ testthat::test_that(
     metadata[, variable_id := "mixed"]
     concepts <- minimal_concepts()
 
-    anchor_by_selector(
+    anchor(
+      by = "selector",
       population = population,
       metadata = metadata,
       concepts = concepts,

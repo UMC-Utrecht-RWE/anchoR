@@ -78,7 +78,7 @@ get_anchor_result(
 
 Person 1's window is `[2023-01-02, 2024-01-01]`, which covers the 2023-10-01 record. Persons 2 and 3 have no matching record, so they don't appear; long output is sparse by design.
 
-`anchor()` *replaces* whatever parquet is already at `anchor_hive_path` for each `variable_id` it computes (rather than appending to it), so calling it twice with overlapping `variable_id` values into the same path re-runs cleanly instead of producing duplicate rows. `variable_id`s outside the current `metadata` call are left untouched. See `anchor_by_variable()`/`anchor_by_selector()` (below) if you want to recompute a subset of variables without recomputing everything else in one pass.
+`anchor()` *replaces* whatever parquet is already at `anchor_hive_path` for each `variable_id` it computes (rather than appending to it), so calling it twice with overlapping `variable_id` values into the same path re-runs cleanly instead of producing duplicate rows. `variable_id`s outside the current `metadata` call are left untouched. See `anchor()`'s `by` argument (below) if you want to recompute a subset of variables without recomputing everything else in one pass.
 
 ## Selector reference
 
@@ -181,7 +181,7 @@ metadata <- data.table(
   end_offset   = 0L
 )
 
-anchor_by_variable(population, metadata, concepts, anchor_hive_path = hive_path)
+anchor(population, metadata, concepts, anchor_hive_path = hive_path, by = "variable")
 get_anchor_result(metadata, hive_path, population = population, result_shape = "wide")
 #>    person_id         T0 window_name value_flu_vaccine date_flu_vaccine
 #> 1:         1 2024-01-01        ever              TRUE       2020-01-01
@@ -206,9 +206,9 @@ get_anchor_result(
 
 Passing `population` to `get_anchor_result()` also backfills a row for every population key with no match at all (person 2 above), so wide output always has a predictable number of rows.
 
-## `anchor()` vs `anchor_by_variable()`
+## `by = "whole"` vs `by = "variable"`
 
-`anchor()` computes every variable in `metadata` in one pass and writes one parquet hive. `anchor_by_variable()` processes variable IDs in bounded chunks (`chunk_size = 10` by default) and replaces each variable's own partition rather than appending. A call with metadata for one variable therefore touches only that partition. Use it when you want a bounded processing/failure scope or expect to re-run selected variables without recomputing everything else:
+With `by = "whole"` (the default), `anchor()` computes every variable in `metadata` in one pass and writes one parquet hive. With `by = "variable"`, it processes variable IDs in bounded chunks (`chunk_size = 20` by default) and replaces each variable's own partition rather than appending. A call with metadata for one variable therefore touches only that partition. Use it when you want a bounded processing/failure scope or expect to re-run selected variables without recomputing everything else:
 
 ```r
 hive_path <- tempfile(pattern = "anchor-hive-")
@@ -232,7 +232,7 @@ concepts <- data.table(
   value      = c("TRUE", "1")
 )
 
-anchor_by_variable(population, metadata, concepts, anchor_hive_path = hive_path)
+anchor(population, metadata, concepts, anchor_hive_path = hive_path, by = "variable")
 get_anchor_result(metadata, hive_path, result_shape = "long")[
   , .(variable_id, person_id, value, date)
 ]
@@ -249,11 +249,12 @@ updated_concepts <- rbindlist(list(
   )
 ))
 
-anchor_by_variable(
+anchor(
   population       = population,
   metadata         = metadata[variable_id == "flu_vaccine_recent"],
   concepts         = updated_concepts,
-  anchor_hive_path = hive_path
+  anchor_hive_path = hive_path,
+  by               = "variable"
 )
 
 get_anchor_result(metadata, hive_path, result_shape = "long")[

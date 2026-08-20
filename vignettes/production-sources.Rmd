@@ -54,9 +54,10 @@ DBI::dbExecute(
 DBI::dbDisconnect(con, shutdown = TRUE)
 
 hive <- tempfile("production-hive-")
-anchor_by_variable(
+anchor(
   population, metadata, parquet_dir,
   anchor_hive_path = hive,
+  by = "variable",
   chunk_size = 1L
 )
 get_anchor_result(
@@ -84,11 +85,12 @@ con <- DBI::dbConnect(duckdb::duckdb(), dbdir = duckdb_path)
 DBI::dbWriteTable(con, "concept_table", updated_concepts)
 DBI::dbDisconnect(con, shutdown = TRUE)
 
-anchor_by_variable(
+anchor(
   population,
   metadata[variable_id == "recent_vaccine"],
   duckdb_path,
   anchor_hive_path = hive,
+  by = "variable",
   chunk_size = 1L
 )
 get_anchor_result(metadata, hive, result_shape = "long")
@@ -96,11 +98,11 @@ get_anchor_result(metadata, hive, result_shape = "long")
 
 The second run replaces only `recent_vaccine`; the existing `hospital_count` partition remains. A recomputed variable with no matches has its previous partition removed. If that leaves the entire hive without parquet files, check for the empty directory before retrieval.
 
-Choose batching based on scale:
+Choose `anchor()`'s `by` argument based on scale:
 
-- `anchor()` minimizes orchestration and handles all requested variables together.
-- `anchor_by_variable()` bounds working-set and replacement scope with `chunk_size`.
-- `anchor_by_selector()` minimizes selector scans by grouping all variables using each selector.
+- `by = "whole"` (default) minimizes orchestration and handles all requested variables together.
+- `by = "variable"` bounds working-set and replacement scope with `chunk_size`.
+- `by = "selector"` minimizes selector scans by grouping all variables using each selector.
 
 ```{r cleanup, include=FALSE}
 unlink(c(parquet_dir, duckdb_path, hive), recursive = TRUE)
