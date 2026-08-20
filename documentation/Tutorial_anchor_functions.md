@@ -1,6 +1,6 @@
 # Running anchoR: `anchor()` and its `by` modes
 
-`R/anchor.R` holds `anchor()`, the function that actually *runs* the anchoring pipeline and writes results to a parquet hive at `anchor_hive_path`. Its `by` argument (`"whole"`, `"variable"`, `"selector"`) picks how `metadata` is worked through. This page is about **how to call it**, which mode to reach for, how the modes relate to each other, and (for `by = "variable"`) the performance knobs meant for large runs or slow output storage.
+`R/anchor.R` holds `anchor()`, the function that actually *runs* the anchoring pipeline and writes results to a parquet hive at `anchor_hive_path`. Its `by` argument (`"whole"`, `"variable"`, `"selector"`) picks how `metadata` is executed through. This page is about **how to call it**, which mode to reach for, how the modes relate to each other, and (for `by = "variable"`) the performance knobs meant for large runs or slow output storage.
 
 This page assumes you already have valid `population`/`metadata`/`concepts` tables. For what a window, selector, or constructor actually *means*, see [Tutorial_standard_windows.md](Tutorial_standard_windows.md) (fixed-offset windows) or [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) (recurring-event windows), everything here works identically regardless of which `constructor` your metadata uses.
 
