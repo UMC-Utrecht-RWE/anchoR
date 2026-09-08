@@ -374,39 +374,38 @@ get_anchor_result <- function(
 #' Count anchored results by study variable
 #'
 #' Counts persisted rows in an anchored-variable parquet hive without
-#' materializing those rows in R. Variables present in `metadata` but absent
-#' from the hive are returned with an anchored count of zero.
+#' materializing those rows in R. The variable identifiers are discovered from
+#' the completed hive; variables for which no result partition was written
+#' cannot be inferred and are not returned.
 #'
 #' When `include_concept_counts = TRUE`, the function also counts rows in the
-#' supplied `concepts` source for each `concept_id` in `metadata`. `concepts`
-#' accepts the same inputs as [anchor()]: an in-memory data frame, a DuckDB
-#' database path, or one or more parquet files, directories, or globs.
+#' supplied `concepts` source. Because anchored output does not retain
+#' `concept_id`, `variable_concepts` supplies the relationship between each
+#' result variable and its source concept. `concepts` accepts the same inputs
+#' as [anchor()]: an in-memory data frame, a DuckDB database path, or one or
+#' more parquet files, directories, or globs.
 #'
 #' The anchored count is the number of sparse result rows written by
 #' [anchor()], not necessarily the number of `TRUE` values. For example, rows
 #' produced by `LATEST`, `COUNT`, and `ALL` selectors are counted as anchored
 #' rows too.
 #'
-#' @param metadata A data frame containing `variable_id`. It must also contain
-#'   `concept_id` when `include_concept_counts = TRUE`.
 #' @param anchor_hive_path Path to the anchored-variable parquet hive.
 #' @param include_concept_counts Logical; whether to add counts from `concepts`.
 #' @param concepts Concept records to count when
 #'   `include_concept_counts = TRUE`. See [anchor()] for accepted source types.
+#' @param variable_concepts A data frame containing `variable_id` and
+#'   `concept_id`, required only when `include_concept_counts = TRUE`.
 #'
 #' @return A data.table with `variable_id` and `n_anchored`. When concept
 #'   counts are requested, `concept_id` and `n_concept` are also returned.
 #' @export
 get_count_anchored_variables <- function(
-  metadata,
   anchor_hive_path,
   include_concept_counts = FALSE,
-  concepts = NULL
+  concepts = NULL,
+  variable_concepts = NULL
 ) {
-  metadata_dt <- as_data_table(metadata, "metadata")
-  assert_has_columns(metadata_dt, "variable_id", "metadata")
-  metadata_dt[, variable_id := as.character(variable_id)]
-
   if (
     !is.logical(include_concept_counts) ||
       length(include_concept_counts) != 1L ||
@@ -423,7 +422,6 @@ get_count_anchored_variables <- function(
     stop("`anchor_hive_path` must be one existing directory.", call. = FALSE)
   }
 
-  variables_dt <- unique(metadata_dt[, .(variable_id)])
   parquet_files <- list.files(
     anchor_hive_path,
     pattern = "\\.parquet$",
@@ -454,26 +452,34 @@ get_count_anchored_variables <- function(
     ))
   }
 
-  counts_dt <- merge(
-    variables_dt,
-    anchored_counts_dt,
-    by = "variable_id",
-    all.x = TRUE,
-    sort = FALSE
-  )
-  counts_dt[is.na(n_anchored), n_anchored := 0]
+  counts_dt <- anchored_counts_dt
 
   if (include_concept_counts) {
-    assert_has_columns(metadata_dt, "concept_id", "metadata")
-    metadata_dt[, concept_id := as.character(concept_id)]
     if (is.null(concepts)) {
       stop(
         "`concepts` must be supplied when concept counts are requested.",
         call. = FALSE
       )
     }
+    if (is.null(variable_concepts)) {
+      stop(
+        paste(
+          "`variable_concepts` must be supplied when concept counts",
+          "are requested."
+        ),
+        call. = FALSE
+      )
+    }
 
-    mapping_dt <- unique(metadata_dt[, .(variable_id, concept_id)])
+    mapping_dt <- as_data_table(variable_concepts, "variable_concepts")
+    assert_has_columns(
+      mapping_dt,
+      c("variable_id", "concept_id"),
+      "variable_concepts"
+    )
+    mapping_dt[, variable_id := as.character(variable_id)]
+    mapping_dt[, concept_id := as.character(concept_id)]
+    mapping_dt <- unique(mapping_dt[, .(variable_id, concept_id)])
     concept_ids <- unique(as.character(mapping_dt$concept_id))
     concept_ids <- concept_ids[!is.na(concept_ids)]
 
