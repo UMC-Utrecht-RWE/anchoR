@@ -371,6 +371,154 @@ get_anchor_result <- function(
   }
 }
 
+#' Count anchored results by study variable
+#'
+#' Counts persisted rows in an anchored-variable parquet hive without
+#' materializing those rows in R. Variables present in `metadata` but absent
+#' from the hive are returned with an anchored count of zero.
+#'
+#' When `include_concept_counts = TRUE`, the function also counts rows in the
+#' supplied `concepts` source for each `concept_id` in `metadata`. `concepts`
+#' accepts the same inputs as [anchor()]: an in-memory data frame, a DuckDB
+#' database path, or one or more parquet files, directories, or globs.
+#'
+#' The anchored count is the number of sparse result rows written by
+#' [anchor()], not necessarily the number of `TRUE` values. For example, rows
+#' produced by `LATEST`, `COUNT`, and `ALL` selectors are counted as anchored
+#' rows too.
+#'
+#' @param metadata A data frame containing `variable_id`. It must also contain
+#'   `concept_id` when `include_concept_counts = TRUE`.
+#' @param anchor_hive_path Path to the anchored-variable parquet hive.
+#' @param include_concept_counts Logical; whether to add counts from `concepts`.
+#' @param concepts Concept records to count when
+#'   `include_concept_counts = TRUE`. See [anchor()] for accepted source types.
+#'
+#' @return A data.table with `variable_id` and `n_anchored`. When concept
+#'   counts are requested, `concept_id` and `n_concept` are also returned.
+#' @export
+get_count_anchored_variables <- function(
+  metadata,
+  anchor_hive_path,
+  include_concept_counts = FALSE,
+  concepts = NULL
+) {
+  metadata_dt <- as_data_table(metadata, "metadata")
+  assert_has_columns(metadata_dt, "variable_id", "metadata")
+  metadata_dt[, variable_id := as.character(variable_id)]
+
+  if (
+    !is.logical(include_concept_counts) ||
+      length(include_concept_counts) != 1L ||
+      is.na(include_concept_counts)
+  ) {
+    stop("`include_concept_counts` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (
+    !is.character(anchor_hive_path) ||
+      length(anchor_hive_path) != 1L ||
+      is.na(anchor_hive_path) ||
+      !dir.exists(anchor_hive_path)
+  ) {
+    stop("`anchor_hive_path` must be one existing directory.", call. = FALSE)
+  }
+
+  variables_dt <- unique(metadata_dt[, .(variable_id)])
+  parquet_files <- list.files(
+    anchor_hive_path,
+    pattern = "\\.parquet$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:", read_only = FALSE)
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+  if (length(parquet_files) == 0L) {
+    anchored_counts_dt <- data.table::data.table(
+      variable_id = character(),
+      n_anchored = numeric()
+    )
+  } else {
+    parquet_sql <- parquet_paths_sql(con, parquet_files)
+    anchored_counts_dt <- data.table::as.data.table(DBI::dbGetQuery(
+      con,
+      paste(
+        "SELECT CAST(variable_id AS VARCHAR) AS variable_id,",
+        "CAST(COUNT(*) AS DOUBLE) AS n_anchored",
+        "FROM read_parquet(",
+        parquet_sql,
+        ", hive_partitioning = true, union_by_name = true)",
+        "GROUP BY variable_id"
+      )
+    ))
+  }
+
+  counts_dt <- merge(
+    variables_dt,
+    anchored_counts_dt,
+    by = "variable_id",
+    all.x = TRUE,
+    sort = FALSE
+  )
+  counts_dt[is.na(n_anchored), n_anchored := 0]
+
+  if (include_concept_counts) {
+    assert_has_columns(metadata_dt, "concept_id", "metadata")
+    metadata_dt[, concept_id := as.character(concept_id)]
+    if (is.null(concepts)) {
+      stop(
+        "`concepts` must be supplied when concept counts are requested.",
+        call. = FALSE
+      )
+    }
+
+    mapping_dt <- unique(metadata_dt[, .(variable_id, concept_id)])
+    concept_ids <- unique(as.character(mapping_dt$concept_id))
+    concept_ids <- concept_ids[!is.na(concept_ids)]
+
+    if (length(concept_ids) == 0L) {
+      concept_counts_dt <- data.table::data.table(
+        concept_id = character(),
+        n_concept = numeric()
+      )
+    } else {
+      load_concepts_table(con, concepts, concept_ids = concept_ids)
+      concept_counts_dt <- data.table::as.data.table(DBI::dbGetQuery(
+        con,
+        paste(
+          "SELECT CAST(concept_id AS VARCHAR) AS concept_id,",
+          "CAST(COUNT(*) AS DOUBLE) AS n_concept",
+          "FROM concepts GROUP BY concept_id"
+        )
+      ))
+    }
+
+    counts_dt <- merge(
+      counts_dt,
+      mapping_dt,
+      by = "variable_id",
+      all.x = TRUE,
+      sort = FALSE
+    )
+    counts_dt <- merge(
+      counts_dt,
+      concept_counts_dt,
+      by = "concept_id",
+      all.x = TRUE,
+      sort = FALSE
+    )
+    counts_dt[is.na(n_concept), n_concept := 0]
+    data.table::setcolorder(
+      counts_dt,
+      c("variable_id", "n_anchored", "concept_id", "n_concept")
+    )
+  }
+
+  data.table::setorder(counts_dt, variable_id)
+  counts_dt[]
+}
+
 
 #' Impute Missing Values in Wide Anchor Output
 #'
