@@ -54,3 +54,6 @@ rsconnect/
 .vscode/
 .positai
 /anchoR_input
+/doc/
+/Meta/
+inst/doc
