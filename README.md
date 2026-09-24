@@ -81,11 +81,8 @@ Person 1's window is 365 days before `T0` through `T0` itself, which covers the 
 
 ## Documentation
 
-- New here? [documentation/Quickstart.md](documentation/Quickstart.md) assumes no prior familiarity with R or epidemiology terms.
-- Installed introductory vignettes: `vignette("standard-windows", package = "anchoR")` and `vignette("episode-windows", package = "anchoR")`.
-- Practical vignettes: `multiple-windows`, `metadata-migration`, `production-sources`, `troubleshooting`, `selector-cookbook`, `custom-constructors`, and `imputation` (open one with `vignette("<name>", package = "anchoR")`).
-- [Standard-window tutorial](documentation/Tutorial_standard_windows.md): selectors, multiple windows, batching, and custom anchors.
-- [Episode-window tutorial](documentation/Tutorial_pregnancy_windows.md): recurring start/end episodes and pregnancy-oriented constructors.
-- [Result walkthrough](documentation/get_anchor_result_walkthrough.md): long/wide retrieval and imputation internals.
-- Canonical schemas: [population](documentation/Input_population.md), [metadata](documentation/Input_metadata.md), [concepts](documentation/Input_concepts.md), and [output](documentation/Output_D4_StudyVariablesAnchored.md).
-- [Documentation index](documentation/README.md): choose a guide by task.
+- New here? Start with [Get started](https://umc-utrecht-rwe.github.io/anchoR/articles/quickstart.html) (`vignette("quickstart", package = "anchoR")`) — assumes no prior familiarity with R or epidemiology terms.
+- Introductory vignettes: `standard-windows` and `episode-windows`.
+- Practical vignettes: `multiple-windows`, `metadata-migration`, `production-sources`, `troubleshooting`, `selector-cookbook`, `custom-constructors`, `custom-selectors`, and `imputation`.
+- Open any vignette with `vignette("<name>", package = "anchoR")`, or browse them all on the [articles index](https://umc-utrecht-rwe.github.io/anchoR/articles/index.html).
+- Canonical schemas for `population`, `metadata`, and `concepts` are documented on the [`anchor()` reference page](https://umc-utrecht-rwe.github.io/anchoR/reference/anchor.html).
