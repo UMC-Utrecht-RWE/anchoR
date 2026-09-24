@@ -1,0 +1,198 @@
+# Episode-based windows
+
+``` r
+
+library(anchoR)
+library(data.table)
+```
+
+Episode-based constructors build windows from repeatable start/end
+periods. The built-in names use pregnancy terminology, but the
+underlying representation is generic.
+
+Episodes live in their own long table, one row per episode, with
+`person_id`, `start_episode`, and `end_episode` columns. It’s passed as
+a separate `episodes` argument, alongside `population` and `metadata`;
+anchoR nests it onto `population` internally.
+
+``` r
+
+episodes <- data.table(
+    person_id = "1",
+    start_episode = as.Date(c("2023-01-01", "2024-03-01", "2025-11-01")),
+    end_episode = as.Date(c("2023-09-01", "2024-11-15", "2026-08-01"))
+)
+
+population <- data.table(
+    person_id = "1",
+    T0 = as.Date("2026-02-15")
+)
+```
+
+`T0` falls inside the third episode, so that one is “current” and the
+other two are “prior”. The four constructors select the current episode,
+every prior episode, both combined, or the gaps outside every episode.
+
+``` r
+
+metadata <- data.table(
+    variable_id = c("current", "prior", "current_and_prior", "outside"),
+    concept_id = "DEMO",
+    constructor = c(
+        "in_current_pregnancy", "in_prior_pregnancy",
+        "in_current_and_prior", "outside_all_pregnancy"
+    ),
+    selector = "ALL",
+    start_offset = 0L, # unused by episode-based constructors, still required
+    end_offset = 0L,
+    anchor_start_offset = c(NA_real_, NA_real_, NA_real_, -1172L),
+    anchor_end_offset = c(NA_real_, NA_real_, NA_real_, 0L),
+    before_start_episode_offset = c(0, 0, 0, NA_real_),
+    after_start_episode_offset = NA_real_,
+    before_end_episode_offset = NA_real_,
+    after_end_episode_offset = c(14, 0, 30, NA_real_)
+)
+
+define_window(population, metadata, episodes = episodes)[
+    window_valid == TRUE,
+    .(variable_id, window_start, window_end)
+]
+```
+
+    ##          variable_id window_start window_end
+    ##               <char>       <Date>     <Date>
+    ## 1:           current   2025-11-01 2026-08-15
+    ## 2:             prior   2023-01-01 2023-09-01
+    ## 3:             prior   2024-03-01 2024-11-15
+    ## 4: current_and_prior   2025-11-01 2026-08-31
+    ## 5: current_and_prior   2023-01-01 2023-10-01
+    ## 6: current_and_prior   2024-03-01 2024-12-15
+    ## 7:           outside   2022-12-01 2022-12-31
+    ## 8:           outside   2023-09-02 2024-02-29
+    ## 9:           outside   2024-11-16 2025-10-31
+
+Every episode-based window is built from two independent border pairs:
+`before_start_episode_offset`/`after_start_episode_offset` (relative to
+the episode’s own `start_episode`) and
+`before_end_episode_offset`/`after_end_episode_offset` (relative to
+`end_episode`). Each pair is read as `edge + offset`, `NA` meaning that
+side isn’t set. `before_start_episode_offset` and
+`after_end_episode_offset` are the two “outer” sides (they point away
+from the episode); `after_start_episode_offset` and
+`before_end_episode_offset` are the “inner” sides (they point into it):
+
+- **Either outer side set alone** (as above: `current`’s
+  `before_start_episode_offset = 0` and
+  `after_end_episode_offset = 14`): the whole window becomes one shared
+  window, that side’s offset defining its edge directly, the other pair
+  contributing whichever single value it has (or the unshifted edge, if
+  it has nothing) for the opposite edge. `current`’s start is pinned to
+  the episode’s own start (`before_start_episode_offset = 0`); its end
+  is 14 days past the episode’s own end
+  (`after_end_episode_offset = 14`).
+- **Only an inner side set, with no outer side set anywhere**: each such
+  pair becomes its own self-contained region instead,
+  `[edge + before_offset, edge + after_offset]` (missing side defaulting
+  to `0`), rather than joining a shared window.
+- **Both sides of a pair set**: that pair is always its own
+  self-contained region, regardless of the other pair.
+
+See `documentation/definitions/Episode-Based Window Engine.md` for the
+complete rule, including what happens when the two pairs disagree (one
+outer, one inner).
+
+`outside_all_pregnancy` works differently: it doesn’t use the
+before/after episode offsets at all, only
+`anchor_start_offset`/`anchor_end_offset`, which define the overall
+search range (`[T0 - 1172, T0]` above) that the gaps between episodes
+are computed within.
+
+The border-offset formula has no idea how long a selected episode
+actually lasted, though — `after_start_episode_offset = 400` always adds
+400 days to `start_episode`, whether or not that episode’s own
+`end_episode` came sooner. Two optional logical columns,
+`cap_start_to_episode`/`cap_end_to_episode` (both `NA`/unset by default,
+not read by `outside_all_pregnancy`), pull a window back inside its own
+selected episode’s real bounds when that happens:
+
+``` r
+
+capped_metadata <- data.table(
+    variable_id = "current_capped",
+    concept_id = "DEMO",
+    constructor = "in_current_pregnancy",
+    selector = "ALL",
+    start_offset = 0L,
+    end_offset = 0L,
+    after_start_episode_offset = 400L, # 400 days after episode C's own start
+    cap_end_to_episode = TRUE # ... but never past episode C's own end
+)
+
+define_window(population, capped_metadata, episodes = episodes)[
+    window_valid == TRUE,
+    .(variable_id, window_start, window_end)
+]
+```
+
+    ##       variable_id window_start window_end
+    ##            <char>       <Date>     <Date>
+    ## 1: current_capped   2025-11-01 2026-08-01
+
+Without the cap, `after_start_episode_offset = 400` alone would run to
+`2026-12-06`, four months past episode C’s own end (`2026-08-01`); with
+`cap_end_to_episode = TRUE`, the window stops at the episode’s real end
+instead.
+
+`anchor_start_offset`/`anchor_end_offset` aren’t only
+`outside_all_pregnancy`’s search range, though — they’re also a hard
+boundary applied to *every* constructor’s window:
+`[T0 + anchor_start_offset, T0 + anchor_end_offset]`, clipped in
+independently of the border-offset formula and the episode-bounds cap
+above. Left `NA` (as for `current`/`prior`/`current_and_prior` in the
+metadata above), that boundary is simply not enforced. Setting it clips
+whatever window the border-offset formula produced, even down to
+nothing:
+
+``` r
+
+clipped_metadata <- data.table(
+    variable_id = "current_clipped",
+    concept_id = "DEMO",
+    constructor = "in_current_pregnancy",
+    selector = "ALL",
+    start_offset = 0L,
+    end_offset = 0L,
+    anchor_start_offset = -30L, # boundary: 30 days before T0 ...
+    anchor_end_offset = 0L, # ... through T0 itself
+    before_start_episode_offset = NA_real_,
+    after_start_episode_offset = NA_real_,
+    before_end_episode_offset = NA_real_,
+    after_end_episode_offset = NA_real_
+)
+
+define_window(population, clipped_metadata, episodes = episodes)[
+    window_valid == TRUE,
+    .(variable_id, window_start, window_end)
+]
+```
+
+    ##        variable_id window_start window_end
+    ##             <char>       <Date>     <Date>
+    ## 1: current_clipped   2026-01-16 2026-02-15
+
+The current episode’s own unshifted span (`[2025-11-01, 2026-08-01]`)
+gets clipped down to `[2026-01-16, 2026-02-15]`, the last 30 days before
+`T0`.
+
+The internal engine can produce several candidate windows for one
+metadata row (`prior` and `current_and_prior` both do, one per selected
+episode). Selectors aggregate matches from those windows into the same
+output key. Candidate windows are not deduplicated: if they overlap, one
+concept event can join more than once and affect `COUNT` or `ALL`. Keep
+episode windows non-overlapping when distinct-event counts are required.
+
+For applications unrelated to pregnancy, either reuse these constructors
+(the underlying episodes can be any repeatable period), or create
+project-specific names with
+[`make_constructor()`](https://umc-utrecht-rwe.github.io/anchoR/reference/make_constructor.md)
+when the pregnancy-oriented vocabulary would be confusing.

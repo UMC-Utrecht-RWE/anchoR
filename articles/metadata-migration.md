@@ -1,0 +1,71 @@
+# Migrating legacy metadata
+
+``` r
+
+library(anchoR)
+library(data.table)
+```
+
+Older study-variable files often use BRIDGE-oriented names. anchoR
+automatically recognizes only three aliases: `date_extraction_func`,
+`anchor_date_start`, and `anchor_date_end`. Window names, offsets, and
+constructors must be renamed explicitly.
+
+``` r
+
+legacy <- data.table(
+    variable_id = c("recent_vaccine", "unsupported_variable"),
+    concept_id = c("VACCINE", "OTHER"),
+    window = c("lookback", "lookback"),
+    start = c(-365, -30),
+    end = c(0, 0),
+    window_definition = c("GENERIC", "GENERIC"),
+    date_extraction_func = c("latest", "not implemented"),
+    anchor_date_start = c("T0", "T0"),
+    anchor_date_end = c("T0", "T0")
+)
+
+setnames(
+    legacy,
+    old = c("window", "start", "end", "window_definition"),
+    new = c("window_name", "start_offset", "end_offset", "constructor"),
+    skip_absent = TRUE
+)
+```
+
+Filter unsupported rows only when dropping them is an explicit pipeline
+decision.
+
+``` r
+
+migrated <- suppressWarnings(filter_supported_metadata(legacy))
+migrated[, .(
+    variable_id, window_name, start_offset, end_offset,
+    date_extraction_func
+)]
+```
+
+    ## Empty data.table (0 rows and 5 cols): variable_id,window_name,start_offset,end_offset,date_extraction_func
+
+Validation applies the automatic aliases and canonical types.
+
+``` r
+
+population <- data.table(person_id = "1", T0 = as.Date("2024-01-01"))
+normalized <- validate_anchor_inputs(population, migrated)$metadata
+normalized[, .(
+    variable_id, selector, constructor, window_name,
+    anchor_start_col, anchor_end_col, start_offset, end_offset
+)]
+```
+
+    ## Empty data.table (0 rows and 8 cols): variable_id,selector,constructor,window_name,anchor_start_col,anchor_end_col...
+
+Before migration, retain an audit table containing every dropped row and
+its original selector. `start_look_back`/`end_look_back` no longer exist
+as metadata columns in current anchoR; episode-based metadata now uses
+`anchor_start_offset`/`anchor_end_offset` and the four
+`before_*_episode_offset`/`after_*_episode_offset` columns instead (see
+[`vignette("episode-windows", package = "anchoR")`](https://umc-utrecht-rwe.github.io/anchoR/articles/episode-windows.md))
+do not silently reinterpret old `start_look_back`/`end_look_back` values
+as any of those, since the semantics changed.

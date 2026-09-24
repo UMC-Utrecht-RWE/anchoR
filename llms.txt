@@ -1,0 +1,194 @@
+# anchoR
+
+`anchoR` is a small R package for anchoring study variables to an index
+date.
+
+It is built for a common epidemiology workflow:
+
+- define a time window around an anchor date such as `T0`
+- find matching concept records for each person inside that window
+- reduce those matches to one anchored value using a selector such as
+  `LATEST`, `EARLIEST`, `COUNT`, or `RANGE_COUNT`
+
+The package is intentionally small. It focuses on reusable anchoring
+logic and leaves study-specific preprocessing to the calling pipeline.
+
+## Core idea
+
+The package works with three inputs:
+
+- `population`: one row per person, including `person_id` and the anchor
+  column
+- `metadata`: one row per study variable, including the concept to look
+  for, the selector to use, and the lookback offsets
+- `concepts`: the clinical events table, supplied as a data frame, a
+  DuckDB file, or parquet location(s)
+
+From those inputs, `anchoR` builds one person-variable window, queries
+the concept data, and writes an anchored result you can read back in
+long or wide format.
+
+## Main functions
+
+- [`define_window()`](https://umc-utrecht-rwe.github.io/anchoR/reference/define_window.md):
+  build one anchoring window per person and per variable
+- [`anchor()`](https://umc-utrecht-rwe.github.io/anchoR/reference/anchor.md):
+  compute requested variables and replace only their parquet partitions,
+  in one of three modes controlled by `by`:
+  - `by = "whole"` (default): everything in one pass
+  - `by = "variable"`: process variables in bounded chunks while still
+    replacing each variable’s partition independently
+  - `by = "selector"`: group all variables using the same selector into
+    one query
+- [`get_anchor_result()`](https://umc-utrecht-rwe.github.io/anchoR/reference/get_anchor_result.md):
+  read the anchored parquet hive back as a long or wide `data.table`
+- [`make_constructor()`](https://umc-utrecht-rwe.github.io/anchoR/reference/make_constructor.md):
+  build a custom window-construction rule without editing anchoR itself
+- [`filter_supported_metadata()`](https://umc-utrecht-rwe.github.io/anchoR/reference/filter_supported_metadata.md):
+  drop metadata rows whose selectors are not implemented in the package
+
+## Minimal example
+
+``` r
+
+library(anchoR)
+library(data.table)
+
+population <- data.table(
+  person_id = c("1", "2"),
+  T0        = as.Date(c("2024-01-01", "2024-01-01"))
+)
+
+metadata <- data.table(
+  variable_id  = "flu_vaccine_recent",
+  concept_id   = "FLU_VAX",
+  constructor  = "GENERIC",
+  selector     = "LATEST",
+  start_offset = -365L,  # 365 days before T0 ...
+  end_offset   = 0L      # ... through T0 itself
+)
+
+concepts <- data.table(
+  person_id  = "1",
+  concept_id = "FLU_VAX",
+  date       = as.Date("2023-10-01"),
+  value      = "TRUE"
+)
+
+hive_path <- tempfile(pattern = "anchor-hive-")
+dir.create(hive_path)
+
+anchor(
+  population       = population,
+  metadata         = metadata,
+  concepts         = concepts,
+  anchor_hive_path = hive_path
+)
+
+get_anchor_result(
+  metadata         = metadata,
+  anchor_hive_path = hive_path,
+  result_shape     = "long"
+)
+#>    person_id         T0        variable_id window_name       date value
+#> 1:         1 2024-01-01 flu_vaccine_recent        <NA> 2023-10-01  TRUE
+```
+
+Person 1’s window is 365 days before `T0` through `T0` itself, which
+covers the 2023-10-01 record; person 2 has no matching record and
+doesn’t appear in the (sparse) result.
+
+## Documentation
+
+- New here?
+  [documentation/Quickstart.md](https://umc-utrecht-rwe.github.io/anchoR/documentation/Quickstart.md)
+  assumes no prior familiarity with R or epidemiology terms.
+- Installed introductory vignettes:
+  [`vignette("standard-windows", package = "anchoR")`](https://umc-utrecht-rwe.github.io/anchoR/articles/standard-windows.md)
+  and
+  [`vignette("episode-windows", package = "anchoR")`](https://umc-utrecht-rwe.github.io/anchoR/articles/episode-windows.md).
+- Practical vignettes: `multiple-windows`, `metadata-migration`,
+  `production-sources`, `troubleshooting`, `selector-cookbook`,
+  `custom-constructors`, and `imputation` (open one with
+  `vignette("<name>", package = "anchoR")`).
+- [Standard-window
+  tutorial](https://umc-utrecht-rwe.github.io/anchoR/documentation/Tutorial_standard_windows.md):
+  selectors, multiple windows, batching, and custom anchors.
+- [Episode-window
+  tutorial](https://umc-utrecht-rwe.github.io/anchoR/documentation/Tutorial_pregnancy_windows.md):
+  recurring start/end episodes and pregnancy-oriented constructors.
+- [Result
+  walkthrough](https://umc-utrecht-rwe.github.io/anchoR/documentation/get_anchor_result_walkthrough.md):
+  long/wide retrieval and imputation internals.
+- Canonical schemas:
+  [population](https://umc-utrecht-rwe.github.io/anchoR/documentation/Input_population.md),
+  [metadata](https://umc-utrecht-rwe.github.io/anchoR/documentation/Input_metadata.md),
+  [concepts](https://umc-utrecht-rwe.github.io/anchoR/documentation/Input_concepts.md),
+  and
+  [output](https://umc-utrecht-rwe.github.io/anchoR/documentation/Output_D4_StudyVariablesAnchored.md).
+- [Documentation
+  index](https://umc-utrecht-rwe.github.io/anchoR/documentation/README.md):
+  choose a guide by task.
+
+# Package index
+
+## Main workflow
+
+- [`anchor()`](https://umc-utrecht-rwe.github.io/anchoR/reference/anchor.md)
+  : Anchor Study Variables to an Index Date
+- [`anchor_by_variable()`](https://umc-utrecht-rwe.github.io/anchoR/reference/anchor_by_variable.md)
+  : Anchor study variables in batches (deprecated)
+- [`anchor_by_selector()`](https://umc-utrecht-rwe.github.io/anchoR/reference/anchor_by_selector.md)
+  : Anchor study variables, one selector at a time (deprecated)
+- [`define_window()`](https://umc-utrecht-rwe.github.io/anchoR/reference/define_window.md)
+  : Define Anchoring Windows
+- [`get_anchor_result()`](https://umc-utrecht-rwe.github.io/anchoR/reference/get_anchor_result.md)
+  : Retrieve and Reshape Anchored Variable Results
+
+## Metadata and extensibility
+
+- [`validate_anchor_inputs()`](https://umc-utrecht-rwe.github.io/anchoR/reference/validate_anchor_inputs.md)
+  : Validate Anchoring Inputs
+- [`available_selectors()`](https://umc-utrecht-rwe.github.io/anchoR/reference/available_selectors.md)
+  : List Available Selector SQL Templates
+- [`filter_supported_metadata()`](https://umc-utrecht-rwe.github.io/anchoR/reference/filter_supported_metadata.md)
+  : Filter Metadata to Selectors Supported by the Package
+- [`selector_sql_path()`](https://umc-utrecht-rwe.github.io/anchoR/reference/selector_sql_path.md)
+  : Get the Path to a Selector SQL Template
+- [`make_constructor()`](https://umc-utrecht-rwe.github.io/anchoR/reference/make_constructor.md)
+  : Make a window constructor
+- [`make_selector()`](https://umc-utrecht-rwe.github.io/anchoR/reference/make_selector.md)
+  : Make a Selector SQL Template
+
+# Articles
+
+### Get started
+
+- [Get
+  started](https://umc-utrecht-rwe.github.io/anchoR/articles/quickstart.md):
+- [Standard anchoring
+  windows](https://umc-utrecht-rwe.github.io/anchoR/articles/standard-windows.md):
+- [Episode-based
+  windows](https://umc-utrecht-rwe.github.io/anchoR/articles/episode-windows.md):
+- [Designing multiple
+  windows](https://umc-utrecht-rwe.github.io/anchoR/articles/multiple-windows.md):
+
+### Data preparation and operations
+
+- [Migrating legacy
+  metadata](https://umc-utrecht-rwe.github.io/anchoR/articles/metadata-migration.md):
+- [Parquet and DuckDB concept
+  sources](https://umc-utrecht-rwe.github.io/anchoR/articles/production-sources.md):
+- [Troubleshooting and
+  validation](https://umc-utrecht-rwe.github.io/anchoR/articles/troubleshooting.md):
+
+### Advanced use
+
+- [Selector
+  cookbook](https://umc-utrecht-rwe.github.io/anchoR/articles/selector-cookbook.md):
+- [Custom window
+  constructors](https://umc-utrecht-rwe.github.io/anchoR/articles/custom-constructors.md):
+- [Custom
+  selectors](https://umc-utrecht-rwe.github.io/anchoR/articles/custom-selectors.md):
+- [Completing and imputing wide
+  results](https://umc-utrecht-rwe.github.io/anchoR/articles/imputation.md):
