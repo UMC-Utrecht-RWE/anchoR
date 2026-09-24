@@ -6,6 +6,7 @@ template:
 articles:
   - title: Get started
     contents:
+      - quickstart
       - standard-windows
       - episode-windows
       - multiple-windows
