@@ -17,3 +17,5 @@
 ^docs$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^doc$
+^Meta$
