@@ -95,8 +95,7 @@ Walking through what just happened: person 1's window was `[2023-01-02, 2024-01-
 
 ## What to read next
 
-- Want a wide table (one row per person, one column per question) instead of one row per match? See [Tutorial_standard_windows.md](Tutorial_standard_windows.md) the "Multiple windows for the same variable" and `get_anchor_result(..., result_shape = "wide")` sections.
-- Have a question that isn't tied to one fixed date e.g. anything about pregnancy, or another event that can happen more than once? See [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md).
+- Want a wide table (one row per person, one column per question) instead of one row per match? See `vignette("standard-windows", package = "anchoR")` and `vignette("multiple-windows", package = "anchoR")` for `get_anchor_result(..., result_shape = "wide")`.
+- Have a question that isn't tied to one fixed date e.g. anything about pregnancy, or another event that can happen more than once? See `vignette("episode-windows", package = "anchoR")`.
 - Want to see every built-in `selector` (`LATEST`, `EARLIEST`, `COUNT`, ...) and what each returns? See `vignette("selector-cookbook", package = "anchoR")`.
-- Not sure where to go from here at all? [documentation/README.md](README.md) routes you by task.
 
