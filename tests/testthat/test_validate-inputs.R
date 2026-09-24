@@ -26,6 +26,25 @@ testthat::test_that("validate_anchor_inputs standardizes metadata names", {
 })
 
 
+testthat::test_that("validate_anchor_inputs warns on empty population", {
+  old_appender <- logger::log_appender()
+  if (!is.function(old_appender)) old_appender <- logger::appender_console
+  withr::defer(logger::log_appender(old_appender))
+  logged <- character()
+  logger::log_appender(function(lines) logged <<- c(logged, lines))
+
+  validate_anchor_inputs(
+    population = minimal_population()[0],
+    metadata = minimal_metadata(),
+    concepts = minimal_concepts()
+  )
+
+  testthat::expect_true(any(grepl(
+    "Either `population` (0 rows) or `metadata` (3 rows) is empty.",
+    logged,
+    fixed = TRUE
+  )))
+})
 
 testthat::test_that(
   "validate_anchor_inputs accepts character anchor dates in YYYY-mm-dd format",

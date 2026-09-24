@@ -243,9 +243,11 @@ validate_anchor_inputs <- function(
 
   if (nrow(population_dt) == 0L || nrow(metadata_dt) == 0L) {
     logger::log_warn(
-      "Either `population` {%d} or `metadata` {%d} is empty.",
-      nrow(population_dt),
-      nrow(metadata_dt)
+      sprintf(
+        "Either `population` (%d rows) or `metadata` (%d rows) is empty.",
+        nrow(population_dt),
+        nrow(metadata_dt)
+      )
     )
   }
 
