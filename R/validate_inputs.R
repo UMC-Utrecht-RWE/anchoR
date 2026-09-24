@@ -239,10 +239,20 @@ validate_anchor_inputs <- function(
   # Normalization is centralized here so exported functions can stay short and
   # still rely on a consistent metadata schema.
   population_dt <- as_data_table(population, "population")
+  metadata_dt <- as_data_table(metadata, "metadata")
+
+  if (nrow(population_dt) == 0L || nrow(metadata_dt) == 0L) {
+    logger::log_warn(
+      "Either `population` {%d} or `metadata` {%d} is empty.",
+      nrow(population_dt),
+      nrow(metadata_dt)
+    )
+  }
+
   # anchor_col must be a Date column; skipping this check would cause
   # hard-to-trace problems downstream.
   validate_population_anchor_col(population_dt, anchor_col)
-  metadata_dt <- as_data_table(metadata, "metadata")
+
 
   assert_has_columns(
     metadata_dt,
