@@ -458,8 +458,8 @@ imputing_missing <- function(wide_anchored, metadata) {
 
       if (i_variable_type %in% c("TF", "BOOL", "BOOLEAN", "LOGICAL")) {
         # Recognize both logical/numeric and string encodings of TRUE/FALSE.
-        true_values <- c(TRUE, 1, "TRUE", "1", "T")
-        false_values <- c(FALSE, 0, "FALSE", "0", "F")
+        true_values <- c(TRUE, 1, "TRUE", "1", "T", "true")
+        false_values <- c(FALSE, 0, "FALSE", "0", "F", "false")
         raw_values <- wide_anchored[[value_col]]
 
         is_na_value <- is.na(raw_values)

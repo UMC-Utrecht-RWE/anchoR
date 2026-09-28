@@ -1,26 +1,24 @@
 url: https://umc-utrecht-rwe.github.io/anchoR/
-
 template:
   bootstrap: 5
-
 articles:
-  - title: Get started
-    contents:
-      - standard-windows
-      - episode-windows
-      - multiple-windows
-  - title: Data preparation and operations
-    contents:
-      - metadata-migration
-      - production-sources
-      - troubleshooting
-  - title: Advanced use
-    contents:
-      - selector-cookbook
-      - custom-constructors
-      - custom-selectors
-      - imputation
-
+- title: Get started
+  contents:
+  - quickstart
+  - standard-windows
+  - episode-windows
+  - multiple-windows
+- title: Data preparation and operations
+  contents:
+  - metadata-migration
+  - production-sources
+  - troubleshooting
+- title: Advanced use
+  contents:
+  - selector-cookbook
+  - custom-constructors
+  - custom-selectors
+  - imputation
 reference:
   - title: Main workflow
     contents:
