@@ -53,6 +53,12 @@ Validation applies the automatic aliases and canonical types.
 
 population <- data.table(person_id = "1", T0 = as.Date("2024-01-01"))
 normalized <- validate_anchor_inputs(population, migrated)$metadata
+```
+
+    ## WARN [2026-09-28 12:52:06] Either `population` (1 rows) or `metadata` (0 rows) is empty.
+
+``` r
+
 normalized[, .(
     variable_id, selector, constructor, window_name,
     anchor_start_col, anchor_end_col, start_offset, end_offset

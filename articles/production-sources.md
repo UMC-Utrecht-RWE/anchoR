@@ -43,7 +43,7 @@ con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/Rtmpi8JfiJ/duckdb
+    ## ℹ /tmp/RtmpdoVaOe/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.
@@ -80,7 +80,7 @@ anchor(
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/Rtmpi8JfiJ/duckdb
+    ## ℹ /tmp/RtmpdoVaOe/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.
@@ -99,7 +99,7 @@ get_anchor_result(
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/Rtmpi8JfiJ/duckdb
+    ## ℹ /tmp/RtmpdoVaOe/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.
@@ -140,7 +140,7 @@ con <- DBI::dbConnect(duckdb::duckdb(), dbdir = duckdb_path)
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/Rtmpi8JfiJ/duckdb
+    ## ℹ /tmp/RtmpdoVaOe/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.
@@ -164,7 +164,7 @@ anchor(
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/Rtmpi8JfiJ/duckdb
+    ## ℹ /tmp/RtmpdoVaOe/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.
@@ -180,7 +180,7 @@ get_anchor_result(metadata, hive, result_shape = "long")
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/Rtmpi8JfiJ/duckdb
+    ## ℹ /tmp/RtmpdoVaOe/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.

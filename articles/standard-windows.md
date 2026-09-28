@@ -62,7 +62,7 @@ anchor(population, metadata, concepts, anchor_hive_path = hive_path)
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/RtmpcluQJe/duckdb
+    ## ℹ /tmp/RtmpYPjncv/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.
@@ -78,7 +78,7 @@ get_anchor_result(metadata, hive_path, result_shape = "long")
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/RtmpcluQJe/duckdb
+    ## ℹ /tmp/RtmpYPjncv/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.
@@ -104,7 +104,7 @@ get_anchor_result(
 ```
 
     ## duckdb keeps downloaded extensions and secrets in a temporary directory:
-    ## ℹ /tmp/RtmpcluQJe/duckdb
+    ## ℹ /tmp/RtmpYPjncv/duckdb
     ## This is removed when the R session ends.
     ## • Extensions are re-downloaded each session.
     ## • Secrets are lost.

@@ -181,7 +181,7 @@ variables. Inspect deliberate filtering separately:</p>
 <code class="sourceCode R"><span><span class="va">supported_metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/filter_supported_metadata.html">filter_supported_metadata</a></span><span class="op">(</span><span class="va">candidate_metadata</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## WARN [2026-09-28 11:56:17] Dropped 1 metadata row(s) with missing or unsupported selectors. Dropped selector value(s): NOT_IMPLEMENTED. Available selectors in package `anchoR`: ALL, COUNT_MORE_THAN_1, COUNT, EARLIEST, LATEST, RANGE_COUNT. Affected variable_id value(s): bad.</span></span></code></pre>
+<pre><code><span><span class="co">## WARN [2026-09-28 12:52:21] Dropped 1 metadata row(s) with missing or unsupported selectors. Dropped selector value(s): NOT_IMPLEMENTED. Available selectors in package `anchoR`: ALL, COUNT_MORE_THAN_1, COUNT, EARLIEST, LATEST, RANGE_COUNT. Affected variable_id value(s): bad.</span></span></code></pre>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">supported_metadata</span><span class="op">[</span>, <span class="fu">.</span><span class="op">(</span><span class="va">variable_id</span>, <span class="va">selector</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
 <pre><code><span><span class="co">##     variable_id selector</span></span>
