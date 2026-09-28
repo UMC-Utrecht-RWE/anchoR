@@ -82,7 +82,7 @@ supported_metadata <- suppressWarnings(
 )
 ```
 
-    ## WARN [2026-09-24 12:46:22] Dropped 1 metadata row(s) with missing or unsupported selectors. Dropped selector value(s): NOT_IMPLEMENTED. Available selectors in package `anchoR`: ALL, COUNT_MORE_THAN_1, COUNT, EARLIEST, LATEST, RANGE_COUNT. Affected variable_id value(s): bad.
+    ## WARN [2026-09-28 11:56:17] Dropped 1 metadata row(s) with missing or unsupported selectors. Dropped selector value(s): NOT_IMPLEMENTED. Available selectors in package `anchoR`: ALL, COUNT_MORE_THAN_1, COUNT, EARLIEST, LATEST, RANGE_COUNT. Affected variable_id value(s): bad.
 
 ``` r
 
