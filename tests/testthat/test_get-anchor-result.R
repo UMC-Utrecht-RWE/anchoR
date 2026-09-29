@@ -42,6 +42,93 @@ testthat::test_that(
   }
 )
 
+testthat::test_that(
+  "get_count_anchored_variables discovers variables and counts across files",
+  {
+    hive_path <- tempfile(pattern = "anchor-count-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    metadata <- minimal_metadata()
+    anchor(
+      population = minimal_population(),
+      metadata = metadata[variable_id == "cov_latest"],
+      concepts = minimal_concepts(),
+      anchor_hive_path = hive_path
+    )
+    anchor(
+      population = minimal_population(),
+      metadata = metadata[variable_id == "cov_count"],
+      concepts = minimal_concepts(),
+      anchor_hive_path = hive_path
+    )
+    latest_file <- list.files(
+      file.path(hive_path, "variable_id=cov_latest"),
+      pattern = "\\.parquet$",
+      full.names = TRUE
+    )
+    file.copy(
+      latest_file,
+      file.path(dirname(latest_file), "additional.parquet")
+    )
+
+    result <- get_count_anchored_variables(hive_path)
+
+    testthat::expect_identical(
+      result$variable_id,
+      c("cov_count", "cov_latest")
+    )
+    testthat::expect_equal(result$n_anchored, c(2, 2))
+  }
+)
+
+testthat::test_that(
+  "get_count_anchored_variables optionally includes concept counts",
+  {
+    hive_path <- tempfile(pattern = "anchor-count-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    metadata <- minimal_metadata()
+    anchor(
+      population = minimal_population(),
+      metadata = metadata[variable_id %in% c("cov_latest", "cov_count")],
+      concepts = minimal_concepts(),
+      anchor_hive_path = hive_path
+    )
+    result <- get_count_anchored_variables(
+      anchor_hive_path = hive_path,
+      include_concept_counts = TRUE,
+      concepts = minimal_concepts(),
+      variable_concepts = metadata[, .(variable_id, concept_id)]
+    )
+
+    testthat::expect_named(
+      result,
+      c("variable_id", "n_anchored", "concept_id", "n_concept")
+    )
+    testthat::expect_equal(result$n_anchored, c(2, 1))
+    testthat::expect_equal(result$n_concept, c(2, 2))
+  }
+)
+
+testthat::test_that(
+  "get_count_anchored_variables requires concepts when requested",
+  {
+    hive_path <- tempfile(pattern = "anchor-count-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    testthat::expect_error(
+      get_count_anchored_variables(
+        hive_path,
+        include_concept_counts = TRUE
+      ),
+      "`concepts` must be supplied"
+    )
+  }
+)
+
 #--- Tests for imputing_missing
 testthat::test_that(
   "imputing_missing returns input unchanged when all required metadata
