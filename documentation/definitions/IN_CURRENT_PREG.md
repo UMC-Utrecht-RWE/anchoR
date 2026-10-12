@@ -6,7 +6,7 @@ That one episode's window(s) come from the border-offset formula in [Episode-Bas
 
 Two common shapes:
 - **Anytime during the current episode**: leave all four border offsets `NA_real_` (neither pair set → the unshifted episode span becomes the window).
-- **Since the start of the current episode, up to the anchor**: this constructor alone always windows relative to the *episode's own* `start_episode`/`end_episode`, never the anchor directly — use `IN_CURRENT_PREG` together with a `GENERIC` variable anchored at `T0` if you need "up to today" rather than "up to the episode's end."
+- **Since the start of the current episode, up to the anchor**: leave all four border offsets `NA_real_` and set `anchor_end_offset = 0` (or `-1` to stop the day before the anchor). The border offsets build the episode's full span, and the anchor clip (Step 4, below) then cuts it off at `T0 + anchor_end_offset`. If the anchor is the episode's first day and `anchor_end_offset` is negative, the clipped window ends before it starts and that person gets no result.
 
 If a border-offset window overshoots the episode's own real bounds (a common risk when a pair is full — the formula doesn't know how long the episode actually is), `cap_start_to_episode`/`cap_end_to_episode` (both `NA`/unset by default) pull it back in — see "Step 3" in [Episode-Based Window Engine](<Episode-Based Window Engine.md>).
 

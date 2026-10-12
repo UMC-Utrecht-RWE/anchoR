@@ -7,6 +7,7 @@ Choose the shortest guide that matches the task.
 - **New to anchoR, or to this domain entirely?** [Quickstart.md](Quickstart.md) no jargon assumed, five terms and one runnable example.
 - [Standard windows](Tutorial_standard_windows.md): the complete fixed-anchor workflow.
 - [Episode-based windows](Tutorial_pregnancy_windows.md): recurring start/end episodes.
+- [Pregnancy window recipes](Recipes_episode_windows.md): know the window your protocol wants ("365 days before LMP", "first trimester")? Copy the metadata row from here.
 - [Custom constructors and selectors](Tutorial_custom_constructors_and_selectors.md): define your own window shape or selection rule without editing anchoR.
 - Installed equivalents: `vignette("standard-windows", package = "anchoR")` and `vignette("episode-windows", package = "anchoR")`.
 
