@@ -237,13 +237,10 @@ get_anchor_result <- function(
     ]
     expected_window_pairs <- if (cast_window) {
       explicit_window_pairs <- requested_results_dt[!is.na(window_name)]
-      wildcard_window_pairs <- anchored_dt[
+      wildcard_window_pairs <- unique(anchored_dt[
         variable_id %in% wildcard_variable_ids,
-        unique(.(
-          variable_id,
-          window_name
-        ))
-      ]
+        .(variable_id, window_name)
+      ])
       unique(data.table::rbindlist(
         list(explicit_window_pairs, wildcard_window_pairs),
         use.names = TRUE,
@@ -302,12 +299,10 @@ get_anchor_result <- function(
           !is.na(window_name),
           .(window_name)
         ]
-        wildcard_window_keys <- anchored_dt[
+        wildcard_window_keys <- unique(anchored_dt[
           variable_id %in% wildcard_variable_ids,
-          unique(.(
-            window_name
-          ))
-        ]
+          .(window_name)
+        ])
         window_keys <- unique(data.table::rbindlist(
           list(explicit_window_keys, wildcard_window_keys),
           use.names = TRUE,
