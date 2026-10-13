@@ -6,7 +6,14 @@ WITH matches AS (
         w.variable_id,
         w.window_name,
         COALESCE(CAST(c.value AS VARCHAR), 'TRUE') AS value,
-        COALESCE(CAST(c.value AS VARCHAR), '') AS sort_value,
+        -- Value tie-break key: numbers compare numerically (so '10' beats '9').
+        -- Non-numeric values (text, or a missing value as '') get a NULL
+        -- value_number, which DuckDB sorts above every number, so they win over
+        -- numbers and compare among themselves alphabetically.
+        struct_pack(
+            value_number := TRY_CAST(CAST(c.value AS VARCHAR) AS DOUBLE),
+            value_text := COALESCE(CAST(c.value AS VARCHAR), '')
+        ) AS sort_value,
         c.date,
         -- Unordered window aggregates (no ORDER BY inside OVER) -- DuckDB
         -- computes these with a partitioned pass, not a sort, unlike the
