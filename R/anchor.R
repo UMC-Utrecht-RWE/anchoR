@@ -216,9 +216,10 @@ clear_anchor_partitions <- function(anchor_hive_path, variable_ids) {
 #' Copy finished variables from local scratch into the real output hive.
 #'
 #' Goes through the requested variables one at a time. If the local scratch
-#' hive holds a variable, this deletes its old copy in the output hive (if
-#' any) and replaces it with the new one. It skips a variable that was never
-#' produced, leaving the output hive's existing copy untouched.
+#' hive holds a variable, this replaces its old copy in the output hive (if
+#' any) with the new one, restoring the old copy if the replacement fails.
+#' It skips a variable that was never produced, leaving the output hive's
+#' existing copy untouched.
 #'
 #' @param local_hive_path The local scratch hive that every chunk wrote
 #'   into.
@@ -249,7 +250,7 @@ publish_anchor_partitions <- function(
         sprintf(
           paste(
             "No parquet partition was produced for variable_id `%s`.",
-            "The target hive was left without that partition."
+            "Any existing target partition was left untouched."
           ),
           current_variable_id
         )
@@ -257,16 +258,8 @@ publish_anchor_partitions <- function(
       next
     }
 
-    if (dir.exists(target_partition_path)) {
-      logger::log_debug(
-        sprintf(
-          "Deleting existing parquet partition for variable_id `%s`.",
-          current_variable_id
-        )
-      )
-      unlink(target_partition_path, recursive = TRUE, force = TRUE)
-    }
-
+    # `move_anchor_partition()` backs up any existing partition and restores
+    # it if the install fails, so the target must not be deleted beforehand.
     move_anchor_partition(
       source_partition_path = local_partition_path,
       target_partition_path = target_partition_path,

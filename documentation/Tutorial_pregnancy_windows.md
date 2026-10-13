@@ -1,5 +1,7 @@
 # Using Episode-Based (Pregnancy) Windows
 
+> Looking for the metadata row for a specific protocol window rather than how the engine works? See [Recipes_episode_windows.md](Recipes_episode_windows.md).
+
 This guide shows how to anchor study variables to a *recurring* event (pregnancy here, or any repeatable start/end episode) instead of a single fixed anchor date. It documents the metadata shape implemented in `R/pregnancy_window.R`. The earlier free-text design is retained only as a clearly labeled [historical sketch](examples/pregnancy_examples.md).
 
 ## The idea
@@ -107,7 +109,8 @@ flowchart TD
 A few notes to go with the diagram:
 
 - The four boxes are exactly the four constructors from the table above; each has its own definitions page with more detail.
-- There is no separate "since the start of the current episode, up to today" shape built in — `in_current_pregnancy`'s window is always relative to the episode's own `start_episode`/`end_episode`, never the anchor directly. If you need "up to T0," add a second, `GENERIC` variable anchored at `T0` instead, or set `anchor_end_offset = 0` to clip the episode-relative window down to no later than `T0`.
+- For "since the start of the current episode, up to T0", use `in_current_pregnancy` with all border offsets `NA` and `anchor_end_offset = 0`: the border offsets give the episode's full span, and the anchor clip cuts it off at `T0`. See [IN_CURRENT_PREG](definitions/IN_CURRENT_PREG.md).
+- `outside_all_pregnancy` never includes days inside the current pregnancy, and its range is measured from `T0`, not from the episode's start. If `T0` falls mid-pregnancy, the lookback is shorter than its offsets suggest. See the warning in [OUTSIDE_ALL_PREG](definitions/OUTSIDE_ALL_PREG.md).
 
 ## Step 1: build the episodes table
 

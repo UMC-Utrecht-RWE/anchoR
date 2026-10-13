@@ -7,7 +7,11 @@ WITH winners AS (
         -- Both fields sort DESC (latest date, then largest value on ties),
         -- so one lexicographic arg_max on (date, value) picks the same row a
         -- ROW_NUMBER() ORDER BY date DESC, value DESC filter would, without
-        -- needing to sort every candidate row.
+        -- needing to sort every candidate row. Numeric values compare
+        -- numerically (so '10' beats '9'). Non-numeric values (text, or a
+        -- missing value as '') get a NULL value_number, which DuckDB sorts
+        -- above every number, so they win over numbers and compare among
+        -- themselves alphabetically.
         arg_max(
             struct_pack(
                 anchor_row_id := w.anchor_row_id,
@@ -16,7 +20,8 @@ WITH winners AS (
             ),
             struct_pack(
                 date := c.date,
-                value := COALESCE(CAST(c.value AS VARCHAR), '')
+                value_number := TRY_CAST(CAST(c.value AS VARCHAR) AS DOUBLE),
+                value_text := COALESCE(CAST(c.value AS VARCHAR), '')
             )
         ) AS winner,
         COUNT(*) AS n

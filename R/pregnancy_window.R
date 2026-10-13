@@ -22,9 +22,21 @@ EPISODE_CONSTRUCTORS <- c( # nolint: object_name_linter.
 #' @return `population_dt`, with `.episodes` added.
 #' @keywords internal
 nest_episodes_onto_population <- function(population_dt, episodes_dt) {
-  population_dt[, .episodes := lapply(person_id, function(id) {
-    episodes_dt[person_id == id, .(start_episode, end_episode)]
-  })]
+  # Split once by person instead of filtering `episodes_dt` per population
+  # row: avoids an O(population x episodes) scan, and avoids resolving the
+  # lookup id against a same-named column in `episodes_dt` (an `id` column
+  # used to silently match nothing).
+  episode_cols <- episodes_dt[, .(start_episode, end_episode)]
+  by_person <- split(episode_cols, as.character(episodes_dt$person_id))
+  no_episodes <- episode_cols[0L]
+
+  population_dt[, .episodes := lapply(
+    as.character(person_id),
+    function(person) {
+      person_episodes <- by_person[[person]]
+      if (is.null(person_episodes)) no_episodes else person_episodes
+    }
+  )]
   population_dt[]
 }
 
@@ -516,5 +528,19 @@ outside_all_pregnancy_window <- make_constructor(
     "anchor_start_col", "anchor_end_col",
     "anchor_start_offset", "anchor_end_offset"
   ),
-  check_fn = generic_window_check
+  check_fn = function(window_dt) {
+    generic_window_check(window_dt)
+    missing_bounds <- is.na(window_dt$anchor_start_offset) |
+      is.na(window_dt$anchor_end_offset)
+    if (any(missing_bounds)) {
+      stop_log(
+        paste(
+          "`outside_all_pregnancy` requires non-missing",
+          "`anchor_start_offset` and `anchor_end_offset`;",
+          "`start_offset` and `end_offset` are not used by this constructor."
+        )
+      )
+    }
+    invisible(TRUE)
+  }
 )

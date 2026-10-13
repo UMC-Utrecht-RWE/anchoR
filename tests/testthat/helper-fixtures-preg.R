@@ -334,3 +334,90 @@ pregnancy_concepts_cases <- function() {
     value = "TRUE"
   )
 }
+
+# ---------------------------------------------------------------------------
+# PRIOR LOOKBACK: one person, four earlier pregnancies and a current one,
+# mirroring the "every prior pregnancy in the last 10 years" use case.
+# T0 = 2026-06-15 (28 weeks into the current pregnancy), so a 10-year
+# lookback of `anchor_start_offset = -3652` starts on 2016-06-15.
+#
+#   2014-01-01/09-01       fully before the lookback
+#   2016-01-01/09-01       straddles the lookback start (2016-06-15)
+#   2018-01-01/09-01       fully inside the lookback
+#   2020-01-01/09-01       fully inside the lookback
+#   2025-12-01/2026-09-01  current
+#
+# Every pregnancy has an EARLY record (start + 10 days) and a LATE record
+# (end - 10 days), so tests can tell a whole pregnancy apart from a clipped
+# one: the straddling 2016 pregnancy keeps its LATE record but not its EARLY
+# one.
+# ---------------------------------------------------------------------------
+
+pregnancy_episodes_lookback <- function() {
+  data.table::data.table(
+    person_id = "1",
+    start_episode = as.Date(c(
+      "2014-01-01", "2016-01-01", "2018-01-01", "2020-01-01", "2025-12-01"
+    )),
+    end_episode = as.Date(c(
+      "2014-09-01", "2016-09-01", "2018-09-01", "2020-09-01", "2026-09-01"
+    ))
+  )
+}
+
+pregnancy_population_lookback <- function() {
+  data.table::data.table(person_id = "1", T0 = as.Date("2026-06-15"))
+}
+
+pregnancy_concepts_lookback <- function() {
+  episodes <- pregnancy_episodes_lookback()
+  data.table::data.table(
+    person_id = "1",
+    concept_id = "PREG_MARKER",
+    date = c(episodes$start_episode + 10L, episodes$end_episode - 10L),
+    value = rep(c("EARLY", "LATE"), each = nrow(episodes))
+  )
+}
+
+# A single metadata row with every episode column defaulted to NA, so a test
+# only spells out the columns it cares about.
+episode_metadata_row <- function(constructor, selector = "ALL",
+                                 variable_id = "v", concept_id = "PREG_MARKER",
+                                 ...) {
+  row <- data.table::data.table(
+    variable_id = variable_id,
+    concept_id = concept_id,
+    constructor = constructor,
+    selector = selector,
+    start_offset = NA_integer_,
+    end_offset = NA_integer_
+  )
+  extra <- list(...)
+  for (col in names(extra)) {
+    data.table::set(row, j = col, value = extra[[col]])
+  }
+  row[]
+}
+
+# Run anchor() into a fresh hive and return the anchored rows, or an empty
+# data.table when nothing matched (anchor() writes no files in that case).
+run_episode_anchor <- function(population, metadata, concepts, episodes,
+                               ...) {
+  hive_path <- tempfile(pattern = "anchor-hive-")
+  dir.create(hive_path)
+  on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+  anchor(
+    population = population,
+    metadata = metadata,
+    concepts = concepts,
+    episodes = episodes,
+    anchor_hive_path = hive_path,
+    ...
+  )
+
+  if (length(list.files(hive_path, recursive = TRUE)) == 0L) {
+    return(data.table::data.table())
+  }
+  read_anchor_hive(hive_path)
+}

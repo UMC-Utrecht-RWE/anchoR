@@ -10,8 +10,10 @@
 | `concept_id`   | character    | Value matched directly to `concepts$concept_id`.                                              |
 | `constructor`  | character    | Window rule, usually `GENERIC`; see [constructors](definitions/Constructor.md).               |
 | `selector`     | character    | Reduction rule such as `LATEST`, `COUNT`, or `ALL`; see [selectors](definitions/Selector.md). |
-| `start_offset` | integer-like | Inclusive window-start offset in days.                                                        |
-| `end_offset`   | integer-like | Inclusive window-end offset in days.                                                          |
+| `start_offset` | integer-like | `GENERIC` only: inclusive window-start offset in days. Ignored by episode-based constructors. |
+| `end_offset`   | integer-like | `GENERIC` only: inclusive window-end offset in days. Ignored by episode-based constructors.   |
+
+`start_offset`/`end_offset` must be present as columns for every row, but episode-based constructors never read them: `NA` is fine there, and any value you put in them has no effect. See [Which columns each constructor reads](#which-columns-each-constructor-reads).
 
 `start_offset` and `end_offset` are converted with `as.integer()`. Fractional values are truncated toward zero, so validate or round them before calling anchoR if fractions have scientific meaning.
 
@@ -28,6 +30,18 @@
 | `cap_start_to_episode`, `cap_end_to_episode`                 | `NA`            | Episode-based constructors only (not `outside_all_pregnancy`): when `TRUE`, pulls a border-offset window back inside that same selected episode's own real bounds. |
 
 See [Episode-Based Window Engine](<definitions/Episode-Based Window Engine.md>) for exactly how the four border-offset columns combine to build a window, and [Tutorial_pregnancy_windows.md](Tutorial_pregnancy_windows.md) for a walkthrough. Episode-based constructors also require a separate `episodes` table, passed as its own argument alongside `population`/`metadata` see [Input_population.md](Input_population.md).
+
+## Which columns each constructor reads
+
+Every row carries every column, but each constructor reads only some of them. A value in a column the constructor ignores is silently discarded, not an error, so check this table before relying on a column.
+
+| constructor                                                          | `start_offset`/`end_offset` | `anchor_start_offset`/`anchor_end_offset`                                   | border offsets (`before_/after_start/end_episode_offset`) | `cap_start/end_to_episode`         |
+| -------------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------- |
+| `GENERIC`                                                            | **shape** the window        | ignored                                                                     | ignored                                                   | ignored                            |
+| `in_current_pregnancy`, `in_prior_pregnancy`, `in_current_and_prior` | ignored                     | **clip** the window to `[anchor + offset, anchor + offset]` (`NA` = no clip) | **shape** the window, relative to the episode's own edges | **cap** the window to the episode |
+| `outside_all_pregnancy`                                              | ignored                     | **define the search range** the gaps are found in                          | ignored                                                   | ignored                            |
+
+In short: `start_offset`/`end_offset` are the only offsets `GENERIC` reads, and the episode-based constructors never read them. For episode-based windows, the window's shape comes from the border offsets and `anchor_*_offset` only narrows it, except for `outside_all_pregnancy`, where `anchor_*_offset` is the only thing that matters.
 
 `date_extraction_func` is accepted as a legacy alias for `selector`. The literal value `"T0"` in either anchor-column field is treated as a placeholder for the `anchor_col` argument.
 

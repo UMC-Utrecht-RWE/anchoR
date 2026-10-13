@@ -27,6 +27,7 @@ reference:
   - anchor_by_selector
   - define_window
   - get_anchor_result
+  - get_count_anchored_variables
 - title: Metadata and extensibility
   contents:
   - validate_anchor_inputs
@@ -35,4 +36,3 @@ reference:
   - selector_sql_path
   - make_constructor
   - make_selector
-
