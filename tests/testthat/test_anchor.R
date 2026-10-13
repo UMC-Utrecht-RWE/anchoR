@@ -848,3 +848,389 @@ testthat::test_that(
     testthat::expect_equal(anchored$n, c(0L, 1L, 3L, 5L))
   }
 )
+
+#--- Tests for hive path and partition publishing helpers
+
+# Write one file into a partition folder so tests can tell old output from
+# new output by content.
+write_partition_marker <- function(partition_path, content) {
+  dir.create(partition_path, recursive = TRUE, showWarnings = FALSE)
+  writeLines(content, file.path(partition_path, "part-0.parquet"))
+}
+
+read_partition_marker <- function(partition_path) {
+  readLines(file.path(partition_path, "part-0.parquet"))
+}
+
+# Leftover `.anchor-incoming-*` / `.anchor-backup-*` folders in the hive.
+anchor_scratch_dirs <- function(hive_path) {
+  list.files(hive_path, pattern = "^\\.anchor-", all.files = TRUE)
+}
+
+# A copy of `move_anchor_partition()` whose `file.rename()` returns FALSE
+# whenever `fail_when(from, to)` is TRUE, to simulate filesystem failures.
+failing_rename_move <- function(fail_when) {
+  failing_rename <- function(from, to) {
+    if (fail_when(from, to)) {
+      return(FALSE)
+    }
+    base::file.rename(from, to)
+  }
+  move_fn <- move_anchor_partition
+  environment(move_fn) <- list2env(
+    list(file.rename = failing_rename),
+    parent = environment(move_anchor_partition)
+  )
+  move_fn
+}
+
+testthat::test_that("ensure_anchor_hive_path errors on a NULL path", {
+  testthat::expect_error(
+    ensure_anchor_hive_path(NULL),
+    "`anchor_hive_path` must be a valid path!"
+  )
+})
+
+testthat::test_that(
+  "ensure_anchor_hive_path creates a missing directory and returns its
+  normalized path",
+  {
+    root <- tempfile(pattern = "anchor-root-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    hive_path <- file.path(root, "nested", "hive")
+
+    result <- ensure_anchor_hive_path(hive_path)
+
+    testthat::expect_true(dir.exists(hive_path))
+    testthat::expect_equal(
+      result,
+      normalizePath(hive_path, winslash = "/", mustWork = TRUE)
+    )
+  }
+)
+
+testthat::test_that(
+  "move_anchor_partition installs into an empty target and removes the
+  source",
+  {
+    root <- tempfile(pattern = "anchor-move-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    source_path <- file.path(root, "local", "variable_id=v1")
+    target_hive <- file.path(root, "hive")
+    target_path <- file.path(target_hive, "variable_id=v1")
+    write_partition_marker(source_path, "new")
+    dir.create(target_hive)
+
+    move_anchor_partition(source_path, target_path, "v1")
+
+    testthat::expect_equal(read_partition_marker(target_path), "new")
+    testthat::expect_false(dir.exists(source_path))
+    testthat::expect_length(anchor_scratch_dirs(target_hive), 0L)
+  }
+)
+
+testthat::test_that(
+  "move_anchor_partition replaces an existing target and drops the backup",
+  {
+    root <- tempfile(pattern = "anchor-move-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    source_path <- file.path(root, "local", "variable_id=v1")
+    target_hive <- file.path(root, "hive")
+    target_path <- file.path(target_hive, "variable_id=v1")
+    write_partition_marker(source_path, "new")
+    write_partition_marker(target_path, "old")
+
+    move_anchor_partition(source_path, target_path, "v1")
+
+    testthat::expect_equal(read_partition_marker(target_path), "new")
+    testthat::expect_false(dir.exists(source_path))
+    testthat::expect_length(anchor_scratch_dirs(target_hive), 0L)
+  }
+)
+
+testthat::test_that(
+  "move_anchor_partition errors and keeps the target when there is nothing
+  to copy",
+  {
+    root <- tempfile(pattern = "anchor-move-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    source_path <- file.path(root, "local", "variable_id=v1")
+    target_hive <- file.path(root, "hive")
+    target_path <- file.path(target_hive, "variable_id=v1")
+    dir.create(source_path, recursive = TRUE)
+    write_partition_marker(target_path, "old")
+
+    testthat::expect_error(
+      move_anchor_partition(source_path, target_path, "v1"),
+      "Could not prepare replacement partition for `v1`."
+    )
+    testthat::expect_equal(read_partition_marker(target_path), "old")
+    testthat::expect_length(anchor_scratch_dirs(target_hive), 0L)
+  }
+)
+
+testthat::test_that(
+  "move_anchor_partition errors and keeps the target when the backup
+  rename fails",
+  {
+    root <- tempfile(pattern = "anchor-move-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    source_path <- file.path(root, "local", "variable_id=v1")
+    target_hive <- file.path(root, "hive")
+    target_path <- file.path(target_hive, "variable_id=v1")
+    write_partition_marker(source_path, "new")
+    write_partition_marker(target_path, "old")
+
+    move_fn <- failing_rename_move(
+      function(from, to) from == target_path
+    )
+
+    testthat::expect_error(
+      move_fn(source_path, target_path, "v1"),
+      "Could not back up existing partition for `v1`."
+    )
+    testthat::expect_equal(read_partition_marker(target_path), "old")
+    testthat::expect_equal(read_partition_marker(source_path), "new")
+    testthat::expect_length(anchor_scratch_dirs(target_hive), 0L)
+  }
+)
+
+testthat::test_that(
+  "move_anchor_partition rolls back to the original when install fails",
+  {
+    root <- tempfile(pattern = "anchor-move-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    source_path <- file.path(root, "local", "variable_id=v1")
+    target_hive <- file.path(root, "hive")
+    target_path <- file.path(target_hive, "variable_id=v1")
+    write_partition_marker(source_path, "new")
+    write_partition_marker(target_path, "old")
+
+    # Only the incoming -> target rename fails; the rollback rename works.
+    move_fn <- failing_rename_move(
+      function(from, to) {
+        to == target_path && grepl("anchor-incoming-", basename(from))
+      }
+    )
+
+    error <- testthat::expect_error(
+      move_fn(source_path, target_path, "v1"),
+      "Could not install replacement partition for `v1`."
+    )
+    testthat::expect_false(grepl("Rollback failed", conditionMessage(error)))
+    testthat::expect_equal(read_partition_marker(target_path), "old")
+    testthat::expect_equal(read_partition_marker(source_path), "new")
+    testthat::expect_length(anchor_scratch_dirs(target_hive), 0L)
+  }
+)
+
+testthat::test_that(
+  "move_anchor_partition reports where the original is when rollback fails",
+  {
+    root <- tempfile(pattern = "anchor-move-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    source_path <- file.path(root, "local", "variable_id=v1")
+    target_hive <- file.path(root, "hive")
+    target_path <- file.path(target_hive, "variable_id=v1")
+    write_partition_marker(source_path, "new")
+    write_partition_marker(target_path, "old")
+
+    # Every rename into the target fails, including the rollback.
+    move_fn <- failing_rename_move(
+      function(from, to) to == target_path
+    )
+
+    error <- testthat::expect_error(
+      move_fn(source_path, target_path, "v1"),
+      "Rollback failed; the original remains at"
+    )
+    testthat::expect_false(dir.exists(target_path))
+
+    # The original survives in the backup folder named in the error, and the
+    # incoming copy is cleaned up.
+    scratch_dirs <- anchor_scratch_dirs(target_hive)
+    testthat::expect_length(scratch_dirs, 1L)
+    testthat::expect_match(scratch_dirs, "^\\.anchor-backup-")
+    backup_path <- file.path(target_hive, scratch_dirs)
+    testthat::expect_equal(read_partition_marker(backup_path), "old")
+    testthat::expect_true(
+      grepl(scratch_dirs, conditionMessage(error), fixed = TRUE)
+    )
+  }
+)
+
+testthat::test_that(
+  "publish_anchor_partitions replaces an existing target partition",
+  {
+    root <- tempfile(pattern = "anchor-publish-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    local_hive <- file.path(root, "local")
+    target_hive <- file.path(root, "hive")
+    write_partition_marker(file.path(local_hive, "variable_id=v1"), "new")
+    write_partition_marker(file.path(target_hive, "variable_id=v1"), "old")
+    # A stale extra file in the old partition must not survive the refresh.
+    writeLines(
+      "stale",
+      file.path(target_hive, "variable_id=v1", "part-1.parquet")
+    )
+    write_partition_marker(file.path(target_hive, "variable_id=v2"), "keep")
+
+    publish_anchor_partitions(
+      local_hive_path = local_hive,
+      anchor_hive_path = target_hive,
+      variable_ids = c("v1", "v2")
+    )
+
+    testthat::expect_equal(
+      list.files(file.path(target_hive, "variable_id=v1")),
+      "part-0.parquet"
+    )
+    testthat::expect_equal(
+      read_partition_marker(file.path(target_hive, "variable_id=v1")),
+      "new"
+    )
+    # v2 was not produced locally, so its existing output is left alone.
+    testthat::expect_equal(
+      read_partition_marker(file.path(target_hive, "variable_id=v2")),
+      "keep"
+    )
+    testthat::expect_false(dir.exists(file.path(local_hive, "variable_id=v1")))
+  }
+)
+
+testthat::test_that(
+  "publish_anchor_partitions keeps the existing partition when the install
+  fails",
+  {
+    root <- tempfile(pattern = "anchor-publish-")
+    on.exit(unlink(root, recursive = TRUE, force = TRUE), add = TRUE)
+    local_hive <- file.path(root, "local")
+    target_hive <- file.path(root, "hive")
+    target_path <- file.path(target_hive, "variable_id=v1")
+    write_partition_marker(file.path(local_hive, "variable_id=v1"), "new")
+    write_partition_marker(target_path, "old")
+
+    publish_fn <- publish_anchor_partitions
+    environment(publish_fn) <- list2env(
+      list(
+        move_anchor_partition = failing_rename_move(
+          function(from, to) {
+            to == target_path && grepl("anchor-incoming-", basename(from))
+          }
+        )
+      ),
+      parent = environment(publish_anchor_partitions)
+    )
+
+    testthat::expect_error(
+      publish_fn(
+        local_hive_path = local_hive,
+        anchor_hive_path = target_hive,
+        variable_ids = "v1"
+      ),
+      "Could not install replacement partition for `v1`."
+    )
+    testthat::expect_equal(read_partition_marker(target_path), "old")
+    testthat::expect_length(anchor_scratch_dirs(target_hive), 0L)
+  }
+)
+
+testthat::test_that(
+  "publish_accumulated_table does nothing when no table was accumulated",
+  {
+    con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    withr::defer(DBI::dbDisconnect(con, shutdown = TRUE))
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    dir.create(hive_path)
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+    write_partition_marker(file.path(hive_path, "variable_id=v1"), "keep")
+
+    result <- withVisible(publish_accumulated_table(
+      con,
+      table_name = "anchor_results",
+      anchor_hive_path = hive_path
+    ))
+
+    testthat::expect_null(result$value)
+    testthat::expect_false(result$visible)
+    testthat::expect_equal(
+      list.files(hive_path, recursive = TRUE),
+      "variable_id=v1/part-0.parquet"
+    )
+  }
+)
+
+testthat::test_that(
+  "anchor by variable rejects an invalid chunk_size",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+    for (bad_chunk_size in list(0, -1, "5", c(1, 2))) {
+      testthat::expect_error(
+        anchor(
+          population = minimal_population(),
+          metadata = minimal_metadata(),
+          concepts = minimal_concepts(),
+          anchor_hive_path = hive_path,
+          by = "variable",
+          chunk_size = bad_chunk_size
+        ),
+        "`chunk_size` must be a single positive number."
+      )
+    }
+    # Validation happens before anything is written.
+    testthat::expect_false(dir.exists(hive_path))
+  }
+)
+
+testthat::test_that(
+  "anchor errors when concepts is NULL",
+  {
+    for (by in c("whole", "variable")) {
+      hive_path <- tempfile(pattern = "anchor-hive-")
+      on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+      testthat::expect_error(
+        anchor(
+          population = minimal_population(),
+          metadata = minimal_metadata(),
+          concepts = NULL,
+          anchor_hive_path = hive_path,
+          by = by
+        ),
+        "`concepts` must be a data frame"
+      )
+    }
+  }
+)
+
+testthat::test_that(
+  "anchor by variable creates a missing staging_dir",
+  {
+    hive_path <- tempfile(pattern = "anchor-hive-")
+    staging_root <- tempfile(pattern = "anchor-staging-")
+    on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+    on.exit(unlink(staging_root, recursive = TRUE, force = TRUE), add = TRUE)
+    staging_dir <- file.path(staging_root, "nested")
+
+    anchor(
+      population = minimal_population(),
+      metadata = minimal_metadata(),
+      concepts = minimal_concepts(),
+      anchor_hive_path = hive_path,
+      by = "variable",
+      staging_dir = staging_dir,
+      staging_mode = "disk"
+    )
+
+    testthat::expect_true(dir.exists(staging_dir))
+    # Scratch folders inside staging_dir are cleaned up after the run.
+    testthat::expect_length(list.files(staging_dir), 0L)
+    # lab_range has no matching concepts, so it gets no partition.
+    testthat::expect_setequal(
+      unique(read_anchor_hive(hive_path)$variable_id),
+      c("cov_latest", "cov_count")
+    )
+  }
+)
