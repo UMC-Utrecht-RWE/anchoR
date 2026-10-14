@@ -3,8 +3,8 @@
 # Opt-in only: it takes minutes, so it is skipped unless
 # ANCHOR_STRESS_TESTS=true. Run it with:
 #
-#   Sys.setenv(ANCHOR_STRESS_TESTS = "true")
-#   devtools::test(filter = "stress-pregnancy-window")
+#   Sys.setenv(ANCHOR_STRESS_TESTS = "true") #nolint
+#   devtools::test(filter = "stress-pregnancy-window") #nolint
 #
 # Row counts default to 1k / 5k / 20k window_dt rows and can be overridden
 # with e.g. ANCHOR_STRESS_SIZES="1000,10000,50000". Timings are printed and
@@ -82,7 +82,8 @@ testthat::test_that("pregnancy_window_engine stress test", {
 
   message("\npregnancy_window_engine stress results:")
   message(paste(utils::capture.output(print(results, digits = 3)),
-                collapse = "\n"))
+    collapse = "\n"
+  ))
   message("Saved to: ", out_file)
 
   testthat::expect_true(all(results$seconds >= 0))
