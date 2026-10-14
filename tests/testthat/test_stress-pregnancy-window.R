@@ -7,11 +7,8 @@
 #   devtools::test(filter = "stress-pregnancy-window")
 #
 # Row counts default to 1k / 5k / 20k window_dt rows and can be overridden
-# with e.g. ANCHOR_STRESS_SIZES="1000,10000,50000". Both the vectorized
-# engine and the original row-by-row one (pregnancy_window_engine_old()) are
-# timed on the same data; the old one only for sizes up to
-# ANCHOR_STRESS_OLD_MAX_ROWS (default 20000), since it costs ~1-2 ms per
-# row. Timings are printed and written to
+# with e.g. ANCHOR_STRESS_SIZES="1000,10000,50000". Timings are printed and
+# written to
 # `tempdir()/pregnancy_window_stress.csv`. Synthetic data comes from
 # helper-fixtures-stress.R.
 
@@ -20,21 +17,16 @@ stress_sizes <- function() {
   as.integer(strsplit(raw, ",", fixed = TRUE)[[1]])
 }
 
-stress_old_max_rows <- function() {
-  as.integer(Sys.getenv("ANCHOR_STRESS_OLD_MAX_ROWS", "20000"))
-}
-
-time_engine <- function(engine, window_dt, episode_select) {
+time_engine <- function(window_dt, episode_select) {
   gc(verbose = FALSE)
   elapsed <- system.time(
-    out <- engine(window_dt, episode_select)
+    out <- pregnancy_window_engine(window_dt, episode_select)
   )[["elapsed"]]
   list(out = out, elapsed = elapsed)
 }
 
-stress_row <- function(engine, mode, window_dt, timed) {
+stress_row <- function(mode, window_dt, timed) {
   data.table::data.table(
-    engine = engine,
     episode_select = mode,
     input_rows = nrow(window_dt),
     output_rows = nrow(timed$out),
@@ -60,11 +52,10 @@ testthat::test_that("pregnancy_window_engine stress test", {
       max(1L, n_rows %/% n_variables),
       stress_metadata_default(n_variables)
     )
-    run_old <- nrow(window_dt) <= stress_old_max_rows()
 
     for (mode in modes) {
-      new <- time_engine(pregnancy_window_engine, window_dt, mode)
-      out <- new$out
+      timed <- time_engine(window_dt, mode)
+      out <- timed$out
 
       # Sanity: output only holds input rows and only real windows.
       testthat::expect_s3_class(out, "data.table")
@@ -74,34 +65,17 @@ testthat::test_that("pregnancy_window_engine stress test", {
       )
       testthat::expect_false(anyNA(out$window_start))
       testthat::expect_false(anyNA(out$window_end))
-      results[[length(results) + 1L]] <- stress_row("new", mode, window_dt, new)
-
-      if (run_old) {
-        old <- time_engine(pregnancy_window_engine_old, window_dt, mode)
-        testthat::expect_equal(new$out, old$out)
-        results[[length(results) + 1L]] <- stress_row(
-          "old", mode, window_dt, old
-        )
-      }
+      results[[length(results) + 1L]] <- stress_row(mode, window_dt, timed)
     }
   }
 
   results <- data.table::rbindlist(results)
-  speedup <- data.table::dcast(
-    results, episode_select + input_rows ~ engine, value.var = "seconds"
-  )
-  if ("old" %in% names(speedup)) {
-    speedup[, speedup := old / pmax(new, 0.001)]
-  }
 
   out_file <- file.path(tempdir(), "pregnancy_window_stress.csv")
   data.table::fwrite(results, out_file)
 
   message("\npregnancy_window_engine stress results:")
   message(paste(utils::capture.output(print(results, digits = 3)),
-                collapse = "\n"))
-  message("\nSpeed-up (old seconds / new seconds):")
-  message(paste(utils::capture.output(print(speedup, digits = 3)),
                 collapse = "\n"))
   message("Saved to: ", out_file)
 

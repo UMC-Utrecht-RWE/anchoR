@@ -44,7 +44,6 @@ ANCHOR_STRESS_TESTS=true ANCHOR_STRESS_SIZES=1000,5000,20000 \
 | --------------------- | -------------------- | --------------------------------------------------------- |
 | `ANCHOR_STRESS_TESTS` | unset (test skipped) | Set to `true` to run the test.                            |
 | `ANCHOR_STRESS_SIZES` | `1000,5000,20000`    | Comma-separated list of `window_dt` row counts to time.   |
-| `ANCHOR_STRESS_OLD_MAX_ROWS` | `20000`       | Largest size at which the old engine is also timed. Set to `0` to time only the new engine (e.g. for 1M rows). |
 
 Use `filter = "stress-pregnancy-window"` so only this file runs. Without the
 filter, the whole suite runs as well.
@@ -68,29 +67,18 @@ seed is fixed (`1026`), so reruns use identical data.
 2. **Shapes it like production.** Episodes are nested with the real
    `nest_episodes_onto_population()`, then cross-joined with the metadata.
    This is the same input `define_window()` passes to a constructor.
-3. **Times both engines.** It calls the vectorized `pregnancy_window_engine()`
-   and, for sizes up to `ANCHOR_STRESS_OLD_MAX_ROWS`, the original row-by-row
-   `pregnancy_window_engine_old()`, with `CURRENT`, `PRIOR`,
-   `CURRENT_AND_PRIOR` and `OUTSIDE_ALL`. Each call is timed (wall clock)
+3. **Times the engine.** It calls `pregnancy_window_engine()` with `CURRENT`,
+   `PRIOR`, `CURRENT_AND_PRIOR` and `OUTSIDE_ALL`. Each call is timed (wall clock)
    with `system.time()` after a `gc()`.
 4. **Checks the output.** Each result must be a data.table, must not contain
    more person-variable pairs than the input, and must have no `NA` in
-   `window_start` or `window_end`. When the old engine runs too, both outputs
-   must be identical.
-5. **Reports.** It prints a results table (one row per engine, mode and
-   size), a speed-up table (old seconds ÷ new seconds), and writes the
-   results to `pregnancy_window_stress.csv` in R's `tempdir()`.
+   `window_start` or `window_end`.
+5. **Reports.** It prints a results table (one row per mode and size) and
+   writes the results to `pregnancy_window_stress.csv` in R's `tempdir()`.
 
 Only the engines are timed. Data generation, nesting, the cross join, DuckDB
 and parquet I/O are not part of the measured time. The data generators live in
 [`tests/testthat/helper-fixtures-stress.R`](../tests/testthat/helper-fixtures-stress.R).
-
-Correctness of the new engine is covered separately, in the default test
-suite, by
-[`test_pregnancy_window_engine_equivalence.R`](../tests/testthat/test_pregnancy_window_engine_equivalence.R).
-It compares old and new on every combination of set/unset border offsets,
-caps, anchor clips, a second anchor column, overlapping episodes, empty input
-and the inverted-offset errors.
 
 ## What to expect while running
 
