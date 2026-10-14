@@ -10,6 +10,7 @@ if (getRversion() >= "2.15.1") {
       ":=",
       "N",
       ".N",
+      ".GRP",
       "T0",
       "SD",
       ".SD",
@@ -50,8 +51,10 @@ if (getRversion() >= "2.15.1") {
       ".row",
       ".rank",
       ".episode",
-      ".region",
-      ".gap"
+      ".grp",
+      ".gap",
+      "covered_until",
+      "cursor"
     )
   )
 }

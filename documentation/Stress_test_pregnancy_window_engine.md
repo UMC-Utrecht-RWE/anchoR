@@ -1,19 +1,20 @@
 # Stress test: `pregnancy_window_engine()`
 
 The stress test measures how long `pregnancy_window_engine()` takes per input
-row, so we can predict its cost on real study sizes. In the first measurement
-it cost **0.9–1.7 ms per row**, which is **15–28 minutes per million rows**
-for each episode constructor.
+row, so we can predict its cost on real study sizes. The original row-by-row
+engine cost **0.9–1.7 ms per row** (15–28 minutes per million rows). The
+current engine costs **about 0.002 ms per row** (2–3 seconds per million
+rows), as long as the machine has enough free memory.
 
 ## Purpose
 
 `pregnancy_window_engine()` (in `R/pregnancy_window.R`) builds the time
 windows for the four episode-based constructors: `in_current_pregnancy`,
 `in_prior_pregnancy`, `in_current_and_prior` and `outside_all_pregnancy`.
-Unlike the rest of anchoR, where the heavy work runs in DuckDB or data.table,
-this function loops over `window_dt` in plain R, one row at a time. That makes
-it the most likely bottleneck in the windowing step. The test isolates it from
-everything else (DuckDB, parquet I/O, selectors).
+It first ran over `window_dt` in plain R, one row at a time, which made it the
+bottleneck of the windowing step. It now stacks every row's episodes into one
+table and works on whole columns. The test checks that it stays fast, and
+isolates it from everything else (DuckDB, parquet I/O, selectors).
 
 The test lives in
 [`tests/testthat/test_stress-pregnancy-window.R`](../tests/testthat/test_stress-pregnancy-window.R).
@@ -68,8 +69,8 @@ seed is fixed (`1026`), so reruns use identical data.
    `nest_episodes_onto_population()`, then cross-joined with the metadata.
    This is the same input `define_window()` passes to a constructor.
 3. **Times the engine.** It calls `pregnancy_window_engine()` with `CURRENT`,
-   `PRIOR`, `CURRENT_AND_PRIOR` and `OUTSIDE_ALL`. Each call is timed (wall clock)
-   with `system.time()` after a `gc()`.
+   `PRIOR`, `CURRENT_AND_PRIOR` and `OUTSIDE_ALL`. Each call is timed with
+   `system.time()` after a `gc()`, both wall clock and CPU time.
 4. **Checks the output.** Each result must be a data.table, must not contain
    more person-variable pairs than the input, and must have no `NA` in
    `window_start` or `window_end`.
@@ -87,18 +88,12 @@ and parquet I/O are not part of the measured time. The data generators live in
   test.` This is expected and keeps the regular suite fast.
 - **No progress output.** Nothing is printed until every size and mode is
   done; the console sits on `ℹ Testing anchoR` in the meantime.
-- **Duration.** Each size runs all four modes, about 5 ms per row in total.
-  Add a few seconds for loading the package.
-
-  | Sizes                       | Approximate run time |
-  | --------------------------- | -------------------- |
-  | `500,2000`                  | ~15 s                |
-  | `1000,5000,20000` (default) | ~2 min               |
-  | `1000,10000,50000`          | ~5 min               |
-  | `100000`                    | ~9 min               |
-
-- **Memory.** Modest: the engine keeps one small data.table per output row
-  until the final `rbindlist()`. 100k rows fits comfortably on a laptop.
+- **Duration.** The engine itself takes well under a second per 100k rows.
+  Most of the run time goes into building the synthetic data and loading the
+  package, so the default sizes finish in seconds.
+- **Memory.** Large sizes need a few GB free. On a laptop with 8 GB of RAM
+  and other apps open, 500k rows already made the machine swap (see
+  [Results](#results-and-how-to-read-them)).
 - **Pass/fail.** The test fails only on wrong output (see step 4 above), never
   on slowness. There is no timing threshold, so results do not depend on the
   machine being fast.
@@ -107,8 +102,8 @@ At the end you will see a block like this, followed by the testthat summary:
 
 ```text
 pregnancy_window_engine stress results:
-      episode_select input_rows output_rows seconds ms_per_row est_minutes_per_1M_rows
-1:           CURRENT        500         140   0.439      0.878                    14.6
+      episode_select input_rows output_rows seconds cpu_seconds ms_per_row
+1:           CURRENT       1000         300   0.006       0.006      0.006
 ...
 Saved to: /var/folders/.../RtmpXXXX/pregnancy_window_stress.csv
 [ FAIL 0 | WARN 0 | SKIP 0 | PASS 33 ]
@@ -119,18 +114,23 @@ somewhere else if you want to keep it.
 
 ## Results and how to read them
 
-Baseline run on 2026-10-13 (macOS laptop), sizes `500,2000`:
+Run on 2026-10-14 (macOS laptop, 8 GB RAM), sizes `100000,500000`. This run
+predates the `cpu_seconds` column:
 
 | episode_select      | input rows | output rows | seconds | ms per row | est. min per 1M rows |
 | ------------------- | ---------: | ----------: | ------: | ---------: | -------------------: |
-| `CURRENT`           |        500 |         140 |   0.439 |      0.878 |                 14.6 |
-| `PRIOR`             |        500 |       1,030 |   0.750 |      1.500 |                 25.0 |
-| `CURRENT_AND_PRIOR` |        500 |       1,170 |   0.852 |      1.704 |                 28.4 |
-| `OUTSIDE_ALL`       |        500 |         810 |   0.422 |      0.844 |                 14.1 |
-| `CURRENT`           |      2,000 |         610 |   1.817 |      0.908 |                 15.1 |
-| `PRIOR`             |      2,000 |       3,640 |   3.005 |      1.502 |                 25.0 |
-| `CURRENT_AND_PRIOR` |      2,000 |       4,250 |   3.316 |      1.658 |                 27.6 |
-| `OUTSIDE_ALL`       |      2,000 |       2,985 |   1.850 |      0.925 |                 15.4 |
+| `CURRENT`           |    100,000 |      29,030 |   0.142 |    0.00142 |                0.024 |
+| `PRIOR`             |    100,000 |     201,670 |   0.205 |    0.00205 |                0.034 |
+| `CURRENT_AND_PRIOR` |    100,000 |     230,700 |   0.222 |    0.00222 |                0.037 |
+| `OUTSIDE_ALL`       |    100,000 |     150,115 |   0.275 |    0.00275 |                0.046 |
+| `CURRENT`           |    500,000 |     143,540 |  11.638 |    0.02328 |                0.388 |
+| `PRIOR`             |    500,000 |     994,510 |  10.549 |    0.02110 |                0.352 |
+| `CURRENT_AND_PRIOR` |    500,000 |   1,138,050 |   9.758 |    0.01952 |                0.325 |
+| `OUTSIDE_ALL`       |    500,000 |     748,465 |  10.215 |    0.02043 |                0.341 |
+
+For comparison, the original row-by-row engine on 2026-10-13 (macOS laptop)
+took 0.84–1.70 ms per row at 500 and 2,000 rows, i.e. 14–28 minutes per
+million rows.
 
 Column meanings:
 
@@ -139,28 +139,33 @@ Column meanings:
 - **output_rows**: candidate windows produced. One input row can produce zero,
   one or several windows, so this can be lower or higher than `input_rows`.
 - **seconds**: wall-clock time for one engine call.
+- **cpu_seconds**: CPU time (user + system) for the same call. When it is
+  much lower than `seconds`, the engine was waiting on memory, not working.
 - **ms_per_row**: `seconds` ÷ `input_rows`. This is the number to compare
   between runs and machines.
 - **est_minutes_per_1M_rows**: `ms_per_row` scaled to one million input rows.
 
 What the numbers say:
 
-1. **Cost grows linearly with rows.** `ms_per_row` stayed the same when the
-   input grew 4×, so the per-row figure can be used to extrapolate.
-2. **The cost is R overhead, not computation.** Each row pays for
-   `window_dt[i]`, building small data.tables, `rbindlist()` and `cbind()`.
-   The date arithmetic itself is negligible.
-3. **Modes that return more windows are slower.** `PRIOR` and
-   `CURRENT_AND_PRIOR` produce about 2× more output rows and take about 1.7×
-   longer than `CURRENT` and `OUTSIDE_ALL`.
+1. **About 600× faster than the row-by-row engine.** At 100k rows it costs
+   0.0014–0.0028 ms per row, against 0.84–1.70 ms before.
+2. **The 500k results are swapping, not the engine.** Five times more rows
+   took about 50 times longer, but no step of the engine scales worse than a
+   sort, so the cost per row should stay flat. The laptop was short on
+   memory at the time: building the same 500k rows of test data in a
+   separate run took 819 s of wall time but only 12 s of CPU time. Use
+   `cpu_seconds` to check this on a new run.
+3. **Modes that return more windows cost a little more.** `PRIOR` and
+   `CURRENT_AND_PRIOR` produce 7–8× more output rows than `CURRENT` and take
+   about 1.5× longer.
 4. **Estimating a real study.** Rows = persons × episode variables, counted
    separately for each episode constructor used. For example, 200,000
-   pregnancies × 5 episode variables = 1M rows, which takes about 15–28
-   minutes per constructor. If all four constructors are used, that is
-   roughly an hour before DuckDB starts.
+   pregnancies × 5 episode variables = 1M rows, which takes a few seconds
+   per constructor when memory is not the limit.
 
 To estimate your own study, multiply its row count by the `ms_per_row` for
-each constructor you use, then add the results together.
+each constructor you use, then add the results together. Take `ms_per_row`
+from a run where `cpu_seconds` is close to `seconds`.
 
 ## Caveats and next steps
 
@@ -172,9 +177,8 @@ each constructor you use, then add the results together.
 - **Engine only.** The test does not cover `define_window()`'s cross join,
   writing windows to DuckDB, or the selector queries. Use `profvis` or
   debug-level logging on a full `anchor()` run for the whole picture.
-- **Next step: vectorize the engine.** Replace the per-row loop with a
-  data.table join of windows to episodes on `person_id` (or one DuckDB
-  query). That should bring 1M rows down to seconds. Use this test to measure
-  the speed-up and the existing tests in
-  `tests/testthat/test_pregnancy_window.R` to confirm the results are
-  unchanged.
+- **Memory is now the limit.** Each person's episodes are nested into
+  `window_dt` as a small table, so very large studies use a lot of memory
+  before the engine starts. If that becomes a problem, the next step is to
+  join a long episodes table on `person_id` instead of nesting it, or to run
+  the step in DuckDB.

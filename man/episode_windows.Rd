@@ -14,7 +14,9 @@ episode_windows(
 )
 }
 \arguments{
-\item{start_episode, end_episode}{The episode's own bounds (single Dates).}
+\item{start_episode, end_episode}{The episode's own bounds: Dates, one
+value per episode. Several episodes can be passed at once when they
+share the same offsets.}
 
 \item{before_start_offset, after_start_offset}{Single integer offsets (or
 \code{NA}) for the \code{start_episode} border.}
@@ -23,7 +25,9 @@ episode_windows(
 \code{NA}) for the \code{end_episode} border.}
 }
 \value{
-A data.table with one or more rows of \code{window_start}/\code{window_end}.
+A data.table of \code{window_start}/\code{window_end}: one block of rows
+per region (start border, end border, shared window, in that order, each
+only when it applies), with one row per episode in each block.
 }
 \description{
 Each pair: \code{before_start_offset}/\code{after_start_offset} for

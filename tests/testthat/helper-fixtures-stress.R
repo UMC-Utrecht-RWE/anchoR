@@ -51,17 +51,7 @@ stress_metadata_default <- function(n_variables = 5L) {
 stress_window_dt <- function(n_persons, metadata) {
   population <- stress_population(n_persons)
   episodes <- stress_episodes(n_persons)
-  # Same `.episodes` shape as nest_episodes_onto_population(), built with a
-  # single split so large stress sizes don't depend on that function's speed.
-  by_person <- split(
-    episodes[, .(start_episode, end_episode)], episodes$person_id
-  )
-  no_episodes <- episodes[0L, .(start_episode, end_episode)]
-  person_idx <- match(population$person_id, names(by_person))
-  population[, .episodes := lapply(
-    person_idx,
-    function(i) if (is.na(i)) no_episodes else by_person[[i]]
-  )]
+  population <- nest_episodes_onto_population(population, episodes)
   # Person-major cross join, as define_window() produces. Repeating row
   # indices is much faster than `merge()` once `.episodes` is a list column.
   cbind(

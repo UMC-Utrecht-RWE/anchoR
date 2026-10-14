@@ -19,10 +19,15 @@ stress_sizes <- function() {
 
 time_engine <- function(window_dt, episode_select) {
   gc(verbose = FALSE)
-  elapsed <- system.time(
+  timing <- system.time(
     out <- pregnancy_window_engine(window_dt, episode_select)
-  )[["elapsed"]]
-  list(out = out, elapsed = elapsed)
+  )
+  # CPU time next to wall clock: a large gap means the machine was swapping.
+  list(
+    out = out,
+    elapsed = timing[["elapsed"]],
+    cpu = timing[["user.self"]] + timing[["sys.self"]]
+  )
 }
 
 stress_row <- function(mode, window_dt, timed) {
@@ -31,6 +36,7 @@ stress_row <- function(mode, window_dt, timed) {
     input_rows = nrow(window_dt),
     output_rows = nrow(timed$out),
     seconds = timed$elapsed,
+    cpu_seconds = timed$cpu,
     ms_per_row = 1000 * timed$elapsed / nrow(window_dt),
     est_minutes_per_1M_rows = timed$elapsed / nrow(window_dt) * 1e6 / 60
   )
