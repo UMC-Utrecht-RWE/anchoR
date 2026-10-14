@@ -46,7 +46,12 @@ if (getRversion() >= "2.15.1") {
       ".episodes",
       "episode_class",
       "range_min",
-      "range_max"
+      "range_max",
+      ".row",
+      ".rank",
+      ".episode",
+      ".region",
+      ".gap"
     )
   )
 }
