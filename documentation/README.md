@@ -17,6 +17,7 @@ Choose the shortest guide that matches the task.
 - [Concepts](Input_concepts.md)
 - [Anchored output](Output_D4_StudyVariablesAnchored.md)
 - [Result implementation walkthrough](get_anchor_result_walkthrough.md)
+- [Stress test for the episode window engine](Stress_test_pregnancy_window_engine.md)
 
 ## Practical recipes
 

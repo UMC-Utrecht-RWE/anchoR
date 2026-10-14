@@ -41,9 +41,16 @@ finds the gaps \emph{between all} of a person's episodes inside
 \verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]} directly; the border offsets and the two capping
 flags are not used.
 Regardless of \code{episode_select}, every candidate window is then clipped
-to that same \verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]} boundary via \code{clip_to_anchor_bounds()} -- for
-\code{"OUTSIDE_ALL"} this is a no-op (the gaps are already computed inside
-that range), for the other three it's what makes \code{anchor_start_offset}/
-\code{anchor_end_offset} a hard, constructor-independent time boundary.
+to that same \verb{[anchor_start_col + anchor_start_offset, anchor_end_col + anchor_end_offset]} boundary -- for \code{"OUTSIDE_ALL"} this is a no-op (the
+gaps are already computed inside that range), for the other three it's
+what makes \code{anchor_start_offset}/\code{anchor_end_offset} a hard,
+constructor-independent time boundary. Each side only applies when its
+offset is not \code{NA}; a window entirely outside the boundary comes out with
+\code{window_start > window_end}, left for \code{finalize_windows()} to mark
+invalid.
+
+Output rows follow \code{window_dt}'s row order; within a row, current
+episodes come before prior ones, then episodes in their original order,
+then regions in \code{episode_windows()} order.
 }
 \keyword{internal}

@@ -2,22 +2,21 @@
 % Please edit documentation in R/pregnancy_window.R
 \name{classify_episodes}
 \alias{classify_episodes}
-\title{Classify a person's episodes relative to the anchor}
+\title{Classify episodes relative to the anchor}
 \usage{
 classify_episodes(episodes, anchor)
 }
 \arguments{
 \item{episodes}{A data.table with \code{start_episode}/\code{end_episode} columns,
-one row per episode for a single person.}
+one row per episode, and optionally \code{.row}.}
 
-\item{anchor}{A single Date.}
+\item{anchor}{The anchor Date: a single value, or one per \code{.row}.}
 }
 \value{
-A new data.table with \code{start_episode}/\code{end_episode}/
-\code{episode_class} columns, \code{episode_class} one of \code{"current"},
-\code{"prior"}, \code{"future"}, or \code{NA} (an episode that is none of the three,
-e.g. one that overlaps the current episode despite the no-overlap
-assumption).
+A copy of \code{episodes} with an \code{episode_class} column, one of
+\code{"current"}, \code{"prior"}, \code{"future"}, or \code{NA} (an episode that is none
+of the three, e.g. one that overlaps the current episode despite the
+no-overlap assumption).
 }
 \description{
 The "current" episode is the one containing \code{anchor} (assumes a person's
@@ -26,12 +25,12 @@ one current episode's own bounds: an episode entirely before the current
 one's start is "prior", one entirely after the current one's end is
 "future". If there is no current episode at all, prior/future fall back
 to being directly relative to \code{anchor} itself (ended before it / starts
-after it).
+after it). When several episodes contain the anchor, the first one sets
+the reference bounds.
 }
 \details{
-Never mutates \code{episodes}: the input's list-column element may be shared
-(by reference) across several \code{window_dt} rows for the same person, so
-this always returns a freshly built table instead of adding a column to
-the one it was given.
+Works on one person's episodes or, with a \code{.row} column, on the stacked
+episodes of many \code{window_dt} rows at once (see \code{stack_episodes()}), each
+classified against its own row's anchor.
 }
 \keyword{internal}
