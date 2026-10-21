@@ -3,17 +3,14 @@
 ## Added
 - `cap_start_to_episode`/`cap_end_to_episode`: two new optional logical metadata columns (`NA`/unset by default), read by `in_current_pregnancy`/`in_prior_pregnancy`/`in_current_and_prior` (not `outside_all_pregnancy`). The need of this case is that we might introduce a `after_start_episode_offset` that falls after the end of an episode pregnancy and the user wants the window to be capped at the minimum value between `after_start_episode_offset` and the end of pregnancy. Therefore, when `TRUE`,  `cap_start_to_episode` raises `window_start` up to at least the episode's own `start_episode`, `cap_end_to_episode` lowers `window_end` down to at most the episode's own `end_episode`.
 - `vignettes/quickstart.Rmd` ("Get started" vignette) and a configured pkgdown site (`_pkgdown.yml`), published from the `gh-pages` branch.
-- Opt-in stress test for `pregnancy_window_engine()` (`tests/testthat/test_stress-pregnancy-window.R`, runs only when `ANCHOR_STRESS_TESTS=true`), documented in `documentation/Stress_test_pregnancy_window_engine.md`.
 - `validate_anchor_inputs()` logs a warning when `population` or `metadata` has zero rows.
 
 ## Changed
-- `pregnancy_window_engine()` works on whole columns instead of row by row: about 0.002 ms per input row instead of 0.9–1.7 ms (2–3 seconds instead of 15–28 minutes per million rows).
 - Boolean imputation in `get_anchor_result()` also recognizes lowercase `"true"`/`"false"`.
 - CI now runs the shared workflows from [rwe-ecosystem](https://github.com/UMC-Utrecht-RWE/rwe-ecosystem) `@v2` through a single `.github/workflows/ci.yaml` (R CMD check, lint and Air formatting, coverage, pkgdown). The package's own `code_quality`, `pkgdown`, `r_cmd_check`, `test_coverage` and `testthat` workflows are removed.
 - Code is formatted with [Air](https://posit-dev.github.io/air/); `air.toml` is managed by rwe-ecosystem and must not be edited here. `.lintr`, `.pre-commit-config.yaml`, `.covrignore` and a pull request template follow the rwe-ecosystem starter files. Formatting only, no behaviour changes.
 - `.gitignore` follows the rwe-ecosystem starter, plus anchoR's own entries (`logs`, `.positai`, `/anchoR_input`); `.vscode/settings.json` (Air as R formatter, format on save) and `.vscode/extensions.json` (recommends the Air and R extensions) are now shared in the repository.
 - `CHANGELOG.md` renamed to `NEWS.md` (pkgdown format), so it ships with the package and is shown as the site's Changelog page.
-- Documentation regenerated with roxygen2 8.1.0.
 - `anchor()` gains a `by` argument (`"whole"` (default), `"variable"`, `"selector"`) that dispatches to the same batching/staging/publishing behavior `anchor_by_variable()`/`anchor_by_selector()` provided, so callers no longer need those separate functions to run the anchoring pass batch-by-variable or one-selector-at-a-time. `anchor_by_variable()` and `anchor_by_selector()` are now deprecated thin wrappers (in `R/deprecated.R`) that forward to `anchor(..., by = "variable")`/`anchor(..., by = "selector")` and warn via `.Deprecated()`; they are unchanged in behavior and not yet removed.
 
 # anchoR 1.5
