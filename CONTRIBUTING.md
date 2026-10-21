@@ -52,11 +52,11 @@ Four workflows run on every push/PR to `main`/`dev`:
 
 - `documentation/` and `vignettes/` currently duplicate some tutorials (e.g. `Tutorial_pregnancy_windows.md` / `episode-windows.Rmd`). Until that's consolidated, if you change externally-visible behavior, check both for a matching description, not just whichever one you remembered.
 - `documentation/definitions/Episode-Based Window Engine.md` is the canonical description of the episode-window border-offset formula; other pages should link to it rather than re-deriving it.
-- Update `CHANGELOG.md` under `## [Unreleased]` for anything a user of the package would notice (new/changed/removed behavior, bug fixes). Past release entries are never edited.
+- Update `NEWS.md` under `## [Unreleased]` for anything a user of the package would notice (new/changed/removed behavior, bug fixes). Past release entries are never edited.
 
 ## Before opening a PR
 
 1. `devtools::document()` (commit any resulting `NAMESPACE`/`man/` changes)
 2. `styler::style_pkg()`
 3. `devtools::test()` and `devtools::check()` locally `check()` catches vignette build failures and doc/code mismatches that `test()` alone won't
-4. A `CHANGELOG.md` entry under `## [Unreleased]`, if the change is user-visible
+4. A `NEWS.md` entry under `## [Unreleased]`, if the change is user-visible
