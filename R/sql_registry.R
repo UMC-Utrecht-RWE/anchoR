@@ -43,10 +43,10 @@ available_selectors <- function() {
 #' @return A filtered `data.table` with the same columns as the input.
 #' @export
 filter_supported_metadata <- function(
-  metadata, selector_col = "selector"
+  metadata,
+  selector_col = "selector"
 ) {
   metadata_dt <- as_data_table(metadata, "metadata")
-
 
   # This helper is intentionally permissive: it is meant for exploratory or
   # mixed metadata files where dropping unsupported rows is more useful than
@@ -156,7 +156,10 @@ read_builtin_selector_sql <- function(selector) {
 }
 
 add_parquet_export <- function(
-  con, sql_query, anchor_hive_path, selector = NULL
+  con,
+  sql_query,
+  anchor_hive_path,
+  selector = NULL
 ) {
   # This helper is for SQL templates that export concept subsets to Parquet
   # files instead of returning them as query results.

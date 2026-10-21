@@ -120,7 +120,8 @@ testthat::test_that("normalize_selector_name: converts to uppercase", {
   testthat::expect_equal(normalize_selector_name("latest"), "LATEST")
   testthat::expect_equal(normalize_selector_name("count"), "COUNT")
   testthat::expect_equal(
-    normalize_selector_name("RANGE_COUNT"), "RANGE_COUNT"
+    normalize_selector_name("RANGE_COUNT"),
+    "RANGE_COUNT"
   )
   testthat::expect_equal(normalize_selector_name(123), "123")
   testthat::expect_equal(normalize_selector_name(TRUE), "TRUE")
@@ -131,7 +132,8 @@ testthat::test_that("normalize_selector_name: trims whitespace", {
   testthat::expect_equal(normalize_selector_name("  latest  "), "LATEST")
   testthat::expect_equal(normalize_selector_name("\tCOUNT\n"), "COUNT")
   testthat::expect_equal(
-    normalize_selector_name(" RANGE_COUNT "), "RANGE_COUNT"
+    normalize_selector_name(" RANGE_COUNT "),
+    "RANGE_COUNT"
   )
 })
 
@@ -153,8 +155,12 @@ testthat::test_that("replaces T0 and empty values with anchor_col", {
   testthat::expect_equal(
     result,
     c(
-      "visit_date", "visit_date", "visit_date",
-      "visit_date", "visit_date", "OTHER_COL"
+      "visit_date",
+      "visit_date",
+      "visit_date",
+      "visit_date",
+      "visit_date",
+      "OTHER_COL"
     )
   )
 })
@@ -176,7 +182,8 @@ testthat::test_that("errors when required columns are missing", {
   testthat::expect_error(
     assert_has_columns(
       dt,
-      required = c("person_id", "date"), arg = "population"
+      required = c("person_id", "date"),
+      arg = "population"
     ),
     regexp = "`population` is missing required columns: date\\."
   )
@@ -242,22 +249,26 @@ testthat::test_that("looks_like_glob detects glob metacharacters", {
 
 testthat::test_that("concepts_input_type identifies a data frame as a table", {
   testthat::expect_equal(
-    concepts_input_type(data.table::data.table(x = 1)), "table"
+    concepts_input_type(data.table::data.table(x = 1)),
+    "table"
   )
 })
 
 testthat::test_that("concepts_input_type identifies a .duckdb path", {
   testthat::expect_equal(concepts_input_type("concepts.duckdb"), "duckdb")
   testthat::expect_equal(
-    concepts_input_type("path/to/CONCEPTS.DUCKDB"), "duckdb"
+    concepts_input_type("path/to/CONCEPTS.DUCKDB"),
+    "duckdb"
   )
 })
 
-testthat::test_that("concepts_input_type falls back to parquet for other character input", { # nolint: line_length_linter.
+testthat::test_that("concepts_input_type falls back to parquet for other character input", {
+  # nolint: line_length_linter.
   testthat::expect_equal(concepts_input_type("concepts.parquet"), "parquet")
   testthat::expect_equal(concepts_input_type("concepts/"), "parquet")
   testthat::expect_equal(
-    concepts_input_type(c("a.parquet", "b.parquet")), "parquet"
+    concepts_input_type(c("a.parquet", "b.parquet")),
+    "parquet"
   )
 })
 
@@ -269,7 +280,8 @@ testthat::test_that("concepts_input_type errors on unsupported input", {
   testthat::expect_error(concepts_input_type(character()))
 })
 
-testthat::test_that("normalize_parquet_sources errors when concepts isn't a parquet source", { # nolint: line_length_linter.
+testthat::test_that("normalize_parquet_sources errors when concepts isn't a parquet source", {
+  # nolint: line_length_linter.
   testthat::expect_error(
     normalize_parquet_sources("concepts.duckdb"),
     "`concepts` is not a parquet source.",
@@ -277,7 +289,8 @@ testthat::test_that("normalize_parquet_sources errors when concepts isn't a parq
   )
 })
 
-testthat::test_that("normalize_parquet_sources expands a directory of parquet files", { # nolint: line_length_linter.
+testthat::test_that("normalize_parquet_sources expands a directory of parquet files", {
+  # nolint: line_length_linter.
   tmp <- withr::local_tempdir()
   file.create(file.path(tmp, "a.parquet"))
   file.create(file.path(tmp, "b.parquet"))
@@ -286,11 +299,13 @@ testthat::test_that("normalize_parquet_sources expands a directory of parquet fi
   result <- normalize_parquet_sources(tmp)
 
   testthat::expect_setequal(
-    basename(result), c("a.parquet", "b.parquet")
+    basename(result),
+    c("a.parquet", "b.parquet")
   )
 })
 
-testthat::test_that("normalize_parquet_sources errors on a directory with no parquet files", { # nolint: line_length_linter.
+testthat::test_that("normalize_parquet_sources errors on a directory with no parquet files", {
+  # nolint: line_length_linter.
   tmp <- withr::local_tempdir()
 
   testthat::expect_error(
@@ -300,20 +315,23 @@ testthat::test_that("normalize_parquet_sources errors on a directory with no par
   )
 })
 
-testthat::test_that("normalize_parquet_sources passes through an existing file unchanged", { # nolint: line_length_linter.
+testthat::test_that("normalize_parquet_sources passes through an existing file unchanged", {
+  # nolint: line_length_linter.
   tmp <- withr::local_tempfile(fileext = ".parquet")
   file.create(tmp)
 
   testthat::expect_equal(normalize_parquet_sources(tmp), tmp)
 })
 
-testthat::test_that("normalize_parquet_sources passes through a glob pattern unchanged", { # nolint: line_length_linter.
+testthat::test_that("normalize_parquet_sources passes through a glob pattern unchanged", {
+  # nolint: line_length_linter.
   glob <- file.path(withr::local_tempdir(), "*.parquet")
 
   testthat::expect_equal(normalize_parquet_sources(glob), glob)
 })
 
-testthat::test_that("normalize_parquet_sources errors when a path neither exists nor looks like a glob", { # nolint: line_length_linter.
+testthat::test_that("normalize_parquet_sources errors when a path neither exists nor looks like a glob", {
+  # nolint: line_length_linter.
   missing_path <- file.path(withr::local_tempdir(), "missing.parquet")
 
   testthat::expect_error(
@@ -323,7 +341,8 @@ testthat::test_that("normalize_parquet_sources errors when a path neither exists
   )
 })
 
-testthat::test_that("concepts_to_data_table passes a table straight through as_data_table", { # nolint: line_length_linter.
+testthat::test_that("concepts_to_data_table passes a table straight through as_data_table", {
+  # nolint: line_length_linter.
   result <- concepts_to_data_table(minimal_concepts())
 
   testthat::expect_true(data.table::is.data.table(result))
@@ -340,7 +359,8 @@ testthat::test_that("concepts_to_data_table adds a value column when missing", {
   testthat::expect_true(all(is.na(result$value)))
 })
 
-testthat::test_that("concepts_to_data_table errors on a missing required column", { # nolint: line_length_linter.
+testthat::test_that("concepts_to_data_table errors on a missing required column", {
+  # nolint: line_length_linter.
   bad <- minimal_concepts()[, .(person_id, date)]
 
   testthat::expect_error(
@@ -359,13 +379,15 @@ testthat::test_that("concepts_to_data_table reads from a DuckDB file", {
 
   testthat::expect_true(data.table::is.data.table(result))
   testthat::expect_setequal(
-    names(result), c("person_id", "concept_id", "date", "value")
+    names(result),
+    c("person_id", "concept_id", "date", "value")
   )
   testthat::expect_equal(nrow(result), nrow(minimal_concepts()))
   testthat::expect_true(inherits(result$date, "Date"))
 })
 
-testthat::test_that("concepts_to_data_table errors when the DuckDB file doesn't exist", { # nolint: line_length_linter.
+testthat::test_that("concepts_to_data_table errors when the DuckDB file doesn't exist", {
+  # nolint: line_length_linter.
   missing_path <- file.path(withr::local_tempdir(), "missing.duckdb")
 
   testthat::expect_error(
@@ -382,7 +404,8 @@ testthat::test_that("concepts_to_data_table reads from a parquet file", {
 
   testthat::expect_true(data.table::is.data.table(result))
   testthat::expect_setequal(
-    names(result), c("person_id", "concept_id", "date", "value")
+    names(result),
+    c("person_id", "concept_id", "date", "value")
   )
   testthat::expect_equal(nrow(result), nrow(minimal_concepts()))
   testthat::expect_true(inherits(result$date, "Date"))

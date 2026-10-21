@@ -20,7 +20,8 @@ testthat::test_that("anchor_by_variable() warns and forwards to anchor()", {
 
   anchored <- read_anchor_hive(hive_path)
   testthat::expect_setequal(
-    unique(anchored$variable_id), c("cov_latest", "cov_count")
+    unique(anchored$variable_id),
+    c("cov_latest", "cov_count")
   )
 })
 
@@ -47,6 +48,7 @@ testthat::test_that("anchor_by_selector() warns and forwards to anchor()", {
   # lab_range's concept (LAB_X) never appears in minimal_concepts(), so it
   # never produces a match and gets no partition at all.
   testthat::expect_setequal(
-    unique(anchored$variable_id), c("cov_latest", "cov_count")
+    unique(anchored$variable_id),
+    c("cov_latest", "cov_count")
   )
 })

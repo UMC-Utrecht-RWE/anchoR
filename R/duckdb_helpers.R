@@ -145,7 +145,9 @@ run_prepare_con <- function(con, prepare_con) {
 }
 
 write_population_windows <- function(
-  con, population_windows, anchor_col = "T0"
+  con,
+  population_windows,
+  anchor_col = "T0"
 ) {
   # The selector SQL only needs these columns, so writing a long table keeps
   # the temporary database smaller and the SQL templates easier to reason about.
@@ -162,8 +164,7 @@ write_population_windows <- function(
   DBI::dbWriteTable(
     con,
     name = "population_windows",
-    value = population_windows[
-      ,
+    value = population_windows[,
       .(
         anchor_row_id,
         person_id,

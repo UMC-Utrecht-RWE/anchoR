@@ -20,8 +20,10 @@ anchor_by_variable <- function(
   publish = c("once", "per_chunk"),
   prepare_con = NULL
 ) {
-  .Deprecated("anchor",
-    package = "anchoR", old = "anchor_by_variable",
+  .Deprecated(
+    "anchor",
+    package = "anchoR",
+    old = "anchor_by_variable",
     msg = "Use 'anchor()' instead with the 'by' argument set to 'variable' to achieve the same effect." # nolint
   )
 
@@ -62,8 +64,10 @@ anchor_by_selector <- function(
   anchor_hive_path = NULL,
   prepare_con = NULL
 ) {
-  .Deprecated("anchor",
-    package = "anchoR", old = "anchor_by_selector",
+  .Deprecated(
+    "anchor",
+    package = "anchoR",
+    old = "anchor_by_selector",
     msg = "Use 'anchor()' instead with the 'by' argument set to 'selector' to achieve the same effect." # nolint
   )
 

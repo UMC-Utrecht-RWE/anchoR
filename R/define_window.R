@@ -127,7 +127,9 @@ resolve_window_constructor <- function(constructor_name, constructor_env) {
   if (
     exists(
       fun_name,
-      envir = constructor_env, mode = "function", inherits = TRUE
+      envir = constructor_env,
+      mode = "function",
+      inherits = TRUE
     )
   ) {
     return(get(fun_name, envir = constructor_env, mode = "function"))
@@ -170,7 +172,8 @@ apply_window_constructors <- function(window_dt, constructor_env) {
   for (i in seq_along(constructor_names)) {
     constructor_name <- constructor_names[[i]]
     constructor_fn <- resolve_window_constructor(
-      constructor_name, constructor_env
+      constructor_name,
+      constructor_env
     )
 
     # Rows that match this constructor name.
@@ -211,8 +214,7 @@ finalize_windows <- function(window_dt) {
 
   # Mark invalid windows instead of dropping them here so callers can decide
   # whether they want a sparse anchored result or a full design matrix.
-  window_dt[
-    ,
+  window_dt[,
     window_valid := !is.na(window_start) &
       !is.na(window_end) &
       window_start <= window_end
@@ -265,8 +267,7 @@ cross_join_population_metadata <- function(population_dt, metadata_dt) {
     by = ".anchor_join_key",
     allow.cartesian = TRUE,
     sort = FALSE
-  )[
-    ,
+  )[,
     .anchor_join_key := NULL
   ]
 }
@@ -332,7 +333,8 @@ define_window <- function(
       )
     )
     population_dt <- nest_episodes_onto_population(
-      population_dt, validated$episodes
+      population_dt,
+      validated$episodes
     )
   }
 
@@ -347,7 +349,8 @@ define_window <- function(
   # window start/end for that combination, whether a concept matched inside
   # it, and the final value for that variable and person.
   window_dt <- cross_join_population_metadata(
-    population_dt, metadata_dt
+    population_dt,
+    metadata_dt
   )
   # Preserve the pre-processing order so later operations can reorder safely
   # and still return rows in the same sequence the cross join produced.

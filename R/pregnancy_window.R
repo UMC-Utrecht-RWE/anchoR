@@ -3,7 +3,8 @@
 #' Used by `define_window()` to decide whether `episodes` must be supplied
 #' and nested onto `population` before any constructor runs.
 #' @keywords internal
-EPISODE_CONSTRUCTORS <- c( # nolint: object_name_linter.
+# nolint next
+EPISODE_CONSTRUCTORS <- c(
   "in_current_pregnancy",
   "in_prior_pregnancy",
   "in_current_and_prior",
@@ -22,9 +23,11 @@ EPISODE_CONSTRUCTORS <- c( # nolint: object_name_linter.
 #' @return `population_dt`, with `.episodes` added.
 #' @keywords internal
 nest_episodes_onto_population <- function(population_dt, episodes_dt) {
-  population_dt[, .episodes := lapply(person_id, function(id) {
-    episodes_dt[person_id == id, .(start_episode, end_episode)]
-  })]
+  population_dt[,
+    .episodes := lapply(person_id, function(id) {
+      episodes_dt[person_id == id, .(start_episode, end_episode)]
+    })
+  ]
   population_dt[]
 }
 
@@ -61,20 +64,27 @@ classify_episodes <- function(episodes, anchor) {
     current_start <- current$start_episode[[1]]
     current_end <- current$end_episode[[1]]
     episode_class <- data.table::fifelse(
-      is_current, "current",
+      is_current,
+      "current",
       data.table::fifelse(
-        episodes$end_episode < current_start, "prior",
+        episodes$end_episode < current_start,
+        "prior",
         data.table::fifelse(
-          episodes$start_episode > current_end, "future", NA_character_
+          episodes$start_episode > current_end,
+          "future",
+          NA_character_
         )
       )
     )
   } else {
     # No current episode: fall back to anchor-relative prior/future.
     episode_class <- data.table::fifelse(
-      episodes$end_episode < anchor, "prior",
+      episodes$end_episode < anchor,
+      "prior",
       data.table::fifelse(
-        episodes$start_episode > anchor, "future", NA_character_
+        episodes$start_episode > anchor,
+        "future",
+        NA_character_
       )
     )
   }
@@ -129,9 +139,12 @@ classify_episodes <- function(episodes, anchor) {
 #' @return A data.table with one or more rows of `window_start`/`window_end`.
 #' @keywords internal
 episode_windows <- function(
-  start_episode, end_episode,
-  before_start_offset, after_start_offset,
-  before_end_offset, after_end_offset
+  start_episode,
+  end_episode,
+  before_start_offset,
+  after_start_offset,
+  before_end_offset,
+  after_end_offset
 ) {
   start_has_before <- !is.na(before_start_offset)
   start_has_after <- !is.na(after_start_offset)
@@ -337,19 +350,23 @@ outside_all_episode_gaps <- function(episodes, range_start, range_end) {
 #' @return `windows`, with `window_start`/`window_end` clipped in place.
 #' @keywords internal
 clip_to_anchor_bounds <- function(
-  windows, anchor_start_val, anchor_start_offset,
-  anchor_end_val, anchor_end_offset
+  windows,
+  anchor_start_val,
+  anchor_start_offset,
+  anchor_end_val,
+  anchor_end_offset
 ) {
   if (!is.na(anchor_start_offset)) {
-    windows[
-      , window_start := pmax(
-        window_start, anchor_start_val + anchor_start_offset
+    windows[,
+      window_start := pmax(
+        window_start,
+        anchor_start_val + anchor_start_offset
       )
     ]
   }
   if (!is.na(anchor_end_offset)) {
-    windows[
-      , window_end := pmin(window_end, anchor_end_val + anchor_end_offset)
+    windows[,
+      window_end := pmin(window_end, anchor_end_val + anchor_end_offset)
     ]
   }
   windows[]
@@ -413,7 +430,8 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
       current <- classified[episode_class == "current"]
       prior <- classified[episode_class == "prior"]
 
-      selected <- switch(episode_select,
+      selected <- switch(
+        episode_select,
         "CURRENT" = current,
         "PRIOR" = prior,
         "CURRENT_AND_PRIOR" = rbind(current, prior)
@@ -427,9 +445,12 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
         seq_len(nrow(selected)),
         function(j) {
           w <- episode_windows(
-            selected$start_episode[[j]], selected$end_episode[[j]],
-            row$before_start_episode_offset, row$after_start_episode_offset,
-            row$before_end_episode_offset, row$after_end_episode_offset
+            selected$start_episode[[j]],
+            selected$end_episode[[j]],
+            row$before_start_episode_offset,
+            row$after_start_episode_offset,
+            row$before_end_episode_offset,
+            row$after_end_episode_offset
           )
           if (isTRUE(row$cap_start_to_episode)) {
             w[, window_start := pmax(window_start, selected$start_episode[[j]])]
@@ -448,8 +469,10 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
 
     windows <- clip_to_anchor_bounds(
       windows,
-      anchor_start_val, row$anchor_start_offset,
-      anchor_end_val, row$anchor_end_offset
+      anchor_start_val,
+      row$anchor_start_offset,
+      anchor_end_val,
+      row$anchor_end_offset
     )
 
     output_rows[[i]] <- cbind(row[rep(1L, nrow(windows))], windows)
@@ -464,7 +487,8 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
     return(cbind(
       window_dt[0],
       data.table::data.table(
-        window_start = as.Date(character()), window_end = as.Date(character())
+        window_start = as.Date(character()),
+        window_end = as.Date(character())
       )
     ))
   }
@@ -473,11 +497,16 @@ pregnancy_window_engine <- function(window_dt, episode_select) {
 }
 
 episode_required_cols <- c(
-  "anchor_start_col", "anchor_end_col",
-  "anchor_start_offset", "anchor_end_offset",
-  "before_start_episode_offset", "after_start_episode_offset",
-  "before_end_episode_offset", "after_end_episode_offset",
-  "cap_start_to_episode", "cap_end_to_episode"
+  "anchor_start_col",
+  "anchor_end_col",
+  "anchor_start_offset",
+  "anchor_end_offset",
+  "before_start_episode_offset",
+  "after_start_episode_offset",
+  "before_end_episode_offset",
+  "after_end_episode_offset",
+  "cap_start_to_episode",
+  "cap_end_to_episode"
 )
 
 # Look for records in the episode containing the anchor date (T0).
@@ -513,8 +542,10 @@ outside_all_pregnancy_window <- make_constructor(
     pregnancy_window_engine(window_dt, episode_select = "OUTSIDE_ALL")
   },
   required_cols = c(
-    "anchor_start_col", "anchor_end_col",
-    "anchor_start_offset", "anchor_end_offset"
+    "anchor_start_col",
+    "anchor_end_col",
+    "anchor_start_offset",
+    "anchor_end_offset"
   ),
   check_fn = generic_window_check
 )
