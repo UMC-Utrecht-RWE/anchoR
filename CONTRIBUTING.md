@@ -51,7 +51,7 @@ Four workflows run on every push/PR to `main`/`dev`:
 | `testthat.yaml` | `devtools::test(stop_on_failure = TRUE)` | ubuntu, macOS, **Windows** each on R release |
 | `r_cmd_check.yaml` | full `R CMD check`, warnings treated as failures | ubuntu (release + oldrel-1), macOS, **Windows** |
 | `code_quality.yaml` | [`lintr::lint_package()`](https://lintr.r-lib.org/reference/lint.html) and `styler::style_pkg(dry = "on")` | ubuntu only |
-| `test_coverage.yaml` | `covr::package_coverage()`, fails under 55% | ubuntu only |
+| `test_coverage.yaml` | [`covr::package_coverage()`](http://covr.r-lib.org/reference/package_coverage.md), fails under 55% | ubuntu only |
 
 **The Windows leg matters more than it might look.** Because
 `.gitignore`/local dev environments are usually macOS or Linux,
@@ -100,9 +100,9 @@ everything else in `lintr`’s defaults applies.
 - `documentation/definitions/Episode-Based Window Engine.md` is the
   canonical description of the episode-window border-offset formula;
   other pages should link to it rather than re-deriving it.
-- Update `CHANGELOG.md` under `## [Unreleased]` for anything a user of
-  the package would notice (new/changed/removed behavior, bug fixes).
-  Past release entries are never edited.
+- Update `NEWS.md` under `## [Unreleased]` for anything a user of the
+  package would notice (new/changed/removed behavior, bug fixes). Past
+  release entries are never edited.
 
 ## Before opening a PR
 
@@ -114,5 +114,5 @@ everything else in `lintr`’s defaults applies.
     [`devtools::check()`](https://devtools.r-lib.org/reference/check.html)
     locally `check()` catches vignette build failures and doc/code
     mismatches that `test()` alone won’t
-4.  A `CHANGELOG.md` entry under `## [Unreleased]`, if the change is
+4.  A `NEWS.md` entry under `## [Unreleased]`, if the change is
     user-visible

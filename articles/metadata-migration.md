@@ -55,7 +55,7 @@ population <- data.table(person_id = "1", T0 = as.Date("2024-01-01"))
 normalized <- validate_anchor_inputs(population, migrated)$metadata
 ```
 
-    ## WARN [2026-09-28 12:52:06] Either `population` (1 rows) or `metadata` (0 rows) is empty.
+    ## WARN [2026-10-22 12:49:25] Either `population` (1 rows) or `metadata` (0 rows) is empty.
 
 ``` r
 

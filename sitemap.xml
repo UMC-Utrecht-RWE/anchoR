@@ -1,6 +1,5 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/404.html</loc></url>
-<url><loc>https://umc-utrecht-rwe.github.io/anchoR/CHANGELOG.html</loc></url>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/CONTRIBUTING.html</loc></url>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/LICENSE-text.html</loc></url>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/articles/custom-constructors.html</loc></url>
@@ -17,6 +16,7 @@
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/articles/troubleshooting.html</loc></url>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/authors.html</loc></url>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/index.html</loc></url>
+<url><loc>https://umc-utrecht-rwe.github.io/anchoR/news/index.html</loc></url>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/reference/EPISODE_CONSTRUCTORS.html</loc></url>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/reference/anchor.html</loc></url>
 <url><loc>https://umc-utrecht-rwe.github.io/anchoR/reference/anchor_by_selector.html</loc></url>
