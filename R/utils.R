@@ -199,23 +199,30 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
   # These defaults keep the minimal metadata shape small while still giving the
   # windowing and selector code every column it expects.
   if (!"anchor_start_col" %in% names(metadata_dt)) {
-    metadata_dt[
-      , anchor_start_col := anchor_col
+    metadata_dt[,
+      anchor_start_col := anchor_col
     ]
   }
   if (!"anchor_end_col" %in% names(metadata_dt)) {
-    metadata_dt[
-      , anchor_end_col := anchor_col
+    metadata_dt[,
+      anchor_end_col := anchor_col
     ]
   }
-  if (!"range_min" %in% names(metadata_dt)) metadata_dt[, range_min := NA_real_]
-  if (!"range_max" %in% names(metadata_dt)) metadata_dt[, range_max := NA_real_]
+  if (!"range_min" %in% names(metadata_dt)) {
+    metadata_dt[, range_min := NA_real_]
+  }
+  if (!"range_max" %in% names(metadata_dt)) {
+    metadata_dt[, range_max := NA_real_]
+  }
   # Only the episode-based constructors (see R/pregnancy_window.R) use these;
   # other constructors carry them along unused.
   episode_offset_cols <- c(
-    "anchor_start_offset", "anchor_end_offset",
-    "before_start_episode_offset", "after_start_episode_offset",
-    "before_end_episode_offset", "after_end_episode_offset"
+    "anchor_start_offset",
+    "anchor_end_offset",
+    "before_start_episode_offset",
+    "after_start_episode_offset",
+    "before_end_episode_offset",
+    "after_end_episode_offset"
   )
   for (col in episode_offset_cols) {
     if (!col %in% names(metadata_dt)) {
@@ -237,12 +244,12 @@ normalize_metadata <- function(metadata, anchor_col = "T0") {
     range_min = as.numeric(range_min),
     range_max = as.numeric(range_max)
   )]
-  metadata_dt[
-    , (episode_offset_cols) := lapply(.SD, as.numeric),
+  metadata_dt[,
+    (episode_offset_cols) := lapply(.SD, as.numeric),
     .SDcols = episode_offset_cols
   ]
-  metadata_dt[
-    , (episode_cap_cols) := lapply(.SD, as.logical),
+  metadata_dt[,
+    (episode_cap_cols) := lapply(.SD, as.logical),
     .SDcols = episode_cap_cols
   ]
 

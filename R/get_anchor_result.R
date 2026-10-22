@@ -65,7 +65,8 @@ get_anchor_result <- function(
   if (!is.null(population)) {
     population_dt <- as_data_table(population, "population")
     missing_population_cols <- setdiff(
-      required_population_cols, names(population_dt)
+      required_population_cols,
+      names(population_dt)
     )
     if (length(missing_population_cols) > 0L) {
       msg <- sprintf(
@@ -168,8 +169,7 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
-    anchored_dt[
-      ,
+    anchored_dt[,
       ..required_long_cols
     ]
   } else if (result_shape == "wide") {
@@ -197,8 +197,7 @@ get_anchor_result <- function(
       base::stop(msg, call. = FALSE)
     }
 
-    duplicate_rows <- anchored_dt[
-      ,
+    duplicate_rows <- anchored_dt[,
       .N,
       by = .(person_id, T0, window_name, variable_id)
     ][N > 1L]
@@ -219,11 +218,13 @@ get_anchor_result <- function(
     # The dcast formula will create columns in the format value_<variable_id>
     # and date_<variable_id> or if cast_window is TRUE,
     # value_<window_name>_<variable_id> and date_<window_name>_<variable_id>
-    formula <- stats::as.formula(if (cast_window) {
-      "person_id + T0 ~ window_name + variable_id"
-    } else {
-      "person_id + T0 + window_name ~ variable_id"
-    })
+    formula <- stats::as.formula(
+      if (cast_window) {
+        "person_id + T0 ~ window_name + variable_id"
+      } else {
+        "person_id + T0 + window_name ~ variable_id"
+      }
+    )
     wide_anchored <- data.table::dcast(
       anchored_dt,
       formula,
@@ -253,35 +254,39 @@ get_anchor_result <- function(
       NULL
     }
 
-    expected_date_cols <- unique(if (cast_window) {
-      paste0(
-        if (only_date == FALSE) "date_" else "",
-        expected_window_pairs$window_name,
-        "_",
-        expected_window_pairs$variable_id
-      )
-    } else {
-      paste0(
-        if (only_date == FALSE) "date_" else "",
-        metadata_dt$variable_id
-      )
-    })
+    expected_date_cols <- unique(
+      if (cast_window) {
+        paste0(
+          if (only_date == FALSE) "date_" else "",
+          expected_window_pairs$window_name,
+          "_",
+          expected_window_pairs$variable_id
+        )
+      } else {
+        paste0(
+          if (only_date == FALSE) "date_" else "",
+          metadata_dt$variable_id
+        )
+      }
+    )
     missing_date_cols <- setdiff(expected_date_cols, names(wide_anchored))
     for (col_name in missing_date_cols) {
       wide_anchored[, (col_name) := as.Date(NA)]
     }
 
     if (only_date == FALSE) {
-      expected_value_cols <- unique(if (cast_window) {
-        paste0(
-          "value_",
-          expected_window_pairs$window_name,
-          "_",
-          expected_window_pairs$variable_id
-        )
-      } else {
-        paste0("value_", metadata_dt$variable_id)
-      })
+      expected_value_cols <- unique(
+        if (cast_window) {
+          paste0(
+            "value_",
+            expected_window_pairs$window_name,
+            "_",
+            expected_window_pairs$variable_id
+          )
+        } else {
+          paste0("value_", metadata_dt$variable_id)
+        }
+      )
       missing_value_cols <- setdiff(expected_value_cols, names(wide_anchored))
       for (col_name in missing_value_cols) {
         wide_anchored[, (col_name) := NA_character_]
@@ -325,8 +330,7 @@ get_anchor_result <- function(
           by = ".anchor_join_key",
           allow.cartesian = TRUE,
           sort = FALSE
-        )[
-          ,
+        )[,
           .anchor_join_key := NULL
         ]
       }
@@ -420,7 +424,8 @@ imputing_missing <- function(wide_anchored, metadata) {
     "variable_type"
   )
   present_imputation_cols <- intersect(
-    required_imputation_cols, names(metadata)
+    required_imputation_cols,
+    names(metadata)
   )
   missing_imputation_cols <- setdiff(required_imputation_cols, names(metadata))
 
