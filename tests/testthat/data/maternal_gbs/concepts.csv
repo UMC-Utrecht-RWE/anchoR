@@ -1,0 +1,8 @@
+person_id,ori_table,unique_id,concept_id,coding_system,code,date,value,meaning
+B01,,,N_GBS_AESI,,,2024-03-12,TRUE,
+B01,,,N_GBS_AESI,,,2024-04-01,TRUE,
+B02,,,N_GBS_AESI,,,2024-04-02,TRUE,
+B03,,,N_GBS_AESI,,,2024-05-31,TRUE,
+B04,,,N_GBS_AESI,,,2023-08-23,TRUE,
+B04,,,N_GBS_AESI,,,2023-08-24,TRUE,
+B04,,,N_GBS_AESI,,,2024-03-11,TRUE,
