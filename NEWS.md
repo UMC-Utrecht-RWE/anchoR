@@ -4,6 +4,7 @@
 - `cap_start_to_episode`/`cap_end_to_episode`: two new optional logical metadata columns (`NA`/unset by default), read by `in_current_pregnancy`/`in_prior_pregnancy`/`in_current_and_prior` (not `outside_all_pregnancy`). The need of this case is that we might introduce a `after_start_episode_offset` that falls after the end of an episode pregnancy and the user wants the window to be capped at the minimum value between `after_start_episode_offset` and the end of pregnancy. Therefore, when `TRUE`,  `cap_start_to_episode` raises `window_start` up to at least the episode's own `start_episode`, `cap_end_to_episode` lowers `window_end` down to at most the episode's own `end_episode`.
 - `vignettes/quickstart.Rmd` ("Get started" vignette) and a configured pkgdown site (`_pkgdown.yml`), published from the `gh-pages` branch.
 - `validate_anchor_inputs()` logs a warning when `population` or `metadata` has zero rows.
+- Regression test for `EARLIEST` in an episode window ending at T0 (`end_offset = 0`): a small maternal GBS dataset (`tests/testthat/data/maternal_gbs/`) checks that a pre-risk window `[LMP, T0]` never picks up records after T0 or before LMP.
 
 ## Changed
 - Boolean imputation in `get_anchor_result()` also recognizes lowercase `"true"`/`"false"`.
