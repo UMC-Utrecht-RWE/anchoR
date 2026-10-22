@@ -819,3 +819,48 @@ testthat::test_that("prepare_con lets RANGE_COUNT run by loading concept_ranges 
   testthat::expect_equal(anchored$value, c("1", "2", "3", "4"))
   testthat::expect_equal(anchored$n, c(0L, 1L, 3L, 5L))
 })
+
+testthat::test_that("Earliest from from LMP to T0 = 0", {
+  # GBS dataset, built by tests/testthat/data/make_test_data.R.
+  metadata <- data.table::fread(
+    testthat::test_path("data", "maternal_gbs", "metadata.csv")
+  )
+  population <- data.table::fread(
+    testthat::test_path("data", "maternal_gbs", "population.csv")
+  )
+  # fread would read value "TRUE" as logical; anchoR expects character.
+  concepts <- data.table::fread(
+    testthat::test_path("data", "maternal_gbs", "concepts.csv"),
+    colClasses = c(value = "character")
+  )
+  episodes <- data.table::fread(
+    testthat::test_path("data", "maternal_gbs", "episodes.csv")
+  )
+
+  hive_path <- tempfile(pattern = "anchor-hive-")
+  dir.create(hive_path)
+  on.exit(unlink(hive_path, recursive = TRUE, force = TRUE), add = TRUE)
+
+  anchor(
+    population = population,
+    metadata = metadata,
+    concepts = concepts,
+    episodes = episodes,
+    anchor_col = "anchor_date",
+    anchor_hive_path = hive_path
+  )
+
+  anchored <- read_anchor_hive(hive_path)
+  gbs_21 <- anchored[variable_id == "SV_GBS_21_O"]
+  data.table::setorder(gbs_21, person_id, window_name)
+
+  # risk is [T0 + 1, T0 + 21]; prerisk is [LMP, T0], EARLIEST. GBS after T0
+  # (B01 2024-03-12, B02 2024-04-02) must not land in prerisk, and B04's
+  # 2023-08-23 record falls before LMP (2023-08-24).
+  testthat::expect_equal(gbs_21$person_id, c("B01", "B03", "B04"))
+  testthat::expect_equal(gbs_21$window_name, c("risk", "risk", "prerisk"))
+  testthat::expect_equal(
+    gbs_21$date,
+    as.Date(c("2024-03-12", "2024-05-31", "2023-08-24"))
+  )
+})
