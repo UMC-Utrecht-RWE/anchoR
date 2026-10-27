@@ -72,40 +72,36 @@ testthat::test_that("selector_sql_root errors when sql root cannot be found", {
   )
 })
 
-testthat::test_that(
-  "selector_sql_root falls back to inst/sql under the working directory",
-  {
-    root_fn <- mocked_selector_sql_root(function(...) "")
+testthat::test_that("selector_sql_root falls back to inst/sql under the working directory", {
+  root_fn <- mocked_selector_sql_root(function(...) "")
 
-    tmp <- withr::local_tempdir()
-    local_root <- file.path(tmp, "inst", "sql")
-    dir.create(local_root, recursive = TRUE)
-    withr::local_dir(tmp)
+  tmp <- withr::local_tempdir()
+  local_root <- file.path(tmp, "inst", "sql")
+  dir.create(local_root, recursive = TRUE)
+  withr::local_dir(tmp)
 
-    testthat::expect_identical(
-      root_fn(),
-      normalizePath(local_root, winslash = "/")
-    )
-  }
-)
+  testthat::expect_identical(
+    root_fn(),
+    normalizePath(local_root, winslash = "/")
+  )
+})
 
-testthat::test_that(
-  "selector_sql_path errors when the selector template is missing",
-  {
-    tmp <- withr::local_tempdir()
-    path_fn <- mocked_selector_sql_path(function() tmp)
+testthat::test_that("selector_sql_path errors when the selector template is missing", {
+  tmp <- withr::local_tempdir()
+  path_fn <- mocked_selector_sql_path(function() tmp)
 
-    testthat::expect_error(
-      path_fn("latest"),
-      "No SQL template found for selector `LATEST`.",
-      fixed = TRUE
-    )
-  }
-)
+  testthat::expect_error(
+    path_fn("latest"),
+    "No SQL template found for selector `LATEST`.",
+    fixed = TRUE
+  )
+})
 
 testthat::test_that("run_selector_queries errors on invalid anchor_hive_path", {
   old_appender <- logger::log_appender()
-  if (!is.function(old_appender)) old_appender <- logger::appender_console
+  if (!is.function(old_appender)) {
+    old_appender <- logger::appender_console
+  }
   withr::defer(logger::log_appender(old_appender))
   logger::log_appender(logger::appender_void)
 
@@ -124,11 +120,13 @@ testthat::test_that("run_selector_queries reports selector context on error", {
   query_fn <- run_selector_queries
   environment(query_fn) <- list2env(
     list(
-      run_selector_query = function(con,
-                                    selector,
-                                    anchor_hive_path = NULL,
-                                    accumulate_table = NULL,
-                                    selector_env = globalenv()) {
+      run_selector_query = function(
+        con,
+        selector,
+        anchor_hive_path = NULL,
+        accumulate_table = NULL,
+        selector_env = globalenv()
+      ) {
         stop("boom", call. = FALSE)
       }
     ),
@@ -136,7 +134,9 @@ testthat::test_that("run_selector_queries reports selector context on error", {
   )
 
   old_appender <- logger::log_appender()
-  if (!is.function(old_appender)) old_appender <- logger::appender_console
+  if (!is.function(old_appender)) {
+    old_appender <- logger::appender_console
+  }
   withr::defer(logger::log_appender(old_appender))
   logger::log_appender(logger::appender_void)
 

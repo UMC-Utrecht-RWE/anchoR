@@ -3,7 +3,8 @@
 #' Used by `define_window()` to decide whether `episodes` must be supplied
 #' and nested onto `population` before any constructor runs.
 #' @keywords internal
-EPISODE_CONSTRUCTORS <- c( # nolint: object_name_linter.
+# nolint next
+EPISODE_CONSTRUCTORS <- c(
   "in_current_pregnancy",
   "in_prior_pregnancy",
   "in_current_and_prior",
@@ -44,9 +45,11 @@ nest_episodes_onto_population <- function(population_dt, episodes_dt) {
   )
   no_episodes <- episodes_dt[0L, .(start_episode, end_episode)]
   person_idx <- match(as.character(population_dt$person_id), names(by_person))
-  population_dt[, .episodes := lapply(person_idx, function(i) {
-    if (is.na(i)) no_episodes else by_person[[i]]
-  })]
+  population_dt[,
+    .episodes := lapply(person_idx, function(i) {
+      if (is.na(i)) no_episodes else by_person[[i]]
+    })
+  ]
   population_dt[]
 }
 
@@ -95,15 +98,21 @@ classify_episodes <- function(episodes, anchor) {
   ref_end[row_id[first_current]] <- end_episode[first_current]
 
   classified <- data.table::copy(episodes)
-  classified[, episode_class := data.table::fifelse(
-    is_current %in% TRUE, "current",
-    data.table::fifelse(
-      end_episode < ref_start[row_id], "prior",
+  classified[,
+    episode_class := data.table::fifelse(
+      is_current %in% TRUE,
+      "current",
       data.table::fifelse(
-        start_episode > ref_end[row_id], "future", NA_character_
+        end_episode < ref_start[row_id],
+        "prior",
+        data.table::fifelse(
+          start_episode > ref_end[row_id],
+          "future",
+          NA_character_
+        )
       )
     )
-  )]
+  ]
   classified[]
 }
 
@@ -154,9 +163,12 @@ classify_episodes <- function(episodes, anchor) {
 #'   only when it applies), with one row per episode in each block.
 #' @keywords internal
 episode_windows <- function(
-  start_episode, end_episode,
-  before_start_offset, after_start_offset,
-  before_end_offset, after_end_offset
+  start_episode,
+  end_episode,
+  before_start_offset,
+  after_start_offset,
+  before_end_offset,
+  after_end_offset
 ) {
   start_has_before <- !is.na(before_start_offset)
   start_has_after <- !is.na(after_start_offset)
@@ -412,7 +424,8 @@ stack_episodes <- function(episode_list) {
 #'   then original episode order.
 #' @keywords internal
 select_episodes <- function(episodes, anchor, episode_select) {
-  select_rank <- switch(episode_select,
+  select_rank <- switch(
+    episode_select,
     "CURRENT" = c(current = 1L),
     "PRIOR" = c(prior = 1L),
     "CURRENT_AND_PRIOR" = c(current = 1L, prior = 2L)
@@ -439,9 +452,12 @@ select_episodes <- function(episodes, anchor, episode_select) {
 #' @keywords internal
 border_offset_windows <- function(selected, window_dt) {
   setting_cols <- c(
-    "before_start_episode_offset", "after_start_episode_offset",
-    "before_end_episode_offset", "after_end_episode_offset",
-    "cap_start_to_episode", "cap_end_to_episode"
+    "before_start_episode_offset",
+    "after_start_episode_offset",
+    "before_end_episode_offset",
+    "after_end_episode_offset",
+    "cap_start_to_episode",
+    "cap_end_to_episode"
   )
   settings <- window_dt[selected$.row, setting_cols, with = FALSE]
   # Groups in order of first appearance, so an inverted-offset error is
@@ -454,9 +470,12 @@ border_offset_windows <- function(selected, window_dt) {
     start_episode <- selected$start_episode[idx]
     end_episode <- selected$end_episode[idx]
     w <- episode_windows(
-      start_episode, end_episode,
-      setting$before_start_episode_offset, setting$after_start_episode_offset,
-      setting$before_end_episode_offset, setting$after_end_episode_offset
+      start_episode,
+      end_episode,
+      setting$before_start_episode_offset,
+      setting$after_start_episode_offset,
+      setting$before_end_episode_offset,
+      setting$after_end_episode_offset
     )
     # Each region block holds one row per episode, in `idx` order.
     n_regions <- nrow(w) %/% length(idx)
@@ -508,14 +527,22 @@ outside_all_gaps <- function(episodes, range_a, range_b) {
   overlapping[, covered_until := as.numeric(end_episode) + 1]
   overlapping[, covered_until := cummax(covered_until), by = .row]
   overlapping[, cursor := data.table::shift(covered_until), by = .row]
-  overlapping[, cursor := pmax(
-    as.numeric(range_start[.row]), cursor, na.rm = TRUE
-  )]
+  overlapping[,
+    cursor := pmax(
+      as.numeric(range_start[.row]),
+      cursor,
+      na.rm = TRUE
+    )
+  ]
 
   inner <- overlapping[
     cursor < start_episode,
-    .(.row, .gap = .I, window_start = cursor,
-      window_end = as.numeric(start_episode) - 1)
+    .(
+      .row,
+      .gap = .I,
+      window_start = cursor,
+      window_end = as.numeric(start_episode) - 1
+    )
   ]
 
   # Trailing gap: after the last covered day (or from the range start, when
@@ -552,11 +579,16 @@ empty_windows <- function() {
 }
 
 episode_required_cols <- c(
-  "anchor_start_col", "anchor_end_col",
-  "anchor_start_offset", "anchor_end_offset",
-  "before_start_episode_offset", "after_start_episode_offset",
-  "before_end_episode_offset", "after_end_episode_offset",
-  "cap_start_to_episode", "cap_end_to_episode"
+  "anchor_start_col",
+  "anchor_end_col",
+  "anchor_start_offset",
+  "anchor_end_offset",
+  "before_start_episode_offset",
+  "after_start_episode_offset",
+  "before_end_episode_offset",
+  "after_end_episode_offset",
+  "cap_start_to_episode",
+  "cap_end_to_episode"
 )
 
 # Look for records in the episode containing the anchor date (T0).
@@ -592,8 +624,10 @@ outside_all_pregnancy_window <- make_constructor(
     pregnancy_window_engine(window_dt, episode_select = "OUTSIDE_ALL")
   },
   required_cols = c(
-    "anchor_start_col", "anchor_end_col",
-    "anchor_start_offset", "anchor_end_offset"
+    "anchor_start_col",
+    "anchor_end_col",
+    "anchor_start_offset",
+    "anchor_end_offset"
   ),
   check_fn = generic_window_check
 )

@@ -9,13 +9,22 @@ testthat::test_that("cross_join_population_metadata works as expected", {
   )
 
   testthat::expect_equal(
-    nrow(res), nrow(minimal_population()) * nrow(minimal_metadata())
+    nrow(res),
+    nrow(minimal_population()) * nrow(minimal_metadata())
   )
   testthat::expect_equal(
     names(res),
     c(
-      "person_id", "T0", "variable_id", "concept_id", "constructor",
-      "selector", "start_offset", "end_offset", "range_min", "range_max"
+      "person_id",
+      "T0",
+      "variable_id",
+      "concept_id",
+      "constructor",
+      "selector",
+      "start_offset",
+      "end_offset",
+      "range_min",
+      "range_max"
     )
   )
 })
@@ -139,24 +148,18 @@ testthat::test_that("generic_window computes start and end dates", {
 # isolation so the lookup rule is clear without define_window()'s plumbing.
 # ---------------------------------------------------------------------------
 
-testthat::test_that(
-  "resolve_window_constructor finds built-ins regardless of constructor_env",
-  {
-    fn <- resolve_window_constructor("GENERIC", constructor_env = new.env())
-    testthat::expect_identical(fn, generic_window)
-  }
-)
+testthat::test_that("resolve_window_constructor finds built-ins regardless of constructor_env", {
+  fn <- resolve_window_constructor("GENERIC", constructor_env = new.env())
+  testthat::expect_identical(fn, generic_window)
+})
 
-testthat::test_that(
-  "resolve_window_constructor finds a constructor via constructor_env",
-  {
-    my_window <- function(window_dt) window_dt
-    user_env <- list2env(list(my_window = my_window))
+testthat::test_that("resolve_window_constructor finds a constructor via constructor_env", {
+  my_window <- function(window_dt) window_dt
+  user_env <- list2env(list(my_window = my_window))
 
-    fn <- resolve_window_constructor("MY", constructor_env = user_env)
-    testthat::expect_identical(fn, my_window)
-  }
-)
+  fn <- resolve_window_constructor("MY", constructor_env = user_env)
+  testthat::expect_identical(fn, my_window)
+})
 
 testthat::test_that("resolve_window_constructor errors when nothing matches", {
   testthat::expect_error(
@@ -186,19 +189,16 @@ testthat::test_that("apply_window_constructors fills window_start/window_end", {
   testthat::expect_equal(out$window_end, as.Date("2024-01-01"))
 })
 
-testthat::test_that(
-  "apply_window_constructors names the constructor when it errors",
-  {
-    window_dt <- data.table::data.table(constructor = "BROKEN")
-    broken_window <- function(window_dt) stop("boom")
-    user_env <- list2env(list(broken_window = broken_window))
+testthat::test_that("apply_window_constructors names the constructor when it errors", {
+  window_dt <- data.table::data.table(constructor = "BROKEN")
+  broken_window <- function(window_dt) stop("boom")
+  user_env <- list2env(list(broken_window = broken_window))
 
-    testthat::expect_error(
-      apply_window_constructors(window_dt, constructor_env = user_env),
-      "Error while applying window constructor 'BROKEN': boom"
-    )
-  }
-)
+  testthat::expect_error(
+    apply_window_constructors(window_dt, constructor_env = user_env),
+    "Error while applying window constructor 'BROKEN': boom"
+  )
+})
 
 # ---------------------------------------------------------------------------
 # finalize_windows(): row order, window_valid, anchor_row_id, isolated from
@@ -218,20 +218,17 @@ testthat::test_that("finalize_windows restores the pre-cross-join row order", {
   testthat::expect_false(".window_row_id" %in% names(out))
 })
 
-testthat::test_that(
-  "finalize_windows marks window valid when start <= end and neither missing",
-  {
-    window_dt <- data.table::data.table(
-      .window_row_id = 1:3,
-      window_start = as.Date(c("2024-01-01", NA, "2024-01-10")),
-      window_end = as.Date(c("2024-01-02", "2024-01-02", "2024-01-01"))
-    )
+testthat::test_that("finalize_windows marks window valid when start <= end and neither missing", {
+  window_dt <- data.table::data.table(
+    .window_row_id = 1:3,
+    window_start = as.Date(c("2024-01-01", NA, "2024-01-10")),
+    window_end = as.Date(c("2024-01-02", "2024-01-02", "2024-01-01"))
+  )
 
-    out <- finalize_windows(window_dt)
+  out <- finalize_windows(window_dt)
 
-    testthat::expect_equal(out$window_valid, c(TRUE, FALSE, FALSE))
-  }
-)
+  testthat::expect_equal(out$window_valid, c(TRUE, FALSE, FALSE))
+})
 
 # ---------------------------------------------------------------------------
 # define_window(): end-to-end, using the curated minimal_* fixtures.
@@ -293,57 +290,51 @@ testthat::test_that("define_window supports per-variable anchor columns", {
   testthat::expect_equal(windows$window_end, population$event_end)
 })
 
-testthat::test_that(
-  "define_window errors when metadata references an unknown constructor",
-  {
-    metadata <- minimal_metadata()[1]
-    metadata[, constructor := "NOPE"]
+testthat::test_that("define_window errors when metadata references an unknown constructor", {
+  metadata <- minimal_metadata()[1]
+  metadata[, constructor := "NOPE"]
 
-    testthat::expect_error(
-      define_window(minimal_population(), metadata),
-      "Window function does not exist: nope_window"
-    )
-  }
-)
+  testthat::expect_error(
+    define_window(minimal_population(), metadata),
+    "Window function does not exist: nope_window"
+  )
+})
 
-testthat::test_that(
-  "define_window resolves a user-defined constructor through constructor_env",
-  {
-    # A package user extends anchoR by building a constructor with
-    # make_constructor() and naming it "<constructor>_window". They don't edit
-    # anchoR or its namespace, passing an environment containing the
-    # function is enough.
-    index_window <- make_constructor(
-      transform_fn = function(window_dt) {
-        window_dt[, window_start := index_date - 30]
-        window_dt[, window_end := index_date + 30]
-        window_dt[]
-      },
-      required_cols = "index_date"
-    )
-    user_env <- list2env(list(index_window = index_window))
+testthat::test_that("define_window resolves a user-defined constructor through constructor_env", {
+  # A package user extends anchoR by building a constructor with
+  # make_constructor() and naming it "<constructor>_window". They don't edit
+  # anchoR or its namespace, passing an environment containing the
+  # function is enough.
+  index_window <- make_constructor(
+    transform_fn = function(window_dt) {
+      window_dt[, window_start := index_date - 30]
+      window_dt[, window_end := index_date + 30]
+      window_dt[]
+    },
+    required_cols = "index_date"
+  )
+  user_env <- list2env(list(index_window = index_window))
 
-    population <- data.table::data.table(
-      person_id = c("1", "2"),
-      T0 = as.Date(c("2024-01-01", "2024-01-15")),
-      index_date = as.Date(c("2024-02-01", "2024-02-15"))
-    )
-    metadata <- data.table::data.table(
-      variable_id = "custom_var",
-      concept_id = "CUSTOM",
-      constructor = "INDEX",
-      selector = "LATEST",
-      start_offset = 0,
-      end_offset = 0
-    )
+  population <- data.table::data.table(
+    person_id = c("1", "2"),
+    T0 = as.Date(c("2024-01-01", "2024-01-15")),
+    index_date = as.Date(c("2024-02-01", "2024-02-15"))
+  )
+  metadata <- data.table::data.table(
+    variable_id = "custom_var",
+    concept_id = "CUSTOM",
+    constructor = "INDEX",
+    selector = "LATEST",
+    start_offset = 0,
+    end_offset = 0
+  )
 
-    windows <- define_window(population, metadata, constructor_env = user_env)
+  windows <- define_window(population, metadata, constructor_env = user_env)
 
-    testthat::expect_equal(windows$window_start, population$index_date - 30)
-    testthat::expect_equal(windows$window_end, population$index_date + 30)
-    testthat::expect_true(all(windows$window_valid))
-  }
-)
+  testthat::expect_equal(windows$window_start, population$index_date - 30)
+  testthat::expect_equal(windows$window_end, population$index_date + 30)
+  testthat::expect_true(all(windows$window_valid))
+})
 
 testthat::test_that("a custom constructor enforces its own required columns", {
   index_window <- make_constructor(
@@ -363,42 +354,37 @@ testthat::test_that("a custom constructor enforces its own required columns", {
 
   testthat::expect_error(
     define_window(
-      minimal_population(), metadata,
+      minimal_population(),
+      metadata,
       constructor_env = user_env
     ),
     "missing required column\\(s\\): index_date"
   )
 })
 
-testthat::test_that(
-  "cross_join_population_metadata errors on overlapping column names",
-  {
-    population <- data.table::data.table(person_id = "1", selector = "LATEST")
-    metadata <- minimal_metadata()
+testthat::test_that("cross_join_population_metadata errors on overlapping column names", {
+  population <- data.table::data.table(person_id = "1", selector = "LATEST")
+  metadata <- minimal_metadata()
 
-    testthat::expect_error(
-      cross_join_population_metadata(population, metadata),
-      "`population` and `metadata` cannot share column names: selector\\." # nolint
-    )
-  }
-)
+  testthat::expect_error(
+    cross_join_population_metadata(population, metadata),
+    "`population` and `metadata` cannot share column names: selector\\." # nolint
+  )
+})
 
-testthat::test_that(
-  "cross_join_population_metadata produces a person-major cartesian product",
-  {
-    population <- minimal_population()
-    metadata <- minimal_metadata()
+testthat::test_that("cross_join_population_metadata produces a person-major cartesian product", {
+  population <- minimal_population()
+  metadata <- minimal_metadata()
 
-    result <- cross_join_population_metadata(population, metadata)
+  result <- cross_join_population_metadata(population, metadata)
 
-    testthat::expect_equal(nrow(result), nrow(population) * nrow(metadata))
-    testthat::expect_equal(
-      result$person_id,
-      rep(population$person_id, each = nrow(metadata))
-    )
-    testthat::expect_equal(
-      result$variable_id,
-      rep(metadata$variable_id, times = nrow(population))
-    )
-  }
-)
+  testthat::expect_equal(nrow(result), nrow(population) * nrow(metadata))
+  testthat::expect_equal(
+    result$person_id,
+    rep(population$person_id, each = nrow(metadata))
+  )
+  testthat::expect_equal(
+    result$variable_id,
+    rep(metadata$variable_id, times = nrow(population))
+  )
+})

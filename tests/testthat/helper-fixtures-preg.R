@@ -64,15 +64,22 @@ pregnancy_population_simple <- function() {
 pregnancy_metadata_simple <- function() {
   data.table::data.table(
     variable_id = c(
-      "simple_current", "simple_prior", "simple_current_and_prior",
+      "simple_current",
+      "simple_prior",
+      "simple_current_and_prior",
       "simple_outside"
     ),
     concept_id = c(
-      "GEST_DIAB_CURRENT", "GEST_DIAB_PRIOR", "GEST_DIAB_CURRENT", "OBESITY"
+      "GEST_DIAB_CURRENT",
+      "GEST_DIAB_PRIOR",
+      "GEST_DIAB_CURRENT",
+      "OBESITY"
     ),
     constructor = c(
-      "in_current_pregnancy", "in_prior_pregnancy",
-      "in_current_and_prior", "outside_all_pregnancy"
+      "in_current_pregnancy",
+      "in_prior_pregnancy",
+      "in_current_and_prior",
+      "outside_all_pregnancy"
     ),
     selector = c("LATEST", "LATEST", "ALL", "LATEST"),
     start_offset = 0L, # unused by episode-based constructors, still required
@@ -123,13 +130,19 @@ pregnancy_episodes_complex <- function() {
   data.table::data.table(
     person_id = c("1", "1", "1", "2", "2", "3"),
     start_episode = as.Date(c(
-      "2020-01-01", "2021-02-15", "2022-03-01",
-      "2021-02-15", "2022-03-01",
+      "2020-01-01",
+      "2021-02-15",
+      "2022-03-01",
+      "2021-02-15",
+      "2022-03-01",
       "2021-02-15"
     )),
     end_episode = as.Date(c(
-      "2020-09-01", "2021-05-20", "2022-12-01",
-      "2021-08-01", "2022-12-01",
+      "2020-09-01",
+      "2021-05-20",
+      "2022-12-01",
+      "2021-08-01",
+      "2022-12-01",
       "2021-09-14"
     ))
   )
@@ -139,7 +152,11 @@ pregnancy_population_complex <- function() {
   data.table::data.table(
     person_id = c("1", "1", "2", "3", "1"),
     T0 = as.Date(c(
-      "2021-04-02", "2022-08-16", "2022-08-16", "2021-04-02", "2021-01-01"
+      "2021-04-02",
+      "2022-08-16",
+      "2022-08-16",
+      "2021-04-02",
+      "2021-01-01"
     ))
   )
 }
@@ -197,15 +214,22 @@ pregnancy_population_complex <- function() {
 pregnancy_metadata_complex <- function() {
   data.table::data.table(
     variable_id = c(
-      "complex_current", "complex_prior", "complex_current_and_prior",
+      "complex_current",
+      "complex_prior",
+      "complex_current_and_prior",
       "complex_outside"
     ),
     concept_id = c(
-      "GEST_DIAB_CURRENT", "GEST_DIAB_PRIOR", "GEST_DIAB_CURRENT", "OBESITY"
+      "GEST_DIAB_CURRENT",
+      "GEST_DIAB_PRIOR",
+      "GEST_DIAB_CURRENT",
+      "OBESITY"
     ),
     constructor = c(
-      "in_current_pregnancy", "in_prior_pregnancy",
-      "in_current_and_prior", "outside_all_pregnancy"
+      "in_current_pregnancy",
+      "in_prior_pregnancy",
+      "in_current_and_prior",
+      "outside_all_pregnancy"
     ),
     selector = c("LATEST", "LATEST", "ALL", "LATEST"),
     start_offset = 0L,
@@ -234,10 +258,16 @@ pregnancy_concepts_complex <- function() {
   data.table::data.table(
     person_id = c("1", "1", "1", "1"),
     concept_id = c(
-      "GEST_DIAB_CURRENT", "GEST_DIAB_PRIOR", "GEST_DIAB_PRIOR", "OBESITY"
+      "GEST_DIAB_CURRENT",
+      "GEST_DIAB_PRIOR",
+      "GEST_DIAB_PRIOR",
+      "OBESITY"
     ),
     date = as.Date(c(
-      "2022-06-01", "2020-05-01", "2022-05-01", "2020-10-15"
+      "2022-06-01",
+      "2020-05-01",
+      "2022-05-01",
+      "2020-10-15"
     )),
     value = c("TRUE", "TRUE", "TRUE", "TRUE")
   )
@@ -274,12 +304,19 @@ pregnancy_population_cases <- function() {
 pregnancy_metadata_cases <- function() {
   data.table::data.table(
     variable_id = c(
-      "case1", "case2", "case3", "case4", "case5"
+      "case1",
+      "case2",
+      "case3",
+      "case4",
+      "case5"
     ),
     concept_id = "DEMO",
     constructor = c(
-      "in_prior_pregnancy", "in_prior_pregnancy", "in_current_and_prior",
-      "in_current_pregnancy", "in_current_pregnancy"
+      "in_prior_pregnancy",
+      "in_prior_pregnancy",
+      "in_current_and_prior",
+      "in_current_pregnancy",
+      "in_current_pregnancy"
     ),
     selector = "ALL",
     start_offset = 0L, # unused by episode-based constructors, still required

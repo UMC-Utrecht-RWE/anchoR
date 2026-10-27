@@ -53,13 +53,16 @@ minimal_concepts <- function() {
 minimal_output <- function() {
   data.table::data.table(
     person_id = rep(c("1", "2", "3", "4", "5"), 3),
-    T0 = rep(as.Date(c(
-      "2024-01-01",
-      "2024-01-15",
-      "2024-02-01",
-      "2024-02-15",
-      "2024-03-01"
-    )), 3),
+    T0 = rep(
+      as.Date(c(
+        "2024-01-01",
+        "2024-01-15",
+        "2024-02-01",
+        "2024-02-15",
+        "2024-03-01"
+      )),
+      3
+    ),
     variable_id = c(
       rep("cov_latest", 5),
       rep("cov_count", 5),
@@ -85,7 +88,9 @@ example_concepts_parquet <- function(data = NULL) {
 
   parquet_path <- tempfile(fileext = ".parquet")
   DBI::dbWriteTable(
-    con, "concepts_source", data,
+    con,
+    "concepts_source",
+    data,
     overwrite = TRUE
   )
   DBI::dbExecute(

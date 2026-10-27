@@ -139,9 +139,11 @@ coerce_date_column <- function(dt, col_name, label) {
   }
 
   non_missing <- !is.na(values)
-  invalid_format <- non_missing & !grepl(
-    "^\\d{4}-\\d{2}-\\d{2}$", values
-  )
+  invalid_format <- non_missing &
+    !grepl(
+      "^\\d{4}-\\d{2}-\\d{2}$",
+      values
+    )
   if (any(invalid_format)) {
     stop_invalid_date("%s must use the date format YYYY-mm-dd.")
   }
@@ -158,7 +160,9 @@ coerce_date_column <- function(dt, col_name, label) {
 
 validate_population_anchor_col <- function(population_dt, anchor_col) {
   coerce_date_column(
-    population_dt, anchor_col, sprintf("`population$%s`", anchor_col)
+    population_dt,
+    anchor_col,
+    sprintf("`population$%s`", anchor_col)
   )
 }
 
@@ -254,7 +258,6 @@ validate_anchor_inputs <- function(
   # anchor_col must be a Date column; skipping this check would cause
   # hard-to-trace problems downstream.
   validate_population_anchor_col(population_dt, anchor_col)
-
 
   assert_has_columns(
     metadata_dt,

@@ -301,7 +301,8 @@ publish_accumulated_table <- function(con, table_name, anchor_hive_path) {
   if (!(table_name %in% DBI::dbListTables(con))) {
     logger::log_debug(
       sprintf(
-        "No rows were accumulated in `%s`; nothing to publish.", table_name
+        "No rows were accumulated in `%s`; nothing to publish.",
+        table_name
       )
     )
     return(invisible(NULL))
@@ -378,7 +379,8 @@ anchor_impl <- function(
   # other population covariates before the cross join multiplies them
   # across every metadata row.
   window_population <- population_columns_for_window(
-    population_dt, metadata_dt
+    population_dt,
+    metadata_dt
   )
   window_dt <- define_window(
     population = window_population,
@@ -414,8 +416,8 @@ anchor_impl <- function(
     # When sparse output is requested, an empty typed table is clearer than
     # returning the full cross join filled with missing values.
     return(
-      window_dt[0][
-        , `:=`(value = character(), date = as.Date(character()), n = integer())
+      window_dt[0][,
+        `:=`(value = character(), date = as.Date(character()), n = integer())
       ]
     )
   }
@@ -504,7 +506,8 @@ anchor_whole_impl <- function(
   anchor_hive_path <- ensure_anchor_hive_path(anchor_hive_path)
   logger::log_trace(
     sprintf(
-      "Writing anchored parquet output under `%s`.", anchor_hive_path
+      "Writing anchored parquet output under `%s`.",
+      anchor_hive_path
     )
   )
 
@@ -792,7 +795,8 @@ anchor_variable_impl <- function(
     )
 
     chunk_duration <- difftime(
-      Sys.time(), chunk_start_time,
+      Sys.time(),
+      chunk_start_time,
       units = "secs"
     )
     logger::log_debug(
