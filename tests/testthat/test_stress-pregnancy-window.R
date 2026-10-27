@@ -81,7 +81,8 @@ testthat::test_that("pregnancy_window_engine stress test", {
   data.table::fwrite(results, out_file)
 
   message("\npregnancy_window_engine stress results:")
-  message(paste(utils::capture.output(print(results, digits = 3)),
+  message(paste(
+    utils::capture.output(print(results, digits = 3)),
     collapse = "\n"
   ))
   message("Saved to: ", out_file)
