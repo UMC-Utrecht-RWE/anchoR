@@ -17,7 +17,9 @@ nest_episodes_onto_population(population_dt, episodes_dt)
 }
 \description{
 Each population row gets its own person's episodes as a small
-\code{data.table(start_episode, end_episode)}, forming a '3D structure' so the.
-Persons with no episodes get a zero-row table rather than \code{NULL}.
+\code{data.table(start_episode, end_episode)}, in their original order.
+Persons with no episodes get a zero-row table rather than \code{NULL}. Rows of
+the same person share one table, so nothing downstream may modify it in
+place.
 }
 \keyword{internal}
